@@ -1,0 +1,77 @@
+package cn.sduonline.join.data.po;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import java.time.LocalDateTime;
+import lombok.Data;
+
+/**
+ * 用户表实体（学号主身份 + OIDC 身份 + 学生资料）。
+ */
+@Data
+@TableName("user")
+public class User {
+
+    /**
+     * OIDC subject；外部 Token 首次创建的用户可能暂时为空。
+     */
+    private String sub;
+
+    /**
+     * 姓名 / 展示名。
+     */
+    private String name;
+
+    /**
+     * 统一认证账号（学号/工号），主键，对应 OIDC claim {@code casID}。
+     */
+    @TableId(value = "cas_id", type = IdType.INPUT)
+    private String casId;
+
+    /**
+     * 邮箱。
+     */
+    private String email;
+
+    /**
+     * 手机号。
+     */
+    private String phone;
+
+    /**
+     * 当前公众号下的 OpenID，用于发送模板消息。
+     */
+    private String wechatOpenid;
+
+    /** 报名必填资料是否已完成。 */
+    private Boolean profileCompleted;
+
+    /** QQ 号（选填）。 */
+    private String qq;
+
+    /**
+     * 学院。
+     */
+    private String college;
+
+    /**
+     * 专业。
+     */
+    private String major;
+
+    /**
+     * 入学年级，如 2024。
+     */
+    private Integer grade;
+
+    /**
+     * 创建时间。
+     */
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间。
+     */
+    private LocalDateTime updatedAt;
+}

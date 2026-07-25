@@ -1,0 +1,90 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: join
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/join?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: ${MAIL_SSL_ENABLED:true}
+  security:
+    oauth2:
+      client:
+        registration:
+          sdu:
+            provider: sdu
+            client-id: ${OIDC_CLIENT_ID}
+            client-secret: ${OIDC_CLIENT_SECRET}
+            client-name: SDU OIDC
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            # IdP scopes_supported: openid, profile
+            scope:
+              - openid
+              - profile
+            client-authentication-method: client_secret_basic
+        provider:
+          sdu:
+            # https://i.sdu.edu.cn/pass-api/.well-known/openid-configuration
+            issuer-uri: ${OIDC_ISSUER_URI:https://i.sdu.edu.cn/pass-api}
+            user-name-attribute: sub
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: input
+      table-underline: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-exception: false
+  servlet:
+    session:
+      cookie:
+        name: JOINSESSION
+        same-site: lax
+        http-only: true
+
+app:
+  # 登录成功后回跳的前端地址
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  # 允许的跨域来源，多个用逗号分隔
+  cors-allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  check-in:
+    token-ttl-seconds: ${CHECK_IN_TOKEN_TTL_SECONDS:30}
+    qr-refresh-seconds: ${CHECK_IN_QR_REFRESH_SECONDS:8}
+  external-identity:
+    base-url: ${EXTERNAL_IDENTITY_BASE_URL:https://i.sdu.edu.cn}
+    cache-ttl-seconds: ${EXTERNAL_IDENTITY_CACHE_TTL_SECONDS:60}
+  wechat:
+    app-id: ${WECHAT_APP_ID:}
+    app-secret: ${WECHAT_APP_SECRET:}
+    oauth-callback-url: ${WECHAT_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/binding/callback}
+    binding-result-url: ${WECHAT_BINDING_RESULT_URL:http://localhost:5173/wechat-binding}
+    binding-state-ttl-seconds: ${WECHAT_BINDING_STATE_TTL_SECONDS:600}
+    binding-template-id: ${WECHAT_BINDING_TEMPLATE_ID:}
+    system-name: ${WECHAT_SYSTEM_NAME:学生在线纳新系统}
+    # access_token 默认有效 7200 秒，提前刷新以避免临界时间请求失败
+    token-refresh-ahead-seconds: ${WECHAT_TOKEN_REFRESH_AHEAD_SECONDS:300}
