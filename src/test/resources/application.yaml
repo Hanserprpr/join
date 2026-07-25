@@ -1,0 +1,46 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:join;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.data.redis.autoconfigure.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.data.redis.autoconfigure.RedisRepositoriesAutoConfiguration
+  security:
+    oauth2:
+      client:
+        registration:
+          sdu:
+            provider: sdu
+            client-id: test-client
+            client-secret: test-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - email
+              - phone
+        provider:
+          sdu:
+            authorization-uri: http://127.0.0.1:9/oauth/authorize
+            token-uri: http://127.0.0.1:9/oauth/token
+            jwk-set-uri: http://127.0.0.1:9/oauth/jwks
+            user-info-uri: http://127.0.0.1:9/oauth/userinfo
+            user-name-attribute: sub
+
+app:
+  frontend-url: http://localhost:5173
+  cors-allowed-origins: http://localhost:5173

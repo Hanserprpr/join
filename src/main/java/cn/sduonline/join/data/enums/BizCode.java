@@ -1,0 +1,122 @@
+package cn.sduonline.join.data.enums;
+
+import lombok.Getter;
+
+/**
+ * 业务状态码枚举。
+ * <p>
+ * 优先复用平台已有状态码，纳新系统独有状态使用六位命名空间
+ * 六位命名空间约定：11xxxx 通用、12xxxx 认证、13xxxx 用户、
+ * 14xxxx 纳新业务、15xxxx 外部依赖、19xxxx 系统
+ */
+@Getter
+public enum BizCode {
+
+    /** 成功。 */
+    SUCCESS(0, "请求成功"),
+
+    // ---------- 平台通用错误 ----------
+    /** 参数非法。 */
+    PARAM_INVALID(40000, "参数范围或格式错误"),
+    /** 请求频率过高。 */
+    TOO_MANY_REQUESTS(40003, "请求繁忙，请稍后再试"),
+    /** 不支持的操作。 */
+    NOT_SUPPORTED(40005, "方法不允许"),
+    /** 请求的接口或资源不存在。 */
+    RESOURCE_NOT_FOUND(40004, "你要找的东西好像走丢啦X﹏X"),
+
+    // ---------- 平台认证与鉴权 ----------
+    /** 用户未登录。 */
+    NOT_LOGIN(-4, "用户未登录"),
+    /** Token 无效。 */
+    TOKEN_INVALID(40101, "登录状态已失效"),
+    /** 权限不足。 */
+    NO_PERMISSION(40103, "无权限访问"),
+
+    // ---------- 13xxxx 用户模块 ----------
+    /** 用户不存在。 */
+    USER_NOT_FOUND(40200, "用户不存在"),
+    /** 用户被禁用。 */
+    USER_DISABLED(130002, "用户被禁用"),
+    /** 用户名已存在。 */
+    USERNAME_EXISTS(130003, "用户名已存在"),
+    /** 密码错误。 */
+    PASSWORD_ERROR(40100, "学号或统一身份认证密码错误"),
+    /** 验证码错误。 */
+    VERIFY_CODE_ERROR(40300, "验证码错误"),
+    /** 该用户已通过邮箱验证。 */
+    EMAIL_ALREADY_VERIFIED(130006, "该用户已通过邮箱验证"),
+    /** 邮箱格式不正确。 */
+    EMAIL_INVALID(130007, "邮箱格式不正确"),
+    /** 邮箱验证链接无效或已过期。 */
+    EMAIL_TOKEN_INVALID(130008, "邮箱验证链接无效或已过期"),
+    /** 用户尚未完成必填资料。 */
+    PROFILE_INCOMPLETE(130009, "用户资料未完成"),
+
+    // ---------- 14xxxx 纳新业务错误 ----------
+    /** 操作失败。 */
+    OP_FAILED(140001, "操作失败"),
+    /** 当前状态不允许该操作。 */
+    STATE_NOT_ALLOWED(40002, "当前条件或时间不允许〒▽〒"),
+    /** 资源不足。 */
+    RESOURCE_NOT_ENOUGH(140003, "资源不足"),
+    /** 重复提交。 */
+    DUPLICATE_SUBMIT(140004, "重复提交"),
+    /** 工作站不存在或未启用。 */
+    WORKSTATION_NOT_FOUND(140005, "工作站不存在或未启用"),
+    /** 板块不存在或未启用。 */
+    BOARD_NOT_FOUND(140006, "板块不存在或未启用"),
+    /** 管理员角色不存在。 */
+    ROLE_NOT_FOUND(140007, "管理员角色不存在"),
+    /** 角色与数据范围不匹配。 */
+    ROLE_SCOPE_MISMATCH(140008, "角色与数据范围不匹配"),
+    /** 指定的组织范围不存在或未启用。 */
+    ORG_SCOPE_NOT_FOUND(140009, "组织范围不存在或未启用"),
+    /** 用户已经拥有该角色范围。 */
+    ROLE_ASSIGNMENT_EXISTS(140010, "用户已经拥有该角色范围"),
+    /** 不能授予同级或更高级角色，或授权范围超出操作者范围。 */
+    ROLE_ASSIGNMENT_FORBIDDEN(140011, "无权授予该角色或组织范围"),
+    /** 部门不存在。 */
+    DEPARTMENT_NOT_FOUND(140012, "部门不存在"),
+    /** 报名记录不存在。 */
+    APPLICATION_NOT_FOUND(140013, "报名记录不存在"),
+    /** 签到二维码无效或已过期。 */
+    CHECK_IN_TOKEN_INVALID(140014, "签到二维码无效或已过期"),
+    /** 当前用户尚未报名该部门。 */
+    CHECK_IN_NOT_REGISTERED(140015, "尚未报名该部门，无法签到"),
+    /** 当前部门没有等待面试的签到用户。 */
+    INTERVIEW_QUEUE_EMPTY(140016, "当前没有等待面试的用户"),
+    /** 当前管理员已经在面试其他用户。 */
+    INTERVIEW_ADMIN_BUSY(140017, "当前管理员已有进行中的面试"),
+    /** 当前管理员在该部门没有进行中的面试。 */
+    INTERVIEW_NOT_ACTIVE(140018, "当前没有进行中的面试"),
+    /** 当前用户尚未在该部门签到。 */
+    CHECK_IN_NOT_FOUND(140019, "尚未在该部门签到"),
+    /** 当前用户已达到部门允许的最大过号次数 */
+    INTERVIEW_PASS_LIMIT_REACHED(140020, "已达到最大过号次数"),
+
+    // ---------- 15xxxx 外部依赖错误 ----------
+    /** 第三方服务不可用。 */
+    THIRD_PARTY_UNAVAILABLE(150001, "第三方服务不可用"),
+    /** 第三方接口超时。 */
+    THIRD_PARTY_TIMEOUT(150002, "第三方接口超时"),
+    /** 第三方返回异常。 */
+    THIRD_PARTY_BAD_RESPONSE(150003, "第三方返回异常"),
+
+    // ---------- 平台系统级错误 ----------
+    /** 系统内部异常。 */
+    SYSTEM_ERROR(-1, "服务器错误"),
+    /** 未捕获异常。 */
+    UNKNOWN_ERROR(-2, "未知错误");
+
+    /** 数字状态码。 */
+    private final int code;
+
+    /** 默认提示文案。 */
+    private final String msg;
+
+    BizCode(int code, String msg) {
+        this.code = code;
+        this.msg = msg;
+    }
+}
