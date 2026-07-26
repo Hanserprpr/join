@@ -1,5 +1,6 @@
 package cn.sduonline.join.config;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.security.OidcLoginSuccessHandler;
 import cn.sduonline.join.security.RestAuthenticationEntryPoint;
 import cn.sduonline.join.security.ExternalTokenAuthenticationFilter;
@@ -53,7 +54,7 @@ public class SecurityConfig {
      * 业务接口的登录及权限校验统一交给 Sa-Token 注解。
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http){
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -69,6 +70,7 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
                         .logoutSuccessHandler((request, response, authentication) -> {
+                            StpUtil.logout();
                             SecurityErrorResponseWriter.write(
                                     response,
                                     HttpServletResponse.SC_OK,
