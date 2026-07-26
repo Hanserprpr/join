@@ -12,45 +12,59 @@ import org.apache.ibatis.annotations.Update;
 public interface DepartmentCheckInMapper {
 
     @Select("""
-            SELECT id, department_id, application_id, cas_id,
-                   checked_in_at, queue_number, queue_order, pass_count
-            FROM department_check_in
+            SELECT COUNT(1)
+            FROM department_interview
             WHERE application_id = #{applicationId}
             """)
-    DepartmentCheckIn selectByApplicationId(
+    int countInterviewsByApplication(
+            @Param("applicationId") Long applicationId
+    );
+
+    @Select("""
+            SELECT id, department_id, application_id, cas_id,
+                   session_id, checked_in_at, queue_number, queue_order,
+                   pass_count, priority
+            FROM department_check_in
+            WHERE session_id = #{sessionId}
+              AND application_id = #{applicationId}
+            """)
+    DepartmentCheckIn selectBySessionAndApplication(
+            @Param("sessionId") Long sessionId,
             @Param("applicationId") Long applicationId
     );
 
     @Insert("""
             INSERT INTO department_check_in
-                (department_id, application_id, cas_id, checked_in_at,
-                 queue_number, queue_order, pass_count)
+                (department_id, session_id, application_id, cas_id,
+                 checked_in_at, queue_number, queue_order, pass_count,
+                 priority)
             VALUES
-                (#{departmentId}, #{applicationId}, #{casId}, #{checkedInAt},
-                 #{queueNumber}, #{queueOrder}, #{passCount})
+                (#{departmentId}, #{sessionId}, #{applicationId}, #{casId},
+                 #{checkedInAt}, #{queueNumber}, #{queueOrder}, #{passCount},
+                 #{priority})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(DepartmentCheckIn checkIn);
 
     @Insert("""
             INSERT IGNORE INTO department_check_in_sequence
-                (department_id, next_number)
-            VALUES (#{departmentId}, 1)
+                (session_id, next_number)
+            VALUES (#{sessionId}, 1)
             """)
-    int initializeSequence(@Param("departmentId") Long departmentId);
+    int initializeSequence(@Param("sessionId") Long sessionId);
 
     @Select("""
             SELECT next_number
             FROM department_check_in_sequence
-            WHERE department_id = #{departmentId}
+            WHERE session_id = #{sessionId}
             FOR UPDATE
             """)
-    int selectNextNumberForUpdate(@Param("departmentId") Long departmentId);
+    int selectNextNumberForUpdate(@Param("sessionId") Long sessionId);
 
     @Update("""
             UPDATE department_check_in_sequence
             SET next_number = next_number + 1
-            WHERE department_id = #{departmentId}
+            WHERE session_id = #{sessionId}
             """)
-    int incrementNextNumber(@Param("departmentId") Long departmentId);
+    int incrementNextNumber(@Param("sessionId") Long sessionId);
 }

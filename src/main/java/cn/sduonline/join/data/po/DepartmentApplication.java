@@ -18,4 +18,7 @@ public class DepartmentApplication {
     private String qq;
     private ApplicationStatus status;
     private LocalDateTime submittedAt;
+    private Long interviewId;
+    private Boolean interviewed;
+    private Integer score;
 }

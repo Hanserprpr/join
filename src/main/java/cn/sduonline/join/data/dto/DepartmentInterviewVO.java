@@ -12,7 +12,9 @@ public record DepartmentInterviewVO(
         String interviewerCasId,
         Integer queueNumber,
         LocalDateTime startedAt,
-        LocalDateTime endedAt
+        LocalDateTime endedAt,
+        Integer score,
+        String evaluation
 ) {
     public static DepartmentInterviewVO from(DepartmentInterview source) {
         return new DepartmentInterviewVO(
@@ -20,7 +22,8 @@ public record DepartmentInterviewVO(
                 source.getApplicationId(), source.getCandidateCasId(),
                 source.getCandidateName(), source.getInterviewerCasId(),
                 source.getQueueNumber(), source.getStartedAt(),
-                source.getEndedAt()
+                source.getEndedAt(), source.getScore(),
+                source.getEvaluation()
         );
     }
 }

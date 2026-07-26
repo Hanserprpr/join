@@ -14,7 +14,10 @@ public record DepartmentApplicationSummaryVO(
         String phone,
         String qq,
         ApplicationStatus status,
-        LocalDateTime submittedAt
+        LocalDateTime submittedAt,
+        Boolean interviewed,
+        Long interviewId,
+        Integer score
 ) {
     public static DepartmentApplicationSummaryVO from(
             DepartmentApplication application
@@ -29,7 +32,10 @@ public record DepartmentApplicationSummaryVO(
                 application.getPhone(),
                 application.getQq(),
                 application.getStatus(),
-                application.getSubmittedAt()
+                application.getSubmittedAt(),
+                application.getInterviewed(),
+                application.getInterviewId(),
+                application.getScore()
         );
     }
 }

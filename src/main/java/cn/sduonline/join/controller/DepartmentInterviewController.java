@@ -8,10 +8,14 @@ import cn.sduonline.join.data.dto.MyInterviewQueueStatusVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigRequest;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
+import cn.sduonline.join.data.dto.InterviewEvaluationRequest;
+import cn.sduonline.join.data.dto.InterviewSessionRequest;
+import cn.sduonline.join.data.dto.InterviewSessionVO;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.scope.DepartmentPermission;
 import cn.sduonline.join.security.scope.PermissionCode;
 import cn.sduonline.join.service.DepartmentInterviewService;
+import cn.sduonline.join.service.DepartmentInterviewSessionService;
 import cn.sduonline.join.service.InterviewSseService;
 import cn.sduonline.join.service.ServiceResult;
 import jakarta.validation.constraints.Positive;
@@ -38,7 +42,110 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class DepartmentInterviewController {
 
     private final DepartmentInterviewService interviewService;
+    private final DepartmentInterviewSessionService sessionService;
     private final InterviewSseService interviewSseService;
+
+    /**
+     * 创建面试场次草稿
+     *
+     * @param departmentId 部门 ID
+     * @param request 面试时间、地点和取号上限
+     * @return 创建后的面试场次
+     */
+    @PostMapping("/sessions")
+    @DepartmentPermission(PermissionCode.INTERVIEW_MANAGE)
+    public Result<InterviewSessionVO> createSession(
+            @PathVariable @Positive Long departmentId,
+            @Valid @RequestBody InterviewSessionRequest request
+    ) {
+        return toSessionResult(sessionService.create(departmentId, request));
+    }
+
+    /**
+     * 修改尚未结束的面试场次
+     *
+     * @param departmentId 部门 ID
+     * @param sessionId 面试场次 ID
+     * @param request 面试时间、地点和取号上限
+     * @return 修改后的面试场次
+     */
+    @PutMapping("/sessions/{sessionId}")
+    @DepartmentPermission(PermissionCode.INTERVIEW_MANAGE)
+    public Result<InterviewSessionVO> updateSession(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable @Positive Long sessionId,
+            @Valid @RequestBody InterviewSessionRequest request
+    ) {
+        return toSessionResult(sessionService.update(
+                departmentId, sessionId, request
+        ));
+    }
+
+    /**
+     * 发布面试场次并绑定待使用的顺延资格
+     *
+     * @param departmentId 部门 ID
+     * @param sessionId 面试场次 ID
+     * @return 已发布的面试场次
+     */
+    @PostMapping("/sessions/{sessionId}/publish")
+    @DepartmentPermission(PermissionCode.INTERVIEW_MANAGE)
+    public Result<InterviewSessionVO> publishSession(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable @Positive Long sessionId
+    ) {
+        return toSessionResult(sessionService.publish(
+                departmentId, sessionId
+        ));
+    }
+
+    /**
+     * 结束面试场次并为未叫到用户生成顺延资格
+     *
+     * @param departmentId 部门 ID
+     * @param sessionId 面试场次 ID
+     * @return 已结束的面试场次
+     * @apiNote 存在进行中的面试时不能结束场次
+     */
+    @PostMapping("/sessions/{sessionId}/end")
+    @DepartmentPermission(PermissionCode.INTERVIEW_MANAGE)
+    public Result<InterviewSessionVO> endSession(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable @Positive Long sessionId
+    ) {
+        return toSessionResult(sessionService.end(departmentId, sessionId));
+    }
+
+    /**
+     * 查询当前已发布的面试场次
+     *
+     * @param departmentId 部门 ID
+     * @return 当前场次的时间、地点和取号上限
+     */
+    @GetMapping("/sessions/current")
+    public Result<InterviewSessionVO> findPublishedSession(
+            @PathVariable @Positive Long departmentId
+    ) {
+        return toSessionResult(sessionService.findPublished(departmentId));
+    }
+
+    /**
+     * 查询部门全部面试场次
+     *
+     * @param departmentId 部门 ID
+     * @return 按开始时间倒序排列的面试场次
+     */
+    @GetMapping("/sessions")
+    @DepartmentPermission(PermissionCode.INTERVIEW_MANAGE)
+    public Result<List<InterviewSessionVO>> findSessions(
+            @PathVariable @Positive Long departmentId
+    ) {
+        ServiceResult<List<InterviewSessionVO>> result =
+                sessionService.findAll(departmentId);
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
 
     /**
      * 查询部门过号配置
@@ -221,15 +328,56 @@ public class DepartmentInterviewController {
      * 结束当前管理员正在进行的面试
      *
      * @param departmentId 部门 ID
+     * @param request 可选的评分和评价
      * @return 已结束的面试记录
      */
     @PostMapping("/current/finish")
     @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
     public Result<DepartmentInterviewVO> finish(
-            @PathVariable @Positive Long departmentId
+            @PathVariable @Positive Long departmentId,
+            @Valid @RequestBody(required = false)
+            InterviewEvaluationRequest request
     ) {
         return toResult(interviewService.finish(
-                departmentId, StpUtil.getLoginIdAsString()
+                departmentId, StpUtil.getLoginIdAsString(), request
+        ));
+    }
+
+    /**
+     * 查询指定面试记录及其评分、评价
+     *
+     * @param departmentId 部门 ID
+     * @param interviewId 面试记录 ID
+     * @return 指定面试记录
+     */
+    @GetMapping("/{interviewId}")
+    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
+    public Result<DepartmentInterviewVO> findById(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable @Positive Long interviewId
+    ) {
+        return toResult(interviewService.findById(
+                departmentId, interviewId
+        ));
+    }
+
+    /**
+     * 补写或修改指定面试记录的评分、评价
+     *
+     * @param departmentId 部门 ID
+     * @param interviewId 面试记录 ID
+     * @param request 评分和评价
+     * @return 修改后的面试记录
+     */
+    @PutMapping("/{interviewId}/evaluation")
+    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
+    public Result<DepartmentInterviewVO> updateEvaluation(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable @Positive Long interviewId,
+            @Valid @RequestBody InterviewEvaluationRequest request
+    ) {
+        return toResult(interviewService.updateEvaluation(
+                departmentId, interviewId, request
         ));
     }
 
@@ -253,8 +401,36 @@ public class DepartmentInterviewController {
                 : Result.fail(result.error());
     }
 
+    /**
+     * 停止当前管理员的叫号，不影响面试场次和其他管理员
+     *
+     * @param departmentId 部门 ID
+     * @return 被释放并回到等待状态的用户
+     */
+    @PostMapping("/current/stop-calling")
+    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
+    public Result<InterviewQueueItemVO> stopCalling(
+            @PathVariable @Positive Long departmentId
+    ) {
+        ServiceResult<InterviewQueueItemVO> result =
+                interviewService.stopCalling(
+                        departmentId, StpUtil.getLoginIdAsString()
+                );
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
     private static Result<DepartmentInterviewVO> toResult(
             ServiceResult<DepartmentInterviewVO> result
+    ) {
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    private static Result<InterviewSessionVO> toSessionResult(
+            ServiceResult<InterviewSessionVO> result
     ) {
         return result.isSuccess()
                 ? Result.ok(result.data())

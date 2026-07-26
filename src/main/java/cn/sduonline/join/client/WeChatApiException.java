@@ -1,5 +1,8 @@
 package cn.sduonline.join.client;
 
+import lombok.Getter;
+
+@Getter
 public class WeChatApiException extends RuntimeException {
 
     private final Integer errorCode;
@@ -13,7 +16,4 @@ public class WeChatApiException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-    public Integer getErrorCode() {
-        return errorCode;
-    }
 }

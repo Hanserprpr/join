@@ -16,6 +16,7 @@ public record InterviewQueueItemVO(
         String interviewerCasId,
         String interviewerName,
         LocalDateTime startedAt,
-        LocalDateTime endedAt
+        LocalDateTime endedAt,
+        Boolean priority
 ) {
 }

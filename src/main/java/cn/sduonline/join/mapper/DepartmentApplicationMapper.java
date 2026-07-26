@@ -17,6 +17,7 @@ public interface DepartmentApplicationMapper {
             SELECT COUNT(1)
             FROM department_application a
             JOIN `user` u ON u.cas_id = a.cas_id
+            LEFT JOIN department_interview i ON i.application_id = a.id
             WHERE a.department_id = #{departmentId}
             <if test="keyword != null and keyword != ''">
               AND (u.name LIKE CONCAT('%', #{keyword}, '%')
@@ -29,6 +30,12 @@ public interface DepartmentApplicationMapper {
             </if>
             <if test="grade != null">
               AND u.grade = #{grade}
+            </if>
+            <if test="interviewed != null and interviewed">
+              AND i.ended_at IS NOT NULL
+            </if>
+            <if test="interviewed != null and interviewed == false">
+              AND (i.id IS NULL OR i.ended_at IS NULL)
             </if>
             </script>
             """)
@@ -36,16 +43,23 @@ public interface DepartmentApplicationMapper {
             @Param("departmentId") Long departmentId,
             @Param("keyword") String keyword,
             @Param("college") String college,
-            @Param("grade") Integer grade
+            @Param("grade") Integer grade,
+            @Param("interviewed") Boolean interviewed
     );
 
     @Select("""
             <script>
             SELECT a.id, a.department_id, a.cas_id,
                    u.name AS applicant_name, u.college, u.major, u.grade,
-                   u.phone, u.email, u.qq, a.status, a.submitted_at
+                   u.phone, u.email, u.qq, a.status, a.submitted_at,
+                   i.id AS interview_id,
+                   CASE WHEN i.ended_at IS NOT NULL
+                     THEN TRUE ELSE FALSE
+                   END AS interviewed,
+                   i.score
             FROM department_application a
             JOIN `user` u ON u.cas_id = a.cas_id
+            LEFT JOIN department_interview i ON i.application_id = a.id
             WHERE a.department_id = #{departmentId}
             <if test="keyword != null and keyword != ''">
               AND (u.name LIKE CONCAT('%', #{keyword}, '%')
@@ -59,7 +73,23 @@ public interface DepartmentApplicationMapper {
             <if test="grade != null">
               AND u.grade = #{grade}
             </if>
-            ORDER BY a.submitted_at DESC, a.id DESC
+            <if test="interviewed != null and interviewed">
+              AND i.ended_at IS NOT NULL
+            </if>
+            <if test="interviewed != null and interviewed == false">
+              AND (i.id IS NULL OR i.ended_at IS NULL)
+            </if>
+            <choose>
+              <when test="sortBy == 'score' and sortOrder == 'asc'">
+                ORDER BY i.score IS NULL ASC, i.score ASC, a.id DESC
+              </when>
+              <when test="sortBy == 'score' and sortOrder == 'desc'">
+                ORDER BY i.score IS NULL ASC, i.score DESC, a.id DESC
+              </when>
+              <otherwise>
+                ORDER BY a.submitted_at DESC, a.id DESC
+              </otherwise>
+            </choose>
             <if test="limit != null">
               LIMIT #{limit} OFFSET #{offset}
             </if>
@@ -70,6 +100,9 @@ public interface DepartmentApplicationMapper {
             @Param("keyword") String keyword,
             @Param("college") String college,
             @Param("grade") Integer grade,
+            @Param("interviewed") Boolean interviewed,
+            @Param("sortBy") String sortBy,
+            @Param("sortOrder") String sortOrder,
             @Param("offset") Integer offset,
             @Param("limit") Integer limit
     );
@@ -77,9 +110,15 @@ public interface DepartmentApplicationMapper {
     @Select("""
             SELECT a.id, a.department_id, a.cas_id,
                    u.name AS applicant_name, u.college, u.major, u.grade,
-                   u.phone, u.email, u.qq, a.status, a.submitted_at
+                   u.phone, u.email, u.qq, a.status, a.submitted_at,
+                   i.id AS interview_id,
+                   CASE WHEN i.ended_at IS NOT NULL
+                     THEN TRUE ELSE FALSE
+                   END AS interviewed,
+                   i.score
             FROM department_application a
             JOIN `user` u ON u.cas_id = a.cas_id
+            LEFT JOIN department_interview i ON i.application_id = a.id
             WHERE a.department_id = #{departmentId}
               AND a.id = #{applicationId}
             """)

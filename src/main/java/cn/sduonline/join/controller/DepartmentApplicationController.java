@@ -18,6 +18,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +50,9 @@ public class DepartmentApplicationController {
      * @param keyword 搜索关键词，可匹配姓名、学号、手机号和 QQ
      * @param college 学院筛选
      * @param grade 年级筛选
+     * @param interviewed 是否已完成面试
+     * @param sortBy 排序字段，支持报名时间和评分
+     * @param sortOrder 排序方向，支持升序和降序
      * @param page 页码，从 1 开始
      * @param size 每页数量
      * @return 分页报名信息
@@ -60,12 +64,18 @@ public class DepartmentApplicationController {
             @RequestParam(required = false) @Size(max = 100) String keyword,
             @RequestParam(required = false) @Size(max = 64) String college,
             @RequestParam(required = false) @Min(2000) @Max(2100) Integer grade,
+            @RequestParam(required = false) Boolean interviewed,
+            @RequestParam(defaultValue = "submittedAt")
+            @Pattern(regexp = "submittedAt|score") String sortBy,
+            @RequestParam(defaultValue = "desc")
+            @Pattern(regexp = "asc|desc") String sortOrder,
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         ServiceResult<PageVO<DepartmentApplicationSummaryVO>> result =
                 applicationService.findApplications(
-                        departmentId, keyword, college, grade, page, size
+                        departmentId, keyword, college, grade, interviewed,
+                        sortBy, sortOrder, page, size
                 );
         return result.isSuccess()
                 ? Result.ok(result.data())
@@ -101,6 +111,7 @@ public class DepartmentApplicationController {
      * @param keyword 搜索关键词，可匹配姓名、学号、手机号和 QQ
      * @param college 学院筛选
      * @param grade 年级筛选
+     * @param interviewed 是否已完成面试
      * @return Excel 文件或业务错误
      */
     @GetMapping("/{departmentId}/applications/export")
@@ -109,11 +120,12 @@ public class DepartmentApplicationController {
             @PathVariable @Positive Long departmentId,
             @RequestParam(required = false) @Size(max = 100) String keyword,
             @RequestParam(required = false) @Size(max = 64) String college,
-            @RequestParam(required = false) @Min(2000) @Max(2100) Integer grade
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer grade,
+            @RequestParam(required = false) Boolean interviewed
     ) {
         ServiceResult<java.util.List<DepartmentApplicationDetailVO>> result =
                 applicationService.findForExport(
-                        departmentId, keyword, college, grade
+                        departmentId, keyword, college, grade, interviewed
                 );
         if (!result.isSuccess()) {
             return ResponseEntity.badRequest().body(Result.fail(result.error()));

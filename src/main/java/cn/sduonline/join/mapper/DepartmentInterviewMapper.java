@@ -18,6 +18,7 @@ public interface DepartmentInterviewMapper {
                    c.cas_id AS candidate_cas_id,
                    candidate.name AS candidate_name,
                    c.queue_number, c.queue_order, c.pass_count, c.checked_in_at,
+                   c.priority,
                    CASE
                      WHEN own_interview.ended_at IS NOT NULL THEN 'COMPLETED'
                      WHEN own_active.interview_id IS NOT NULL THEN 'INTERVIEWING'
@@ -35,6 +36,8 @@ public interface DepartmentInterviewMapper {
                    END AS interviewer_name,
                    own_interview.started_at, own_interview.ended_at
             FROM department_check_in c
+            JOIN department_interview_session s
+              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             JOIN `user` candidate ON candidate.cas_id = c.cas_id
             LEFT JOIN department_interview own_interview
                    ON own_interview.check_in_id = c.id
@@ -46,7 +49,7 @@ public interface DepartmentInterviewMapper {
             LEFT JOIN `user` interviewer
                    ON interviewer.cas_id = own_interview.interviewer_cas_id
             WHERE c.department_id = #{departmentId}
-            ORDER BY c.queue_order ASC
+            ORDER BY c.priority DESC, c.queue_order ASC
             """)
     java.util.List<InterviewQueueItemVO> selectQueue(
             @Param("departmentId") Long departmentId
@@ -57,6 +60,7 @@ public interface DepartmentInterviewMapper {
                    c.cas_id AS candidate_cas_id,
                    candidate.name AS candidate_name,
                    c.queue_number, c.queue_order, c.pass_count, c.checked_in_at,
+                   c.priority,
                    CASE
                      WHEN own_interview.ended_at IS NOT NULL THEN 'COMPLETED'
                      WHEN own_active.interview_id IS NOT NULL THEN 'INTERVIEWING'
@@ -66,6 +70,8 @@ public interface DepartmentInterviewMapper {
                    END AS status,
                    own_interview.started_at, own_interview.ended_at
             FROM department_check_in c
+            JOIN department_interview_session s
+              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             JOIN `user` candidate ON candidate.cas_id = c.cas_id
             LEFT JOIN department_interview own_interview
                    ON own_interview.check_in_id = c.id
@@ -85,6 +91,8 @@ public interface DepartmentInterviewMapper {
     @Select("""
             SELECT COUNT(1)
             FROM department_check_in ahead
+            JOIN department_interview_session s
+              ON s.id = ahead.session_id AND s.status = 'PUBLISHED'
             LEFT JOIN department_interview own_interview
                    ON own_interview.check_in_id = ahead.id
             LEFT JOIN department_interview_active other_active
@@ -92,7 +100,15 @@ public interface DepartmentInterviewMapper {
                   AND other_active.interview_id
                       <> COALESCE(own_interview.id, -1)
             WHERE ahead.department_id = #{departmentId}
-              AND ahead.queue_order < #{queueOrder}
+              AND (
+                (#{priority} = TRUE
+                  AND ahead.priority = TRUE
+                  AND ahead.queue_order < #{queueOrder})
+                OR
+                (#{priority} = FALSE
+                  AND (ahead.priority = TRUE
+                    OR ahead.queue_order < #{queueOrder}))
+              )
               AND (
                 own_interview.id IS NULL
                 OR own_interview.ended_at IS NULL
@@ -104,13 +120,17 @@ public interface DepartmentInterviewMapper {
             """)
     int countPeopleAhead(
             @Param("departmentId") Long departmentId,
-            @Param("queueOrder") Long queueOrder
+            @Param("queueOrder") Long queueOrder,
+            @Param("priority") Boolean priority
     );
 
     @Select("""
             SELECT i.queue_number
             FROM department_interview_active a
             JOIN department_interview i ON i.id = a.interview_id
+            JOIN department_check_in c ON c.id = i.check_in_id
+            JOIN department_interview_session s
+              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             WHERE i.department_id = #{departmentId}
             ORDER BY i.queue_number ASC
             """)
@@ -122,7 +142,7 @@ public interface DepartmentInterviewMapper {
             SELECT i.id, i.department_id, i.check_in_id, i.application_id,
                    i.candidate_cas_id, u.name AS candidate_name,
                    i.interviewer_cas_id, i.queue_number,
-                   i.started_at, i.ended_at
+                   i.started_at, i.ended_at, i.score, i.evaluation
             FROM department_interview_active a
             JOIN department_interview i ON i.id = a.interview_id
             JOIN `user` u ON u.cas_id = i.candidate_cas_id
@@ -133,10 +153,27 @@ public interface DepartmentInterviewMapper {
     );
 
     @Select("""
+            SELECT i.id, i.department_id, i.check_in_id, i.application_id,
+                   i.candidate_cas_id, u.name AS candidate_name,
+                   i.interviewer_cas_id, i.queue_number,
+                   i.started_at, i.ended_at, i.score, i.evaluation
+            FROM department_interview i
+            JOIN `user` u ON u.cas_id = i.candidate_cas_id
+            WHERE i.id = #{interviewId}
+              AND i.department_id = #{departmentId}
+            """)
+    DepartmentInterview selectByIdAndDepartment(
+            @Param("departmentId") Long departmentId,
+            @Param("interviewId") Long interviewId
+    );
+
+    @Select("""
             SELECT c.id AS check_in_id, c.department_id, c.application_id,
                    c.cas_id AS candidate_cas_id, u.name AS candidate_name,
                    c.queue_number
             FROM department_check_in c
+            JOIN department_interview_session s
+              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             JOIN `user` u ON u.cas_id = c.cas_id
             LEFT JOIN department_interview i ON i.check_in_id = c.id
             LEFT JOIN department_interview_active a
@@ -144,7 +181,7 @@ public interface DepartmentInterviewMapper {
             WHERE c.department_id = #{departmentId}
               AND i.id IS NULL
               AND a.interview_id IS NULL
-            ORDER BY c.queue_order ASC
+            ORDER BY c.priority DESC, c.queue_order ASC
             LIMIT 1
             FOR UPDATE SKIP LOCKED
             """)
@@ -174,8 +211,9 @@ public interface DepartmentInterviewMapper {
     );
 
     @Select("""
-            SELECT id, department_id, application_id, cas_id,
-                   checked_in_at, queue_number, queue_order, pass_count
+            SELECT id, department_id, session_id, application_id, cas_id,
+                   checked_in_at, queue_number, queue_order, pass_count,
+                   priority
             FROM department_check_in
             WHERE id = #{checkInId}
             FOR UPDATE
@@ -185,13 +223,16 @@ public interface DepartmentInterviewMapper {
     );
 
     @Select("""
-            SELECT c.id, c.department_id, c.application_id, c.cas_id,
-                   c.checked_in_at, c.queue_number, c.queue_order, c.pass_count
+            SELECT c.id, c.department_id, c.session_id, c.application_id,
+                   c.cas_id, c.checked_in_at, c.queue_number, c.queue_order,
+                   c.pass_count, c.priority
             FROM department_check_in c
+            JOIN department_interview_session s
+              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             LEFT JOIN department_interview i ON i.check_in_id = c.id
             WHERE c.department_id = #{departmentId}
               AND i.id IS NULL
-            ORDER BY c.queue_order ASC
+            ORDER BY c.priority DESC, c.queue_order ASC
             FOR UPDATE
             """)
     java.util.List<cn.sduonline.join.data.po.DepartmentCheckIn>
@@ -232,12 +273,30 @@ public interface DepartmentInterviewMapper {
 
     @Update("""
             UPDATE department_interview
-            SET ended_at = #{endedAt}
+            SET ended_at = #{endedAt},
+                score = #{score},
+                evaluation = #{evaluation}
             WHERE id = #{id} AND ended_at IS NULL
             """)
     int finishInterview(
             @Param("id") Long id,
-            @Param("endedAt") java.time.LocalDateTime endedAt
+            @Param("endedAt") java.time.LocalDateTime endedAt,
+            @Param("score") Integer score,
+            @Param("evaluation") String evaluation
+    );
+
+    @Update("""
+            UPDATE department_interview
+            SET score = #{score},
+                evaluation = #{evaluation}
+            WHERE id = #{id}
+              AND department_id = #{departmentId}
+            """)
+    int updateEvaluation(
+            @Param("departmentId") Long departmentId,
+            @Param("id") Long id,
+            @Param("score") Integer score,
+            @Param("evaluation") String evaluation
     );
 
     @Delete("""

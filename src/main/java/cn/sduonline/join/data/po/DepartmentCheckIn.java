@@ -7,10 +7,12 @@ import lombok.Data;
 public class DepartmentCheckIn {
     private Long id;
     private Long departmentId;
+    private Long sessionId;
     private Long applicationId;
     private String casId;
     private LocalDateTime checkedInAt;
     private Integer queueNumber;
     private Long queueOrder;
     private Integer passCount;
+    private Boolean priority;
 }

@@ -6,15 +6,18 @@ import java.time.LocalDateTime;
 public record CheckInVO(
         Long id,
         Long departmentId,
+        Long sessionId,
         Long applicationId,
         LocalDateTime checkedInAt,
-        Integer queueNumber
+        Integer queueNumber,
+        Boolean priority
 ) {
     public static CheckInVO from(DepartmentCheckIn source) {
         return new CheckInVO(
                 source.getId(), source.getDepartmentId(),
-                source.getApplicationId(), source.getCheckedInAt(),
-                source.getQueueNumber()
+                source.getSessionId(), source.getApplicationId(),
+                source.getCheckedInAt(), source.getQueueNumber(),
+                source.getPriority()
         );
     }
 }

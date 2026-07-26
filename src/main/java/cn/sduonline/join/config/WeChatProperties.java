@@ -1,8 +1,12 @@
 package cn.sduonline.join.config;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+@Setter
+@Getter
 @Component
 @ConfigurationProperties(prefix = "app.wechat")
 public class WeChatProperties {
@@ -16,72 +20,10 @@ public class WeChatProperties {
     private long bindingStateTtlSeconds = 600;
     private String bindingTemplateId =
             "";
+    private String interviewCallTemplateId =
+            "gmRpMS8vWvQuR02-tcVMp-lBRyH_qKelfziA3yKiRyY";
     private String systemName = "学生在线纳新系统";
     private long tokenRefreshAheadSeconds = 300;
-
-    public String getAppId() {
-        return appId;
-    }
-
-    public void setAppId(String appId) {
-        this.appId = appId;
-    }
-
-    public String getAppSecret() {
-        return appSecret;
-    }
-
-    public void setAppSecret(String appSecret) {
-        this.appSecret = appSecret;
-    }
-
-    public long getTokenRefreshAheadSeconds() {
-        return tokenRefreshAheadSeconds;
-    }
-
-    public String getOauthCallbackUrl() {
-        return oauthCallbackUrl;
-    }
-
-    public void setOauthCallbackUrl(String oauthCallbackUrl) {
-        this.oauthCallbackUrl = oauthCallbackUrl;
-    }
-
-    public String getBindingResultUrl() {
-        return bindingResultUrl;
-    }
-
-    public void setBindingResultUrl(String bindingResultUrl) {
-        this.bindingResultUrl = bindingResultUrl;
-    }
-
-    public long getBindingStateTtlSeconds() {
-        return bindingStateTtlSeconds;
-    }
-
-    public void setBindingStateTtlSeconds(long bindingStateTtlSeconds) {
-        this.bindingStateTtlSeconds = bindingStateTtlSeconds;
-    }
-
-    public String getBindingTemplateId() {
-        return bindingTemplateId;
-    }
-
-    public void setBindingTemplateId(String bindingTemplateId) {
-        this.bindingTemplateId = bindingTemplateId;
-    }
-
-    public String getSystemName() {
-        return systemName;
-    }
-
-    public void setSystemName(String systemName) {
-        this.systemName = systemName;
-    }
-
-    public void setTokenRefreshAheadSeconds(long tokenRefreshAheadSeconds) {
-        this.tokenRefreshAheadSeconds = tokenRefreshAheadSeconds;
-    }
 
     public void validate() {
         if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
