@@ -135,22 +135,29 @@ class DepartmentApplicationServiceTest {
                 cn.sduonline.join.data.enums.ApplicationStatus.SUBMITTED
         );
         application.setSubmittedAt(LocalDateTime.now());
+        application.setInterviewId(300L);
+        application.setInterviewed(true);
+        application.setScore(5);
         when(applicationMapper.countApplications(
-                12L, "张三", "软件学院", 2024
+                12L, "张三", "软件学院", 2024, true
         )).thenReturn(1L);
         when(applicationMapper.selectApplications(
-                12L, "张三", "软件学院", 2024, 0, 20
+                12L, "张三", "软件学院", 2024,
+                true, "score", "desc", 0, 20
         ))
                 .thenReturn(List.of(application));
 
         var result = service.findApplications(
-                12L, " 张三 ", " 软件学院 ", 2024, 1, 20
+                12L, " 张三 ", " 软件学院 ", 2024,
+                true, "score", "desc", 1, 20
         );
 
         assertTrue(result.isSuccess());
         assertEquals(1L, result.data().total());
         assertEquals("张三", result.data().items().getFirst().applicantName());
         assertEquals("软件学院", result.data().items().getFirst().college());
+        assertTrue(result.data().items().getFirst().interviewed());
+        assertEquals(5, result.data().items().getFirst().score());
     }
 
     @Test

@@ -47,6 +47,9 @@ public class DepartmentApplicationService {
             String keyword,
             String college,
             Integer grade,
+            Boolean interviewed,
+            String sortBy,
+            String sortOrder,
             int page,
             int size
     ) {
@@ -56,11 +59,13 @@ public class DepartmentApplicationService {
         String normalizedKeyword = trimToNull(keyword);
         String normalizedCollege = trimToNull(college);
         long total = applicationMapper.countApplications(
-                departmentId, normalizedKeyword, normalizedCollege, grade
+                departmentId, normalizedKeyword, normalizedCollege, grade,
+                interviewed
         );
         List<DepartmentApplicationSummaryVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, normalizedKeyword, normalizedCollege, grade,
+                        interviewed, sortBy, sortOrder,
                         (page - 1) * size, size
                 )
                 .stream()
@@ -90,7 +95,8 @@ public class DepartmentApplicationService {
             Long departmentId,
             String keyword,
             String college,
-            Integer grade
+            Integer grade,
+            Boolean interviewed
     ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
@@ -98,7 +104,7 @@ public class DepartmentApplicationService {
         List<DepartmentApplicationDetailVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, trimToNull(keyword), trimToNull(college),
-                        grade, null, null
+                        grade, interviewed, null, null, null, null
                 )
                 .stream()
                 .map(this::toDetailVO)

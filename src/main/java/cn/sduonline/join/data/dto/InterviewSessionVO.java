@@ -1,0 +1,46 @@
+package cn.sduonline.join.data.dto;
+
+import cn.sduonline.join.data.enums.InterviewSessionStatus;
+import cn.sduonline.join.data.po.DepartmentInterviewSession;
+import java.time.LocalDateTime;
+
+/**
+ * 面试场次信息
+ *
+ * @param id 面试场次 ID
+ * @param departmentId 部门 ID
+ * @param startsAt 面试开始时间
+ * @param endsAt 面试结束时间
+ * @param location 面试地点
+ * @param checkInLimit 取号人数上限
+ * @param status 场次状态
+ * @param publishedAt 发布时间
+ * @param endedAt 实际结束时间
+ */
+public record InterviewSessionVO(
+        Long id,
+        Long departmentId,
+        LocalDateTime startsAt,
+        LocalDateTime endsAt,
+        String location,
+        Integer checkInLimit,
+        InterviewSessionStatus status,
+        LocalDateTime publishedAt,
+        LocalDateTime endedAt
+) {
+    /**
+     * 将面试场次实体转换为返回对象
+     *
+     * @param source 面试场次实体
+     * @return 面试场次返回对象
+     */
+    public static InterviewSessionVO from(DepartmentInterviewSession source) {
+        return new InterviewSessionVO(
+                source.getId(), source.getDepartmentId(),
+                source.getStartsAt(), source.getEndsAt(),
+                source.getLocation(), source.getCheckInLimit(),
+                source.getStatus(), source.getPublishedAt(),
+                source.getEndedAt()
+        );
+    }
+}

@@ -15,4 +15,6 @@ public class DepartmentInterview {
     private Integer queueNumber;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
+    private Integer score;
+    private String evaluation;
 }

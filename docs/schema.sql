@@ -166,9 +166,32 @@ CREATE TABLE `department_application_answer_option` (
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='报名答案所选选项';
 
+CREATE TABLE `department_interview_session` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `department_id` BIGINT NOT NULL,
+  `starts_at` DATETIME NOT NULL,
+  `ends_at` DATETIME NOT NULL,
+  `location` VARCHAR(255) NOT NULL,
+  `check_in_limit` INT NOT NULL,
+  `status` VARCHAR(16) NOT NULL DEFAULT 'DRAFT'
+    COMMENT 'DRAFT/PUBLISHED/ENDED',
+  `published_at` DATETIME NULL,
+  `ended_at` DATETIME NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_interview_session_department_status`
+    (`department_id`, `status`, `starts_at`),
+  CONSTRAINT `fk_interview_session_department`
+    FOREIGN KEY (`department_id`) REFERENCES `department` (`id`),
+  CONSTRAINT `chk_interview_session_limit`
+    CHECK (`check_in_limit` > 0),
+  CONSTRAINT `chk_interview_session_time`
+    CHECK (`ends_at` > `starts_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门面试场次';
+
 CREATE TABLE `department_check_in` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `department_id` BIGINT NOT NULL,
+  `session_id` BIGINT NOT NULL,
   `application_id` BIGINT NOT NULL,
   `cas_id` VARCHAR(32)
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -176,10 +199,12 @@ CREATE TABLE `department_check_in` (
   `queue_number` INT NOT NULL COMMENT '部门内等待叫号序号',
   `queue_order` BIGINT NOT NULL COMMENT '当前队列排序位置',
   `pass_count` INT NOT NULL DEFAULT 0 COMMENT '在本部门累计过号次数',
+  `priority` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为顺延优先签到',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_department_check_in_application` (`application_id`),
+  UNIQUE KEY `uk_department_check_in_session_application`
+    (`session_id`, `application_id`),
   UNIQUE KEY `uk_department_check_in_queue`
-    (`department_id`, `queue_number`),
+    (`session_id`, `queue_number`),
   KEY `idx_department_check_in_department_time`
     (`department_id`, `checked_in_at`),
   KEY `idx_department_check_in_queue_order`
@@ -187,6 +212,8 @@ CREATE TABLE `department_check_in` (
   KEY `idx_department_check_in_user` (`cas_id`),
   CONSTRAINT `fk_check_in_department`
     FOREIGN KEY (`department_id`) REFERENCES `department` (`id`),
+  CONSTRAINT `fk_check_in_session`
+    FOREIGN KEY (`session_id`) REFERENCES `department_interview_session` (`id`),
   CONSTRAINT `fk_check_in_application`
     FOREIGN KEY (`application_id`) REFERENCES `department_application` (`id`),
   CONSTRAINT `fk_check_in_user`
@@ -194,11 +221,11 @@ CREATE TABLE `department_check_in` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门现场签到';
 
 CREATE TABLE `department_check_in_sequence` (
-  `department_id` BIGINT NOT NULL,
+  `session_id` BIGINT NOT NULL,
   `next_number` INT NOT NULL DEFAULT 1,
-  PRIMARY KEY (`department_id`),
-  CONSTRAINT `fk_check_in_sequence_department`
-    FOREIGN KEY (`department_id`) REFERENCES `department` (`id`)
+  PRIMARY KEY (`session_id`),
+  CONSTRAINT `fk_check_in_sequence_session`
+    FOREIGN KEY (`session_id`) REFERENCES `department_interview_session` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门签到叫号序列';
 
 CREATE TABLE `department_interview` (
@@ -213,7 +240,11 @@ CREATE TABLE `department_interview` (
   `queue_number` INT NOT NULL,
   `started_at` DATETIME NOT NULL,
   `ended_at` DATETIME NULL,
+  `score` TINYINT UNSIGNED NULL COMMENT '面试评分，1-5分',
+  `evaluation` VARCHAR(2000) NULL COMMENT '面试评价',
   PRIMARY KEY (`id`),
+  CONSTRAINT `chk_interview_score`
+    CHECK (`score` IS NULL OR (`score` BETWEEN 1 AND 5)),
   UNIQUE KEY `uk_department_interview_check_in` (`check_in_id`),
   KEY `idx_department_interview_department` (`department_id`, `started_at`),
   KEY `idx_department_interview_candidate` (`candidate_cas_id`),
@@ -251,6 +282,33 @@ CREATE TABLE `department_interview_active` (
   CONSTRAINT `fk_active_interview_candidate`
     FOREIGN KEY (`candidate_cas_id`) REFERENCES `user` (`cas_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='当前进行中的面试占用';
+
+CREATE TABLE `department_interview_carryover` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `department_id` BIGINT NOT NULL,
+  `application_id` BIGINT NOT NULL,
+  `source_session_id` BIGINT NOT NULL,
+  `target_session_id` BIGINT NULL,
+  `status` VARCHAR(16) NOT NULL DEFAULT 'PENDING'
+    COMMENT 'PENDING/USED/CANCELLED',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `used_at` DATETIME NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_carryover_source_application`
+    (`source_session_id`, `application_id`),
+  KEY `idx_carryover_pending`
+    (`department_id`, `application_id`, `status`),
+  CONSTRAINT `fk_carryover_department`
+    FOREIGN KEY (`department_id`) REFERENCES `department` (`id`),
+  CONSTRAINT `fk_carryover_application`
+    FOREIGN KEY (`application_id`) REFERENCES `department_application` (`id`),
+  CONSTRAINT `fk_carryover_source_session`
+    FOREIGN KEY (`source_session_id`)
+      REFERENCES `department_interview_session` (`id`),
+  CONSTRAINT `fk_carryover_target_session`
+    FOREIGN KEY (`target_session_id`)
+      REFERENCES `department_interview_session` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='未叫到用户的顺延资格';
 
 CREATE TABLE `role` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,

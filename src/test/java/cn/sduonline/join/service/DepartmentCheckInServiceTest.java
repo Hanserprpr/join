@@ -14,6 +14,8 @@ import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentApplicationMapper;
 import cn.sduonline.join.mapper.DepartmentCheckInMapper;
+import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
+import cn.sduonline.join.data.po.DepartmentInterviewSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,7 @@ class DepartmentCheckInServiceTest {
     @Mock AdminOrganizationMapper organizationMapper;
     @Mock DepartmentApplicationMapper applicationMapper;
     @Mock DepartmentCheckInMapper checkInMapper;
+    @Mock DepartmentInterviewSessionMapper sessionMapper;
     @Mock StringRedisTemplate redisTemplate;
     @Mock ValueOperations<String, String> valueOperations;
     @Mock InterviewSseService interviewSseService;
@@ -38,6 +41,7 @@ class DepartmentCheckInServiceTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         service = new DepartmentCheckInService(
                 organizationMapper, applicationMapper, checkInMapper,
+                sessionMapper,
                 redisTemplate, new AppProperties(), interviewSseService
         );
     }
@@ -57,7 +61,9 @@ class DepartmentCheckInServiceTest {
     @Test
     void rejectsUserWhoDidNotApplyToDepartment() {
         when(valueOperations.get("join:check-in:token:valid"))
-                .thenReturn("12");
+                .thenReturn("12:30");
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
         when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
                 .thenReturn(null);
 
@@ -70,13 +76,16 @@ class DepartmentCheckInServiceTest {
     @Test
     void createsOneCheckInForRegisteredUser() {
         when(valueOperations.get("join:check-in:token:valid"))
-                .thenReturn("12");
+                .thenReturn("12:30");
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
         when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
                 .thenReturn(application);
-        when(checkInMapper.selectByApplicationId(100L)).thenReturn(null);
-        when(checkInMapper.selectNextNumberForUpdate(12L)).thenReturn(7);
+        when(checkInMapper.selectBySessionAndApplication(30L, 100L))
+                .thenReturn(null);
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(7);
         org.mockito.Mockito.doAnswer(invocation -> {
             DepartmentCheckIn checkIn = invocation.getArgument(0);
             checkIn.setId(200L);
@@ -88,16 +97,19 @@ class DepartmentCheckInServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(200L, result.data().id());
         assertEquals(12L, result.data().departmentId());
+        assertEquals(30L, result.data().sessionId());
         assertEquals(100L, result.data().applicationId());
         assertEquals(7, result.data().queueNumber());
-        verify(checkInMapper).initializeSequence(12L);
-        verify(checkInMapper).incrementNextNumber(12L);
+        verify(checkInMapper).initializeSequence(30L);
+        verify(checkInMapper).incrementNextNumber(30L);
     }
 
     @Test
     void repeatedScanReturnsExistingCheckIn() {
         when(valueOperations.get("join:check-in:token:valid"))
-                .thenReturn("12");
+                .thenReturn("12:30");
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
         when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
@@ -105,13 +117,65 @@ class DepartmentCheckInServiceTest {
         DepartmentCheckIn existing = new DepartmentCheckIn();
         existing.setId(200L);
         existing.setDepartmentId(12L);
+        existing.setSessionId(30L);
         existing.setApplicationId(100L);
-        when(checkInMapper.selectByApplicationId(100L)).thenReturn(existing);
+        when(checkInMapper.selectBySessionAndApplication(30L, 100L))
+                .thenReturn(existing);
 
         var result = service.checkIn("valid", "20240001");
 
         assertTrue(result.isSuccess());
         assertEquals(200L, result.data().id());
         verify(checkInMapper, never()).insert(any());
+    }
+
+    @Test
+    void rejectsCheckInWhenSessionLimitIsReached() {
+        when(valueOperations.get("join:check-in:token:valid"))
+                .thenReturn("12:30");
+        DepartmentInterviewSession session = openSession();
+        session.setCheckInLimit(1);
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session);
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        when(sessionMapper.countCheckIns(30L)).thenReturn(1);
+
+        var result = service.checkIn("valid", "20240001");
+
+        assertEquals(BizCode.INTERVIEW_SESSION_FULL, result.error());
+        verify(checkInMapper, never()).insert(any());
+    }
+
+    @Test
+    void marksCarryoverCandidateAsPriorityOnlyAfterCheckIn() {
+        when(valueOperations.get("join:check-in:token:valid"))
+                .thenReturn("12:30");
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        when(sessionMapper.selectPendingCarryoverForUpdate(
+                12L, 100L, 30L
+        )).thenReturn(900L);
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(1);
+
+        var result = service.checkIn("valid", "20240001");
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.data().priority());
+        verify(sessionMapper).useCarryover(900L, 30L);
+    }
+
+    private static DepartmentInterviewSession openSession() {
+        DepartmentInterviewSession session = new DepartmentInterviewSession();
+        session.setId(30L);
+        session.setDepartmentId(12L);
+        session.setCheckInLimit(50);
+        return session;
     }
 }

@@ -94,6 +94,16 @@ public enum BizCode {
     CHECK_IN_NOT_FOUND(140019, "尚未在该部门签到"),
     /** 当前用户已达到部门允许的最大过号次数 */
     INTERVIEW_PASS_LIMIT_REACHED(140020, "已达到最大过号次数"),
+    /** 面试记录不存在。 */
+    INTERVIEW_NOT_FOUND(140021, "面试记录不存在"),
+    /** 面试场次不存在。 */
+    INTERVIEW_SESSION_NOT_FOUND(140022, "面试场次不存在"),
+    /** 面试场次状态不允许当前操作。 */
+    INTERVIEW_SESSION_STATE_INVALID(140023, "面试场次状态不允许当前操作"),
+    /** 当前面试场次签到人数已满。 */
+    INTERVIEW_SESSION_FULL(140024, "当前面试场次取号人数已满"),
+    /** 当前没有开放签到的面试场次。 */
+    INTERVIEW_SESSION_NOT_OPEN(140025, "当前没有开放签到的面试场次"),
 
     // ---------- 15xxxx 外部依赖错误 ----------
     /** 第三方服务不可用。 */

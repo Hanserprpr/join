@@ -12,11 +12,15 @@ import cn.sduonline.join.data.enums.InterviewQueueStatus;
 import cn.sduonline.join.data.dto.InterviewQueueItemVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
+import cn.sduonline.join.data.dto.InterviewEvaluationRequest;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentInterview;
+import cn.sduonline.join.data.po.User;
+import cn.sduonline.join.config.WeChatProperties;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
+import cn.sduonline.join.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +39,9 @@ class DepartmentInterviewServiceTest {
     @Mock TransactionTemplate transactionTemplate;
     @Mock TransactionStatus transactionStatus;
     @Mock InterviewSseService interviewSseService;
+    @Mock UserMapper userMapper;
+    @Mock WeChatTemplateMessageService templateMessageService;
+    private WeChatProperties weChatProperties;
     private DepartmentInterviewService service;
 
     @BeforeEach
@@ -44,9 +51,11 @@ class DepartmentInterviewServiceTest {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(transactionStatus);
         });
+        weChatProperties = new WeChatProperties();
         service = new DepartmentInterviewService(
                 organizationMapper, interviewMapper, transactionTemplate,
-                interviewSseService
+                interviewSseService, userMapper, templateMessageService,
+                weChatProperties
         );
     }
 
@@ -68,6 +77,44 @@ class DepartmentInterviewServiceTest {
         assertEquals(7, result.data().queueNumber());
         assertEquals("admin01", result.data().interviewerCasId());
         verify(interviewMapper).insertActive(next);
+    }
+
+    @Test
+    void notifiesCalledCandidateUsingInterviewerNameAsWindow() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentInterview next = waitingCandidate();
+        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
+        User candidate = user(
+                "20240001", "张三", "candidate-openid"
+        );
+        User interviewer = user("admin01", "李老师", null);
+        when(userMapper.selectById("20240001")).thenReturn(candidate);
+        when(userMapper.selectById("admin01")).thenReturn(interviewer);
+
+        var result = service.callNext(12L, "admin01");
+
+        assertTrue(result.isSuccess());
+        verify(templateMessageService).send(
+                org.mockito.ArgumentMatchers.eq("candidate-openid"),
+                org.mockito.ArgumentMatchers.eq(
+                        weChatProperties.getInterviewCallTemplateId()
+                ),
+                org.mockito.ArgumentMatchers.eq(java.util.Map.of(
+                        "thing2",
+                        new cn.sduonline.join.client.WeChatApiClient.TemplateData(
+                                "张三"
+                        ),
+                        "character_string14",
+                        new cn.sduonline.join.client.WeChatApiClient.TemplateData(
+                                "7"
+                        ),
+                        "thing9",
+                        new cn.sduonline.join.client.WeChatApiClient.TemplateData(
+                                "李老师"
+                        )
+                ))
+        );
     }
 
     @Test
@@ -104,13 +151,60 @@ class DepartmentInterviewServiceTest {
         when(interviewMapper.selectActiveByInterviewer("admin01"))
                 .thenReturn(active);
 
-        var result = service.finish(12L, "admin01");
+        var result = service.finish(
+                12L, "admin01",
+                new InterviewEvaluationRequest(5, " 表现优秀 ")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(5, result.data().score());
+        assertEquals("表现优秀", result.data().evaluation());
+        verify(interviewMapper).finishInterview(
+                org.mockito.ArgumentMatchers.eq(300L), any(),
+                org.mockito.ArgumentMatchers.eq(5),
+                org.mockito.ArgumentMatchers.eq("表现优秀")
+        );
+        verify(interviewMapper).deleteActive(300L);
+    }
+
+    @Test
+    void supportsFinishingWithoutEvaluationForCompatibility() {
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setInterviewerCasId("admin01");
+        when(interviewMapper.selectActiveByInterviewer("admin01"))
+                .thenReturn(active);
+
+        var result = service.finish(12L, "admin01", null);
 
         assertTrue(result.isSuccess());
         verify(interviewMapper).finishInterview(
-                org.mockito.ArgumentMatchers.eq(300L), any()
+                org.mockito.ArgumentMatchers.eq(300L), any(),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.isNull()
         );
-        verify(interviewMapper).deleteActive(300L);
+    }
+
+    @Test
+    void updatesEvaluationAndReturnsSavedInterview() {
+        DepartmentInterview saved = waitingCandidate();
+        saved.setId(300L);
+        saved.setScore(4);
+        saved.setEvaluation("沟通清晰");
+        when(interviewMapper.updateEvaluation(
+                12L, 300L, 4, "沟通清晰"
+        )).thenReturn(1);
+        when(interviewMapper.selectByIdAndDepartment(12L, 300L))
+                .thenReturn(saved);
+
+        var result = service.updateEvaluation(
+                12L, 300L,
+                new InterviewEvaluationRequest(4, " 沟通清晰 ")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(4, result.data().score());
+        assertEquals("沟通清晰", result.data().evaluation());
     }
 
     @Test
@@ -120,7 +214,7 @@ class DepartmentInterviewServiceTest {
         InterviewQueueItemVO item = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三", 7, 7L, 0, null,
                 InterviewQueueStatus.INTERVIEWING_ELSEWHERE,
-                null, null, null, null
+                null, null, null, null, false
         );
         when(interviewMapper.selectQueue(12L)).thenReturn(List.of(item));
 
@@ -142,11 +236,12 @@ class DepartmentInterviewServiceTest {
         InterviewQueueItemVO item = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三", 12, 12L, 0, null,
                 InterviewQueueStatus.WAITING,
-                null, null, null, null
+                null, null, null, null, false
         );
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(item);
-        when(interviewMapper.countPeopleAhead(12L, 12L)).thenReturn(3);
+        when(interviewMapper.countPeopleAhead(12L, 12L, false))
+                .thenReturn(3);
         when(interviewMapper.selectInterviewingQueueNumbers(12L))
                 .thenReturn(List.of(8, 9));
 
@@ -168,7 +263,9 @@ class DepartmentInterviewServiceTest {
         var result = service.findMyQueueStatus(12L, "20240001");
 
         assertEquals(BizCode.CHECK_IN_NOT_FOUND, result.error());
-        verify(interviewMapper, never()).countPeopleAhead(any(), any());
+        verify(interviewMapper, never()).countPeopleAhead(
+                any(), any(), any()
+        );
     }
 
     @Test
@@ -191,7 +288,7 @@ class DepartmentInterviewServiceTest {
         InterviewQueueItemVO moved = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三",
                 7, 4L, 1, null, InterviewQueueStatus.WAITING,
-                null, null, null, null
+                null, null, null, null, false
         );
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(moved);
@@ -222,6 +319,45 @@ class DepartmentInterviewServiceTest {
 
         assertEquals(BizCode.INTERVIEW_PASS_LIMIT_REACHED, result.error());
         verify(interviewMapper, never()).deleteActive(any());
+    }
+
+    @Test
+    void stoppingCallingReleasesCandidateWithoutChangingQueueOrPassCount() {
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setInterviewerCasId("admin01");
+        when(interviewMapper.selectActiveByInterviewer("admin01"))
+                .thenReturn(active);
+        InterviewQueueItemVO waiting = new InterviewQueueItemVO(
+                200L, 100L, "20240001", "张三",
+                7, 1L, 0, null, InterviewQueueStatus.WAITING,
+                null, null, null, null, false
+        );
+        when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
+                .thenReturn(waiting);
+
+        var result = service.stopCalling(12L, "admin01");
+
+        assertTrue(result.isSuccess());
+        assertEquals(InterviewQueueStatus.WAITING, result.data().status());
+        assertEquals(0, result.data().passCount());
+        assertEquals(1L, result.data().queueOrder());
+        verify(interviewMapper).deleteActive(300L);
+        verify(interviewMapper).deleteInterview(300L);
+        verify(interviewMapper, never()).updateCheckInQueue(any());
+        verify(interviewSseService).publish(12L);
+    }
+
+    @Test
+    void rejectsStoppingCallingWhenAdministratorHasNoActiveInterview() {
+        when(interviewMapper.selectActiveByInterviewer("admin01"))
+                .thenReturn(null);
+
+        var result = service.stopCalling(12L, "admin01");
+
+        assertEquals(BizCode.INTERVIEW_NOT_ACTIVE, result.error());
+        verify(interviewMapper, never()).deleteActive(any());
+        verify(interviewSseService, never()).publish(any());
     }
 
     @Test
@@ -276,5 +412,17 @@ class DepartmentInterviewServiceTest {
         checkIn.setQueueOrder(queueOrder);
         checkIn.setPassCount(passCount);
         return checkIn;
+    }
+
+    private static User user(
+            String casId,
+            String name,
+            String openId
+    ) {
+        User user = new User();
+        user.setCasId(casId);
+        user.setName(name);
+        user.setWechatOpenid(openId);
+        return user;
     }
 }
