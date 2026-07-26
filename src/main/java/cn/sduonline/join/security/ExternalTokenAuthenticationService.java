@@ -37,7 +37,7 @@ public class ExternalTokenAuthenticationService {
     public ExternalStudentIdentity authenticate(String rawToken) {
         if (!StringUtils.hasText(rawToken)) {
             throw NotLoginException.newInstance(
-                    "external", null, "未提供 Token", NotLoginException.NOT_TOKEN);
+                    "external", NotLoginException.NOT_TOKEN, "未提供 Token", null);
         }
 
         String cacheKey = CACHE_PREFIX + sha256(rawToken);
@@ -59,8 +59,8 @@ public class ExternalTokenAuthenticationService {
                     abbreviatedBody(ex)
             );
             throw NotLoginException.newInstance(
-                    "external", rawToken, "Token 无效或已过期",
-                    NotLoginException.INVALID_TOKEN);
+                    "external", NotLoginException.INVALID_TOKEN,
+                    "Token 无效或已过期", null);
         } catch (FeignException ex) {
             log.error(
                     "External identity request failed, status={}, response={}",
@@ -71,7 +71,7 @@ public class ExternalTokenAuthenticationService {
             throw new ExternalIdentityUnavailableException("外部身份服务暂时不可用", ex);
         }
 
-        validate(identity, rawToken);
+        validate(identity);
         userService.syncFromExternal(identity);
         writeCache(cacheKey, identity);
         return identity;
@@ -103,7 +103,7 @@ public class ExternalTokenAuthenticationService {
         );
     }
 
-    private void validate(ExternalStudentIdentity identity, String rawToken) {
+    private void validate(ExternalStudentIdentity identity) {
         if (identity == null
                 || !StringUtils.hasText(identity.studentNumber())
                 || !StringUtils.hasText(identity.name())
@@ -114,8 +114,8 @@ public class ExternalTokenAuthenticationService {
                     identity
             );
             throw NotLoginException.newInstance(
-                    "external", rawToken, "外部身份信息不完整",
-                    NotLoginException.INVALID_TOKEN);
+                    "external", NotLoginException.INVALID_TOKEN,
+                    "外部身份信息不完整", null);
         }
     }
 

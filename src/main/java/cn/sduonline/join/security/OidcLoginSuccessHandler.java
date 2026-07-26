@@ -52,14 +52,11 @@ public class OidcLoginSuccessHandler implements AuthenticationSuccessHandler {
             return;
         }
         StpUtil.login(localUser.getCasId());
-        String accessToken = StpUtil.getTokenValue();
 
         UriComponentsBuilder redirect = UriComponentsBuilder
                 .fromUriString(appProperties.getFrontendUrl())
                 .path("/")
                 .queryParam("login", "success");
-
-        redirect.queryParam("token", accessToken);
 
         response.sendRedirect(redirect.build().toUriString());
     }

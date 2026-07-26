@@ -1,5 +1,6 @@
 package cn.sduonline.join.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.sduonline.join.data.dto.DepartmentDetailUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
@@ -89,6 +90,7 @@ public class DepartmentController {
      * @param departmentId 部门 ID
      * @return 部门报名问卷，未设置时返回空题目列表
      */
+    @SaCheckLogin
     @GetMapping("/{departmentId}/questionnaire")
     public Result<DepartmentQuestionnaireVO> getQuestionnaire(
             @PathVariable @Positive Long departmentId
