@@ -13,13 +13,16 @@ import cn.sduonline.join.data.dto.InterviewQueueItemVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
 import cn.sduonline.join.data.dto.InterviewEvaluationRequest;
+import cn.sduonline.join.data.dto.InterviewEvaluationVO;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentInterview;
+import cn.sduonline.join.data.po.DepartmentInterviewRoom;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.config.WeChatProperties;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
+import cn.sduonline.join.mapper.DepartmentInterviewRoomMapper;
 import cn.sduonline.join.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,11 +39,13 @@ class DepartmentInterviewServiceTest {
 
     @Mock AdminOrganizationMapper organizationMapper;
     @Mock DepartmentInterviewMapper interviewMapper;
+    @Mock DepartmentInterviewRoomMapper roomMapper;
     @Mock TransactionTemplate transactionTemplate;
     @Mock TransactionStatus transactionStatus;
     @Mock InterviewSseService interviewSseService;
     @Mock UserMapper userMapper;
     @Mock WeChatTemplateMessageService templateMessageService;
+    @Mock AuthorizationService authorizationService;
     private WeChatProperties weChatProperties;
     private DepartmentInterviewService service;
 
@@ -53,46 +58,29 @@ class DepartmentInterviewServiceTest {
         });
         weChatProperties = new WeChatProperties();
         service = new DepartmentInterviewService(
-                organizationMapper, interviewMapper, transactionTemplate,
+                organizationMapper, interviewMapper, roomMapper,
+                transactionTemplate,
                 interviewSseService, userMapper, templateMessageService,
-                weChatProperties
+                weChatProperties, authorizationService
         );
     }
 
     @Test
-    void assignsFirstWaitingCandidate() {
-        when(organizationMapper.selectDepartmentById(12L))
-                .thenReturn(new Department());
+    void notifiesCalledCandidateUsingRoomName() {
+        DepartmentInterviewRoom room = openRoom();
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
         DepartmentInterview next = waitingCandidate();
+        next.setRoomId(9L);
+        when(interviewMapper.selectActiveByRoom(9L))
+                .thenReturn(null, next);
         when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
-        org.mockito.Mockito.doAnswer(invocation -> {
-            invocation.<DepartmentInterview>getArgument(0).setId(300L);
-            return 1;
-        }).when(interviewMapper).insertInterview(any());
-
-        var result = service.callNext(12L, "admin01");
-
-        assertTrue(result.isSuccess());
-        assertEquals(300L, result.data().id());
-        assertEquals(7, result.data().queueNumber());
-        assertEquals("admin01", result.data().interviewerCasId());
-        verify(interviewMapper).insertActive(next);
-    }
-
-    @Test
-    void notifiesCalledCandidateUsingInterviewerNameAsWindow() {
-        when(organizationMapper.selectDepartmentById(12L))
-                .thenReturn(new Department());
-        DepartmentInterview next = waitingCandidate();
-        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
-        User candidate = user(
+        when(userMapper.selectById("20240001")).thenReturn(user(
                 "20240001", "张三", "candidate-openid"
-        );
-        User interviewer = user("admin01", "李老师", null);
-        when(userMapper.selectById("20240001")).thenReturn(candidate);
-        when(userMapper.selectById("admin01")).thenReturn(interviewer);
+        ));
+        when(roomMapper.selectById(12L, 9L)).thenReturn(room);
 
-        var result = service.callNext(12L, "admin01");
+        var result = service.callNextInRoom(12L, 9L, "admin01");
 
         assertTrue(result.isSuccess());
         verify(templateMessageService).send(
@@ -111,100 +99,55 @@ class DepartmentInterviewServiceTest {
                         ),
                         "thing9",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
-                                "李老师"
+                                "第一面试室"
                         )
                 ))
         );
+        verify(userMapper, never()).selectById("admin01");
     }
 
     @Test
-    void preventsInterviewerFromTakingSecondCandidate() {
-        when(organizationMapper.selectDepartmentById(12L))
-                .thenReturn(new Department());
-        DepartmentInterview active = waitingCandidate();
-        active.setInterviewerCasId("admin01");
-        when(interviewMapper.selectActiveByInterviewer("admin01"))
-                .thenReturn(active);
-
-        var result = service.callNext(12L, "admin01");
-
-        assertEquals(BizCode.INTERVIEW_ADMIN_BUSY, result.error());
-        verify(interviewMapper, never()).selectNextWaitingForUpdate(any());
-    }
-
-    @Test
-    void reportsEmptyWaitingQueue() {
-        when(organizationMapper.selectDepartmentById(12L))
-                .thenReturn(new Department());
-        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(null);
-
-        var result = service.callNext(12L, "admin01");
-
-        assertEquals(BizCode.INTERVIEW_QUEUE_EMPTY, result.error());
-    }
-
-    @Test
-    void finishingInterviewReleasesBothOccupants() {
-        DepartmentInterview active = waitingCandidate();
-        active.setId(300L);
-        active.setInterviewerCasId("admin01");
-        when(interviewMapper.selectActiveByInterviewer("admin01"))
-                .thenReturn(active);
-
-        var result = service.finish(
-                12L, "admin01",
-                new InterviewEvaluationRequest(5, " 表现优秀 ")
-        );
-
-        assertTrue(result.isSuccess());
-        assertEquals(5, result.data().score());
-        assertEquals("表现优秀", result.data().evaluation());
-        verify(interviewMapper).finishInterview(
-                org.mockito.ArgumentMatchers.eq(300L), any(),
-                org.mockito.ArgumentMatchers.eq(5),
-                org.mockito.ArgumentMatchers.eq("表现优秀")
-        );
-        verify(interviewMapper).deleteActive(300L);
-    }
-
-    @Test
-    void supportsFinishingWithoutEvaluationForCompatibility() {
-        DepartmentInterview active = waitingCandidate();
-        active.setId(300L);
-        active.setInterviewerCasId("admin01");
-        when(interviewMapper.selectActiveByInterviewer("admin01"))
-                .thenReturn(active);
-
-        var result = service.finish(12L, "admin01", null);
-
-        assertTrue(result.isSuccess());
-        verify(interviewMapper).finishInterview(
-                org.mockito.ArgumentMatchers.eq(300L), any(),
-                org.mockito.ArgumentMatchers.isNull(),
-                org.mockito.ArgumentMatchers.isNull()
-        );
-    }
-
-    @Test
-    void updatesEvaluationAndReturnsSavedInterview() {
+    void updatesEvaluationAndReturnsOwnEvaluation() {
         DepartmentInterview saved = waitingCandidate();
         saved.setId(300L);
-        saved.setScore(4);
-        saved.setEvaluation("沟通清晰");
-        when(interviewMapper.updateEvaluation(
-                12L, 300L, 4, "沟通清晰"
-        )).thenReturn(1);
+        saved.setRoomId(9L);
         when(interviewMapper.selectByIdAndDepartment(12L, 300L))
                 .thenReturn(saved);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        InterviewEvaluationVO own = new InterviewEvaluationVO(
+                300L, "admin01", "管理员一", 4, "沟通清晰", null
+        );
+        when(roomMapper.selectEvaluation(300L, "admin01")).thenReturn(own);
 
         var result = service.updateEvaluation(
-                12L, 300L,
+                12L, 300L, "admin01",
                 new InterviewEvaluationRequest(4, " 沟通清晰 ")
         );
 
         assertTrue(result.isSuccess());
         assertEquals(4, result.data().score());
         assertEquals("沟通清晰", result.data().evaluation());
+        verify(roomMapper).upsertEvaluation(300L, "admin01", 4, "沟通清晰");
+    }
+
+    @Test
+    void cannotUpdateEvaluationUnlessRoomMember() {
+        DepartmentInterview saved = waitingCandidate();
+        saved.setId(300L);
+        saved.setRoomId(9L);
+        when(interviewMapper.selectByIdAndDepartment(12L, 300L))
+                .thenReturn(saved);
+        when(roomMapper.countMember(9L, "someone-else")).thenReturn(0);
+
+        var result = service.updateEvaluation(
+                12L, 300L, "someone-else",
+                new InterviewEvaluationRequest(5, "他人评价")
+        );
+
+        assertEquals(BizCode.NO_PERMISSION, result.error());
+        verify(roomMapper, never()).upsertEvaluation(
+                any(), any(), any(), any()
+        );
     }
 
     @Test
@@ -272,9 +215,10 @@ class DepartmentInterviewServiceTest {
     void passingCurrentCandidateMovesThemBackThreePlaces() {
         DepartmentInterview active = waitingCandidate();
         active.setId(300L);
-        active.setInterviewerCasId("admin01");
-        when(interviewMapper.selectActiveByInterviewer("admin01"))
-                .thenReturn(active);
+        active.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(openRoom());
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(active);
         when(interviewMapper.selectQueueConfig(12L))
                 .thenReturn(new InterviewQueueConfigVO(3, 2));
         DepartmentCheckIn target = checkIn(200L, 1L, 0);
@@ -293,29 +237,31 @@ class DepartmentInterviewServiceTest {
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(moved);
 
-        var result = service.passCurrent(12L, "admin01");
+        var result = service.passCurrentInRoom(12L, 9L, "admin01");
 
         assertTrue(result.isSuccess());
         assertEquals(1, result.data().passCount());
         assertEquals(4L, target.getQueueOrder());
         verify(interviewMapper).deleteActive(300L);
         verify(interviewMapper).deleteInterview(300L);
-        verify(interviewSseService).publish(12L);
+        verify(interviewSseService).publishQueue(12L);
+        verify(interviewSseService).publishRoom(12L, 9L);
     }
 
     @Test
     void rejectsPassAfterDepartmentLimitIsReached() {
         DepartmentInterview active = waitingCandidate();
         active.setId(300L);
-        active.setInterviewerCasId("admin01");
-        when(interviewMapper.selectActiveByInterviewer("admin01"))
-                .thenReturn(active);
+        active.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(openRoom());
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(active);
         when(interviewMapper.selectQueueConfig(12L))
                 .thenReturn(new InterviewQueueConfigVO(3, 2));
         when(interviewMapper.selectCheckInForUpdate(200L))
                 .thenReturn(checkIn(200L, 1L, 2));
 
-        var result = service.passCurrent(12L, "admin01");
+        var result = service.passCurrentInRoom(12L, 9L, "admin01");
 
         assertEquals(BizCode.INTERVIEW_PASS_LIMIT_REACHED, result.error());
         verify(interviewMapper, never()).deleteActive(any());
@@ -325,9 +271,10 @@ class DepartmentInterviewServiceTest {
     void stoppingCallingReleasesCandidateWithoutChangingQueueOrPassCount() {
         DepartmentInterview active = waitingCandidate();
         active.setId(300L);
-        active.setInterviewerCasId("admin01");
-        when(interviewMapper.selectActiveByInterviewer("admin01"))
-                .thenReturn(active);
+        active.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(openRoom());
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(active);
         InterviewQueueItemVO waiting = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三",
                 7, 1L, 0, null, InterviewQueueStatus.WAITING,
@@ -336,7 +283,7 @@ class DepartmentInterviewServiceTest {
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(waiting);
 
-        var result = service.stopCalling(12L, "admin01");
+        var result = service.stopCallingInRoom(12L, 9L, "admin01");
 
         assertTrue(result.isSuccess());
         assertEquals(InterviewQueueStatus.WAITING, result.data().status());
@@ -345,19 +292,22 @@ class DepartmentInterviewServiceTest {
         verify(interviewMapper).deleteActive(300L);
         verify(interviewMapper).deleteInterview(300L);
         verify(interviewMapper, never()).updateCheckInQueue(any());
-        verify(interviewSseService).publish(12L);
+        verify(interviewSseService).publishQueue(12L);
+        verify(interviewSseService).publishRoom(12L, 9L);
     }
 
     @Test
-    void rejectsStoppingCallingWhenAdministratorHasNoActiveInterview() {
-        when(interviewMapper.selectActiveByInterviewer("admin01"))
-                .thenReturn(null);
+    void rejectsStoppingCallingWhenRoomHasNoActiveInterview() {
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(openRoom());
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(null);
 
-        var result = service.stopCalling(12L, "admin01");
+        var result = service.stopCallingInRoom(12L, 9L, "admin01");
 
         assertEquals(BizCode.INTERVIEW_NOT_ACTIVE, result.error());
         verify(interviewMapper, never()).deleteActive(any());
-        verify(interviewSseService, never()).publish(any());
+        verify(interviewSseService, never()).publishQueue(any());
+        verify(interviewSseService, never()).publishRoom(any(), any());
     }
 
     @Test
@@ -387,6 +337,184 @@ class DepartmentInterviewServiceTest {
         );
     }
 
+    @Test
+    void roomMembersShareTheSameCurrentCandidate() {
+        DepartmentInterviewRoom room = openRoom();
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setRoomId(9L);
+        when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(roomMapper.countMember(9L, "admin02")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(active);
+
+        var first = service.findCurrentInRoom(12L, 9L, "admin01");
+        var second = service.findCurrentInRoom(12L, 9L, "admin02");
+
+        assertTrue(first.isSuccess());
+        assertTrue(second.isSuccess());
+        assertEquals(first.data().id(), second.data().id());
+        assertEquals("20240001", second.data().candidateCasId());
+    }
+
+    @Test
+    void callNextLocksRoomBeforeCheckingAndAssigningCandidate() {
+        DepartmentInterviewRoom room = openRoom();
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        DepartmentInterview next = waitingCandidate();
+        next.setRoomId(9L);
+        when(interviewMapper.selectActiveByRoom(9L))
+                .thenReturn(null, next);
+        when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
+
+        var result = service.callNextInRoom(12L, 9L, "admin01");
+
+        assertTrue(result.isSuccess());
+        assertEquals(9L, result.data().currentInterview().roomId());
+        verify(roomMapper).selectByIdForUpdate(12L, 9L);
+        verify(interviewMapper).insertRoomActive(next);
+    }
+
+    @Test
+    void secondCallReportsAdministratorsWithPendingEvaluations() {
+        DepartmentInterviewRoom room = openRoom();
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin02")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(active);
+        when(roomMapper.selectMemberStatuses(9L, 300L)).thenReturn(List.of(
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin01", "李老师", true, java.time.LocalDateTime.now()
+                ),
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin02", "王老师", false, null
+                )
+        ));
+
+        var result = service.callNextInRoom(12L, 9L, "admin02");
+
+        assertEquals(BizCode.INTERVIEW_EVALUATIONS_PENDING, result.error());
+        assertEquals(
+                "admin02",
+                result.data().pendingAdministrators().getFirst().casId()
+        );
+        assertEquals(false, result.data().canForce());
+        verify(interviewMapper, never()).selectNextWaitingForUpdate(any());
+    }
+
+    @Test
+    void administratorSubmitsIndependentEvaluation() {
+        DepartmentInterviewRoom room = openRoom();
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(active);
+        when(roomMapper.selectMemberStatuses(9L, 300L)).thenReturn(List.of(
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin01", "李老师", true, java.time.LocalDateTime.now()
+                ),
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin02", "王老师", false, null
+                )
+        ));
+
+        var result = service.submitEvaluationInRoom(
+                12L, 9L, "admin01",
+                new InterviewEvaluationRequest(5, " 表现优秀 ")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, result.data().submittedCount());
+        assertEquals(2, result.data().administratorCount());
+        assertEquals(true, result.data().currentUserSubmitted());
+        verify(roomMapper).upsertEvaluation(
+                300L, "admin01", 5, "表现优秀"
+        );
+        verify(interviewSseService).publishRoom(12L, 9L);
+    }
+
+    @Test
+    void allEvaluationsAllowFinishingAndCallingNextAtomically() {
+        DepartmentInterviewRoom room = openRoom();
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setRoomId(9L);
+        DepartmentInterview next = waitingCandidate();
+        next.setId(301L);
+        next.setCheckInId(201L);
+        next.setCandidateCasId("20240002");
+        next.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L))
+                .thenReturn(active, active, next);
+        var submittedAt = java.time.LocalDateTime.now();
+        when(roomMapper.selectMemberStatuses(9L, 300L)).thenReturn(List.of(
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin01", "李老师", true, submittedAt
+                ),
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin02", "王老师", true, submittedAt
+                )
+        ));
+        when(roomMapper.selectMemberStatuses(9L, 301L)).thenReturn(List.of(
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin01", "李老师", false, null
+                ),
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin02", "王老师", false, null
+                )
+        ));
+        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
+
+        var result = service.callNextInRoom(12L, 9L, "admin01");
+
+        assertTrue(result.isSuccess());
+        assertEquals(301L, result.data().currentInterview().id());
+        verify(interviewMapper).finishInterview(
+                org.mockito.ArgumentMatchers.eq(300L), any()
+        );
+        verify(interviewMapper).deleteActive(300L);
+        verify(interviewMapper).insertRoomActive(next);
+    }
+
+    @Test
+    void roomCreatorCanForceFinishWithPendingEvaluations() {
+        DepartmentInterviewRoom room = openRoom();
+        room.setCreatedBy("admin01");
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L))
+                .thenReturn(active, active, null);
+        when(roomMapper.selectMemberStatuses(9L, 300L)).thenReturn(List.of(
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin01", "李老师", true, java.time.LocalDateTime.now()
+                ),
+                new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                        "admin02", "王老师", false, null
+                )
+        ));
+
+        var result = service.forceFinishInRoom(12L, 9L, "admin01");
+
+        assertTrue(result.isSuccess());
+        assertEquals(null, result.data().currentInterview());
+        verify(interviewMapper).deleteActive(300L);
+    }
+
     private static DepartmentInterview waitingCandidate() {
         DepartmentInterview interview = new DepartmentInterview();
         interview.setDepartmentId(12L);
@@ -412,6 +540,16 @@ class DepartmentInterviewServiceTest {
         checkIn.setQueueOrder(queueOrder);
         checkIn.setPassCount(passCount);
         return checkIn;
+    }
+
+    private static DepartmentInterviewRoom openRoom() {
+        DepartmentInterviewRoom room = new DepartmentInterviewRoom();
+        room.setId(9L);
+        room.setDepartmentId(12L);
+        room.setSessionId(5L);
+        room.setName("第一面试室");
+        room.setStatus("OPEN");
+        return room;
     }
 
     private static User user(

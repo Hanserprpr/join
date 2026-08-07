@@ -5,7 +5,9 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.data.dto.ContactUpdateRequest;
 import cn.sduonline.join.data.dto.UserProfileVO;
 import cn.sduonline.join.data.enums.BizCode;
+import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.data.vo.Result;
+import cn.sduonline.join.service.ServiceResult;
 import cn.sduonline.join.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -59,12 +61,12 @@ public class UserProfileController {
                     "至少填写一个可更新的个人资料字段"
             );
         }
-        return userService.updateContact(
-                        StpUtil.getLoginIdAsString(),
-                        request
-                )
-                .map(UserProfileVO::from)
-                .map(Result::ok)
-                .orElseGet(() -> Result.fail(BizCode.USER_NOT_FOUND));
+        ServiceResult<User> result = userService.updateContact(
+                StpUtil.getLoginIdAsString(),
+                request
+        );
+        return result.isSuccess()
+                ? Result.ok(UserProfileVO.from(result.data()))
+                : Result.fail(result.error());
     }
 }

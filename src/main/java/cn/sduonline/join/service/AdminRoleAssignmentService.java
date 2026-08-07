@@ -77,6 +77,52 @@ public class AdminRoleAssignmentService {
         return ServiceResult.success(RoleAssignmentVO.from(assignment, roleCode));
     }
 
+    /**
+     * 撤销角色分配。
+     * 与授予对称：仅当操作者持有高于目标角色的身份、且其数据范围覆盖目标组织时允许撤销。
+     *
+     * @param operatorCasId 操作者学号
+     * @param request 被撤销的角色分配
+     * @return 撤销结果
+     */
+    @Transactional
+    public ServiceResult<Void> revoke(
+            String operatorCasId,
+            RoleAssignmentRequest request
+    ) {
+        String roleCode = request.roleCode().trim().toUpperCase();
+        RoleRule roleRule = ASSIGNABLE_ROLES.get(roleCode);
+        if (roleRule == null) {
+            return ServiceResult.failure(BizCode.ROLE_NOT_FOUND);
+        }
+        if (roleRule.scopeType() != request.scopeType()) {
+            return ServiceResult.failure(BizCode.ROLE_SCOPE_MISMATCH);
+        }
+        Long roleId = assignmentMapper.selectRoleId(roleCode);
+        if (roleId == null) {
+            return ServiceResult.failure(BizCode.ROLE_NOT_FOUND);
+        }
+        if (assignmentMapper.countAssignment(
+                request.casId(), roleId,
+                request.scopeType().name(), request.scopeId()
+        ) == 0) {
+            return ServiceResult.failure(BizCode.ROLE_ASSIGNMENT_NOT_FOUND);
+        }
+        if (assignmentMapper.countGrantAuthority(
+                operatorCasId,
+                roleRule.level(),
+                request.scopeType().name(),
+                request.scopeId()
+        ) == 0) {
+            return ServiceResult.failure(BizCode.ROLE_ASSIGNMENT_FORBIDDEN);
+        }
+        assignmentMapper.deleteAssignment(
+                request.casId(), roleId,
+                request.scopeType().name(), request.scopeId()
+        );
+        return ServiceResult.success(null);
+    }
+
     private boolean scopeExists(OrgType scopeType, Long scopeId) {
         if (scopeId == null || scopeId <= 0) {
             return false;

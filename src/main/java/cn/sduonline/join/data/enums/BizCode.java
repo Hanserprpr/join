@@ -52,6 +52,10 @@ public enum BizCode {
     EMAIL_TOKEN_INVALID(130008, "邮箱验证链接无效或已过期"),
     /** 用户尚未完成必填资料。 */
     PROFILE_INCOMPLETE(130009, "用户资料未完成"),
+    /** 学院不存在。 */
+    COLLEGE_INVALID(130010, "学院不存在"),
+    /** 专业不存在或与学院不匹配。 */
+    MAJOR_INVALID(130011, "专业不存在或与所选学院不匹配"),
 
     // ---------- 14xxxx 纳新业务错误 ----------
     /** 操作失败。 */
@@ -86,8 +90,6 @@ public enum BizCode {
     CHECK_IN_NOT_REGISTERED(140015, "尚未报名该部门，无法签到"),
     /** 当前部门没有等待面试的签到用户。 */
     INTERVIEW_QUEUE_EMPTY(140016, "当前没有等待面试的用户"),
-    /** 当前管理员已经在面试其他用户。 */
-    INTERVIEW_ADMIN_BUSY(140017, "当前管理员已有进行中的面试"),
     /** 当前管理员在该部门没有进行中的面试。 */
     INTERVIEW_NOT_ACTIVE(140018, "当前没有进行中的面试"),
     /** 当前用户尚未在该部门签到。 */
@@ -104,6 +106,18 @@ public enum BizCode {
     INTERVIEW_SESSION_FULL(140024, "当前面试场次取号人数已满"),
     /** 当前没有开放签到的面试场次。 */
     INTERVIEW_SESSION_NOT_OPEN(140025, "当前没有开放签到的面试场次"),
+    /** 面试室不存在。 */
+    INTERVIEW_ROOM_NOT_FOUND(140026, "面试室不存在"),
+    /** 面试室已关闭。 */
+    INTERVIEW_ROOM_CLOSED(140027, "面试室已关闭"),
+    /** 当前管理员尚未加入该面试室。 */
+    INTERVIEW_ROOM_NOT_JOINED(140028, "请先加入面试室"),
+    /** 当前面试室已有进行中的面试。 */
+    INTERVIEW_ROOM_BUSY(140029, "当前面试室已有进行中的面试"),
+    /** 仍有管理员未提交评价。 */
+    INTERVIEW_EVALUATIONS_PENDING(140030, "仍有管理员未提交评价"),
+    /** 未找到该角色分配。 */
+    ROLE_ASSIGNMENT_NOT_FOUND(140031, "未找到该角色分配"),
 
     // ---------- 15xxxx 外部依赖错误 ----------
     /** 第三方服务不可用。 */

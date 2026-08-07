@@ -1,5 +1,7 @@
 package cn.sduonline.join.mapper;
 
+import cn.sduonline.join.data.dto.DepartmentRoleAccess;
+import cn.sduonline.join.data.dto.PermissionDepartmentAccess;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -106,5 +108,76 @@ public interface AuthorizationMapper {
             @Param("casId") String casId,
             @Param("permission") String permission,
             @Param("departmentId") Long departmentId
+    );
+
+    /**
+     * 查询该用户按权限可管理的启用部门。
+     * 作用域按 ALL → BOARD → WORKSTATION → DEPARTMENT 逐级展开；
+     * SYSTEM_ADMIN 无角色权限关联，权限码统一映射为 {@code *}。
+     *
+     * @param casId 学号
+     * @return 权限编码与部门 ID 的去重组合
+     */
+    @Select("""
+            SELECT DISTINCT COALESCE(p.code, '*') AS permissionCode, d.id AS departmentId
+            FROM user_role_scope s
+            JOIN `role` r ON r.id = s.role_id
+            LEFT JOIN role_permission rp ON rp.role_id = r.id
+            LEFT JOIN `permission` p ON p.id = rp.permission_id
+            JOIN department d
+            WHERE s.cas_id = #{casId}
+              AND (r.code = 'SYSTEM_ADMIN' OR p.code IS NOT NULL)
+              AND d.enabled = 1
+              AND (
+                    s.scope_type = 'ALL'
+                    OR (s.scope_type = 'DEPARTMENT' AND d.id = s.scope_id)
+                    OR (s.scope_type = 'WORKSTATION' AND d.workstation_id = s.scope_id)
+                    OR (s.scope_type = 'BOARD' AND EXISTS (
+                        SELECT 1 FROM workstation w
+                        WHERE w.id = d.workstation_id AND w.board_id = s.scope_id
+                    ))
+              )
+            ORDER BY permissionCode, departmentId
+            """)
+    List<PermissionDepartmentAccess> selectScopedDepartmentAccess(
+            @Param("casId") String casId
+    );
+
+    /**
+     * 查询该用户在各部门担任的角色及权限。
+     * 作用域按 ALL → BOARD → WORKSTATION → DEPARTMENT 逐级展开到部门；
+     * SYSTEM_ADMIN 无角色权限关联，权限码统一映射为 {@code *}。
+     *
+     * @param casId 学号
+     * @return 部门、角色与权限的去重组合
+     */
+    @Select("""
+            SELECT DISTINCT
+                   d.id AS departmentId,
+                   d.name AS departmentName,
+                   r.code AS roleCode,
+                   r.name AS roleName,
+                   s.scope_type AS scopeType,
+                   COALESCE(p.code, '*') AS permissionCode
+            FROM user_role_scope s
+            JOIN `role` r ON r.id = s.role_id
+            LEFT JOIN role_permission rp ON rp.role_id = r.id
+            LEFT JOIN `permission` p ON p.id = rp.permission_id
+            JOIN department d
+            WHERE s.cas_id = #{casId}
+              AND d.enabled = 1
+              AND (
+                    s.scope_type = 'ALL'
+                    OR (s.scope_type = 'DEPARTMENT' AND d.id = s.scope_id)
+                    OR (s.scope_type = 'WORKSTATION' AND d.workstation_id = s.scope_id)
+                    OR (s.scope_type = 'BOARD' AND EXISTS (
+                        SELECT 1 FROM workstation w
+                        WHERE w.id = d.workstation_id AND w.board_id = s.scope_id
+                    ))
+              )
+            ORDER BY d.id, r.code, permissionCode
+            """)
+    List<DepartmentRoleAccess> selectDepartmentRoleAccess(
+            @Param("casId") String casId
     );
 }

@@ -9,19 +9,24 @@ import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigRequest;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
 import cn.sduonline.join.data.dto.InterviewEvaluationRequest;
+import cn.sduonline.join.data.dto.InterviewEvaluationVO;
+import cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO;
+import cn.sduonline.join.data.dto.InterviewRoomStateVO;
 import cn.sduonline.join.data.enums.InterviewQueueStatus;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.DepartmentInterview;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
+import cn.sduonline.join.mapper.DepartmentInterviewRoomMapper;
 import cn.sduonline.join.mapper.UserMapper;
+import cn.sduonline.join.security.scope.OrgType;
+import cn.sduonline.join.security.scope.PermissionCode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -30,45 +35,363 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Slf4j
 public class DepartmentInterviewService {
 
-    private static final int MAX_ASSIGNMENT_ATTEMPTS = 3;
-
     private final AdminOrganizationMapper organizationMapper;
     private final DepartmentInterviewMapper interviewMapper;
+    private final DepartmentInterviewRoomMapper roomMapper;
     private final TransactionTemplate transactionTemplate;
     private final InterviewSseService interviewSseService;
     private final UserMapper userMapper;
     private final WeChatTemplateMessageService templateMessageService;
     private final WeChatProperties weChatProperties;
+    private final AuthorizationService authorizationService;
 
-    public ServiceResult<DepartmentInterviewVO> callNext(
-            Long departmentId,
-            String interviewerCasId
+    public ServiceResult<InterviewRoomStateVO> callNextInRoom(
+            Long departmentId, Long roomId, String administratorCasId
     ) {
-        if (organizationMapper.selectDepartmentById(departmentId) == null) {
-            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
-        }
-        for (int attempt = 0; attempt < MAX_ASSIGNMENT_ATTEMPTS; attempt++) {
-            try {
-                ServiceResult<DepartmentInterviewVO> result =
-                        transactionTemplate.execute(status ->
-                        assignNext(departmentId, interviewerCasId)
-                );
-                if (result != null && result.isSuccess()) {
-                    interviewSseService.publish(departmentId);
-                    sendCallNotification(result.data());
-                }
-                return result;
-            } catch (DuplicateKeyException exception) {
-                // 其他管理员可能刚刚占用了同一应试者，重新取队首。
+        ServiceResult<InterviewRoomStateVO> result =
+                transactionTemplate.execute(status -> {
+            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+                    departmentId, roomId, administratorCasId
+            );
+            if (!access.isSuccess()) {
+                return ServiceResult.failure(access.error());
             }
+            DepartmentInterview active =
+                    interviewMapper.selectActiveByRoom(roomId);
+            if (active != null) {
+                InterviewRoomStateVO state = buildRoomState(
+                        departmentId, roomId, administratorCasId
+                );
+                if (!state.allSubmitted()) {
+                    return ServiceResult.failure(
+                            BizCode.INTERVIEW_EVALUATIONS_PENDING, state
+                    );
+                }
+            }
+            DepartmentInterview next =
+                    interviewMapper.selectNextWaitingForUpdate(departmentId);
+            if (next == null) {
+                return ServiceResult.failure(BizCode.INTERVIEW_QUEUE_EMPTY);
+            }
+            if (active != null) {
+                finishActive(active);
+            }
+            next.setRoomId(roomId);
+            next.setInterviewerCasId(administratorCasId);
+            next.setStartedAt(LocalDateTime.now());
+            interviewMapper.insertRoomInterview(next);
+            interviewMapper.insertRoomActive(next);
+            return ServiceResult.success(buildRoomState(
+                    departmentId, roomId, administratorCasId
+            ));
+        });
+        if (result != null && result.isSuccess()) {
+            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishRoom(departmentId, roomId);
+            sendCallNotification(result.data().currentInterview());
         }
-        DepartmentInterview active =
-                interviewMapper.selectActiveByInterviewer(interviewerCasId);
-        return ServiceResult.failure(
-                active == null
-                        ? BizCode.TOO_MANY_REQUESTS
-                        : BizCode.INTERVIEW_ADMIN_BUSY
+        return result;
+    }
+
+    public ServiceResult<InterviewRoomStateVO> forceCallNextInRoom(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        ServiceResult<InterviewRoomStateVO> result =
+                transactionTemplate.execute(status -> {
+            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+                    departmentId, roomId, administratorCasId
+            );
+            if (!access.isSuccess()) {
+                return ServiceResult.failure(access.error());
+            }
+            if (!canForce(departmentId, roomId, administratorCasId)) {
+                return ServiceResult.failure(BizCode.NO_PERMISSION);
+            }
+            DepartmentInterview active =
+                    interviewMapper.selectActiveByRoom(roomId);
+            DepartmentInterview next =
+                    interviewMapper.selectNextWaitingForUpdate(departmentId);
+            if (next == null) {
+                return ServiceResult.failure(BizCode.INTERVIEW_QUEUE_EMPTY);
+            }
+            if (active != null) {
+                finishActive(active);
+            }
+            next.setRoomId(roomId);
+            next.setInterviewerCasId(administratorCasId);
+            next.setStartedAt(LocalDateTime.now());
+            interviewMapper.insertRoomInterview(next);
+            interviewMapper.insertRoomActive(next);
+            return ServiceResult.success(buildRoomState(
+                    departmentId, roomId, administratorCasId
+            ));
+        });
+        if (result != null && result.isSuccess()) {
+            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishRoom(departmentId, roomId);
+            sendCallNotification(result.data().currentInterview());
+        }
+        return result;
+    }
+
+    public ServiceResult<DepartmentInterviewVO> findCurrentInRoom(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        var room = roomMapper.selectById(departmentId, roomId);
+        if (room == null) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_FOUND);
+        }
+        if (roomMapper.countMember(roomId, administratorCasId) == 0) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_JOINED);
+        }
+        DepartmentInterview active = interviewMapper.selectActiveByRoom(roomId);
+        return active == null
+                ? ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE)
+                : ServiceResult.success(DepartmentInterviewVO.from(active));
+    }
+
+    public ServiceResult<InterviewRoomStateVO> submitEvaluationInRoom(
+            Long departmentId, Long roomId, String administratorCasId,
+            InterviewEvaluationRequest request
+    ) {
+        ServiceResult<InterviewRoomStateVO> result =
+                transactionTemplate.execute(status -> {
+            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+                    departmentId, roomId, administratorCasId
+            );
+            if (!access.isSuccess()) {
+                return ServiceResult.failure(access.error());
+            }
+            DepartmentInterview active =
+                    interviewMapper.selectActiveByRoom(roomId);
+            if (active == null) {
+                return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
+            }
+            roomMapper.upsertEvaluation(
+                    active.getId(), administratorCasId, request.score(),
+                    normalizeEvaluation(request.evaluation())
+            );
+            return ServiceResult.success(buildRoomState(
+                    departmentId, roomId, administratorCasId
+            ));
+        });
+        if (result != null && result.isSuccess()) {
+            interviewSseService.publishRoom(departmentId, roomId);
+        }
+        return result;
+    }
+
+    public ServiceResult<InterviewRoomStateVO> finishInRoom(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        return finishInRoom(
+                departmentId, roomId, administratorCasId, false
         );
+    }
+
+    public ServiceResult<InterviewRoomStateVO> forceFinishInRoom(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        return finishInRoom(
+                departmentId, roomId, administratorCasId, true
+        );
+    }
+
+    private ServiceResult<InterviewRoomStateVO> finishInRoom(
+            Long departmentId, Long roomId, String administratorCasId,
+            boolean force
+    ) {
+        ServiceResult<InterviewRoomStateVO> result =
+                transactionTemplate.execute(status -> {
+            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+                    departmentId, roomId, administratorCasId
+            );
+            if (!access.isSuccess()) {
+                return ServiceResult.failure(access.error());
+            }
+            InterviewRoomStateVO state = buildRoomState(
+                    departmentId, roomId, administratorCasId
+            );
+            if (state.currentInterview() == null) {
+                return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
+            }
+            if (force && !state.canForce()) {
+                return ServiceResult.failure(BizCode.NO_PERMISSION, state);
+            }
+            if (!force && !state.allSubmitted()) {
+                return ServiceResult.failure(
+                        BizCode.INTERVIEW_EVALUATIONS_PENDING, state
+                );
+            }
+            DepartmentInterview active =
+                    interviewMapper.selectActiveByRoom(roomId);
+            finishActive(active);
+            return ServiceResult.success(buildRoomState(
+                    departmentId, roomId, administratorCasId
+            ));
+        });
+        if (result != null && result.isSuccess()) {
+            interviewSseService.publishRoom(departmentId, roomId);
+        }
+        return result;
+    }
+
+    public ServiceResult<InterviewQueueItemVO> stopCallingInRoom(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        ServiceResult<InterviewQueueItemVO> result =
+                transactionTemplate.execute(status -> {
+            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+                    departmentId, roomId, administratorCasId
+            );
+            if (!access.isSuccess()) {
+                return ServiceResult.failure(access.error());
+            }
+            DepartmentInterview active =
+                    interviewMapper.selectActiveByRoom(roomId);
+            if (active == null) {
+                return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
+            }
+            interviewMapper.deleteActive(active.getId());
+            interviewMapper.deleteInterview(active.getId());
+            return ServiceResult.success(
+                    interviewMapper.selectCandidateQueueItem(
+                            departmentId, active.getCandidateCasId()
+                    )
+            );
+        });
+        if (result != null && result.isSuccess()) {
+            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishRoom(departmentId, roomId);
+        }
+        return result;
+    }
+
+    public ServiceResult<InterviewQueueItemVO> passCurrentInRoom(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        ServiceResult<InterviewQueueItemVO> result =
+                transactionTemplate.execute(status -> {
+            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+                    departmentId, roomId, administratorCasId
+            );
+            if (!access.isSuccess()) {
+                return ServiceResult.failure(access.error());
+            }
+            DepartmentInterview active =
+                    interviewMapper.selectActiveByRoom(roomId);
+            if (active == null) {
+                return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
+            }
+            return passActiveInTransaction(departmentId, active);
+        });
+        if (result != null && result.isSuccess()) {
+            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishRoom(departmentId, roomId);
+        }
+        return result;
+    }
+
+    public ServiceResult<InterviewRoomStateVO> findRoomState(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        var room = roomMapper.selectById(departmentId, roomId);
+        if (room == null) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_FOUND);
+        }
+        if (roomMapper.countMember(roomId, administratorCasId) == 0) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_JOINED);
+        }
+        return ServiceResult.success(buildRoomState(
+                departmentId, roomId, administratorCasId
+        ));
+    }
+
+    public ServiceResult<List<InterviewEvaluationVO>> findEvaluations(
+            Long departmentId, Long roomId, Long interviewId,
+            String administratorCasId
+    ) {
+        var room = roomMapper.selectById(departmentId, roomId);
+        if (room == null) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_FOUND);
+        }
+        if (roomMapper.countMember(roomId, administratorCasId) == 0) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_JOINED);
+        }
+        DepartmentInterview interview =
+                interviewMapper.selectByIdAndDepartment(
+                        departmentId, interviewId
+                );
+        if (interview == null || !roomId.equals(interview.getRoomId())) {
+            return ServiceResult.failure(BizCode.INTERVIEW_NOT_FOUND);
+        }
+        return ServiceResult.success(
+                roomMapper.selectEvaluations(roomId, interviewId)
+        );
+    }
+
+    private InterviewRoomStateVO buildRoomState(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        var room = roomMapper.selectById(departmentId, roomId);
+        DepartmentInterview active = interviewMapper.selectActiveByRoom(roomId);
+        List<InterviewRoomMemberStatusVO> administrators =
+                roomMapper.selectMemberStatuses(
+                        roomId, active == null ? null : active.getId()
+                );
+        List<InterviewRoomMemberStatusVO> pending = administrators.stream()
+                .filter(member -> !member.submitted())
+                .toList();
+        int submittedCount = administrators.size() - pending.size();
+        boolean currentUserSubmitted = administrators.stream()
+                .anyMatch(member -> member.casId().equals(administratorCasId)
+                        && member.submitted());
+        return new InterviewRoomStateVO(
+                roomId, room.getName(), room.getStatus(),
+                active == null ? null : DepartmentInterviewVO.from(active),
+                administrators, submittedCount, administrators.size(),
+                pending, currentUserSubmitted,
+                canForce(departmentId, roomId, administratorCasId)
+        );
+    }
+
+    private boolean canForce(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        var room = roomMapper.selectById(departmentId, roomId);
+        return room != null
+                && (administratorCasId.equals(room.getCreatedBy())
+                || authorizationService.canAccessWithPermission(
+                        administratorCasId,
+                        PermissionCode.INTERVIEW_MANAGE.code(),
+                        OrgType.DEPARTMENT,
+                        departmentId
+                ));
+    }
+
+    private void finishActive(DepartmentInterview active) {
+        if (active == null) {
+            return;
+        }
+        LocalDateTime endedAt = LocalDateTime.now();
+        interviewMapper.finishInterview(active.getId(), endedAt);
+        interviewMapper.deleteActive(active.getId());
+    }
+
+    private ServiceResult<?> lockOpenRoomAndCheckMember(
+            Long departmentId, Long roomId, String administratorCasId
+    ) {
+        var room = roomMapper.selectByIdForUpdate(departmentId, roomId);
+        if (room == null) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_FOUND);
+        }
+        if (!"OPEN".equals(room.getStatus())) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_CLOSED);
+        }
+        if (roomMapper.countMember(roomId, administratorCasId) == 0) {
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NOT_JOINED);
+        }
+        return ServiceResult.success(room);
     }
 
     private void sendCallNotification(DepartmentInterviewVO interview) {
@@ -83,13 +406,7 @@ public class DepartmentInterviewService {
                             candidate.getWechatOpenid())) {
                 return;
             }
-            var interviewer =
-                    userMapper.selectById(interview.interviewerCasId());
-            String window = interviewer == null
-                    || !org.springframework.util.StringUtils.hasText(
-                            interviewer.getName())
-                    ? interview.interviewerCasId()
-                    : interviewer.getName();
+            String window = resolveInterviewRoomName(interview);
             templateMessageService.send(
                     candidate.getWechatOpenid(),
                     weChatProperties.getInterviewCallTemplateId(),
@@ -113,17 +430,16 @@ public class DepartmentInterviewService {
         }
     }
 
-    public ServiceResult<DepartmentInterviewVO> findCurrent(
-            Long departmentId,
-            String interviewerCasId
-    ) {
-        DepartmentInterview active =
-                interviewMapper.selectActiveByInterviewer(interviewerCasId);
-        if (active == null
-                || !departmentId.equals(active.getDepartmentId())) {
-            return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
+    private String resolveInterviewRoomName(DepartmentInterviewVO interview) {
+        var room = roomMapper.selectById(
+                interview.departmentId(), interview.roomId()
+        );
+        if (room != null
+                && org.springframework.util.StringUtils.hasText(
+                        room.getName())) {
+            return room.getName();
         }
-        return ServiceResult.success(DepartmentInterviewVO.from(active));
+        return "面试室";
     }
 
     public ServiceResult<List<InterviewQueueItemVO>> findQueue(
@@ -216,81 +532,6 @@ public class DepartmentInterviewService {
         ));
     }
 
-    public ServiceResult<InterviewQueueItemVO> passCurrent(
-            Long departmentId,
-            String interviewerCasId
-    ) {
-        ServiceResult<InterviewQueueItemVO> result =
-                transactionTemplate.execute(status ->
-                        passCurrentInTransaction(
-                                departmentId, interviewerCasId
-                        )
-                );
-        if (result != null && result.isSuccess()) {
-            interviewSseService.publish(departmentId);
-        }
-        return result;
-    }
-
-    public ServiceResult<InterviewQueueItemVO> stopCalling(
-            Long departmentId,
-            String interviewerCasId
-    ) {
-        ServiceResult<InterviewQueueItemVO> result =
-                transactionTemplate.execute(status -> {
-            DepartmentInterview active =
-                    interviewMapper.selectActiveByInterviewer(interviewerCasId);
-            if (active == null
-                    || !departmentId.equals(active.getDepartmentId())) {
-                return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
-            }
-            interviewMapper.deleteActive(active.getId());
-            interviewMapper.deleteInterview(active.getId());
-            return ServiceResult.success(
-                    interviewMapper.selectCandidateQueueItem(
-                            departmentId, active.getCandidateCasId()
-                    )
-            );
-        });
-        if (result != null && result.isSuccess()) {
-            interviewSseService.publish(departmentId);
-        }
-        return result;
-    }
-
-    public ServiceResult<DepartmentInterviewVO> finish(
-            Long departmentId,
-            String interviewerCasId,
-            InterviewEvaluationRequest request
-    ) {
-        ServiceResult<DepartmentInterviewVO> result =
-                transactionTemplate.execute(status -> {
-            DepartmentInterview active =
-                    interviewMapper.selectActiveByInterviewer(interviewerCasId);
-            if (active == null
-                    || !departmentId.equals(active.getDepartmentId())) {
-                return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
-            }
-            LocalDateTime endedAt = LocalDateTime.now();
-            Integer score = request == null ? null : request.score();
-            String evaluation = request == null
-                    ? null
-                    : normalizeEvaluation(request.evaluation());
-            interviewMapper.finishInterview(
-                    active.getId(), endedAt, score, evaluation
-            );
-            interviewMapper.deleteActive(active.getId());
-            active.setEndedAt(endedAt);
-            active.setScore(score);
-            active.setEvaluation(evaluation);
-            return ServiceResult.success(DepartmentInterviewVO.from(active));
-        });
-        if (result != null && result.isSuccess()) {
-            interviewSseService.publish(departmentId);
-        }
-        return result;
-    }
-
     public ServiceResult<DepartmentInterviewVO> findById(
             Long departmentId,
             Long interviewId
@@ -304,18 +545,42 @@ public class DepartmentInterviewService {
                 : ServiceResult.success(DepartmentInterviewVO.from(interview));
     }
 
-    public ServiceResult<DepartmentInterviewVO> updateEvaluation(
+    /**
+     * 补写或修改当前用户对指定面试的评价。
+     * 一个面试有多位面试官各自提交的评价，本接口只更新当前用户的那一份。
+     *
+     * @param departmentId 部门 ID
+     * @param interviewId 面试记录 ID
+     * @param casId 当前用户学号
+     * @param request 评分和评价
+     * @return 当前用户对该面试的评价
+     */
+    public ServiceResult<InterviewEvaluationVO> updateEvaluation(
             Long departmentId,
             Long interviewId,
+            String casId,
             InterviewEvaluationRequest request
     ) {
-        String evaluation = normalizeEvaluation(request.evaluation());
-        if (interviewMapper.updateEvaluation(
-                departmentId, interviewId, request.score(), evaluation
-        ) == 0) {
+        DepartmentInterview interview =
+                interviewMapper.selectByIdAndDepartment(
+                        departmentId, interviewId
+                );
+        if (interview == null) {
             return ServiceResult.failure(BizCode.INTERVIEW_NOT_FOUND);
         }
-        return findById(departmentId, interviewId);
+        if (interview.getRoomId() == null
+                || roomMapper.countMember(interview.getRoomId(), casId) == 0) {
+            return ServiceResult.failure(BizCode.NO_PERMISSION);
+        }
+        roomMapper.upsertEvaluation(
+                interviewId,
+                casId,
+                request.score(),
+                normalizeEvaluation(request.evaluation())
+        );
+        return ServiceResult.success(
+                roomMapper.selectEvaluation(interviewId, casId)
+        );
     }
 
     private static String normalizeEvaluation(String evaluation) {
@@ -326,37 +591,10 @@ public class DepartmentInterviewService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private ServiceResult<DepartmentInterviewVO> assignNext(
+    private ServiceResult<InterviewQueueItemVO> passActiveInTransaction(
             Long departmentId,
-            String interviewerCasId
+            DepartmentInterview active
     ) {
-        DepartmentInterview current =
-                interviewMapper.selectActiveByInterviewer(interviewerCasId);
-        if (current != null) {
-            return ServiceResult.failure(BizCode.INTERVIEW_ADMIN_BUSY);
-        }
-        DepartmentInterview next =
-                interviewMapper.selectNextWaitingForUpdate(departmentId);
-        if (next == null) {
-            return ServiceResult.failure(BizCode.INTERVIEW_QUEUE_EMPTY);
-        }
-        next.setInterviewerCasId(interviewerCasId);
-        next.setStartedAt(LocalDateTime.now());
-        interviewMapper.insertInterview(next);
-        interviewMapper.insertActive(next);
-        return ServiceResult.success(DepartmentInterviewVO.from(next));
-    }
-
-    private ServiceResult<InterviewQueueItemVO> passCurrentInTransaction(
-            Long departmentId,
-            String interviewerCasId
-    ) {
-        DepartmentInterview active =
-                interviewMapper.selectActiveByInterviewer(interviewerCasId);
-        if (active == null
-                || !departmentId.equals(active.getDepartmentId())) {
-            return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
-        }
         InterviewQueueConfigVO config =
                 interviewMapper.selectQueueConfig(departmentId);
         DepartmentCheckIn target =

@@ -7,14 +7,14 @@ import lombok.Data;
 public class DepartmentInterview {
     private Long id;
     private Long departmentId;
+    private Long roomId;
     private Long checkInId;
     private Long applicationId;
     private String candidateCasId;
     private String candidateName;
     private String interviewerCasId;
+    private String interviewerName;
     private Integer queueNumber;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
-    private Integer score;
-    private String evaluation;
 }

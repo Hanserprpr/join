@@ -18,6 +18,7 @@ import java.util.List;
  * @param contact 联系方式
  * @param recruitmentGroup 纳新群信息
  * @param hasQuestionnaire 是否设置了报名问卷
+ * @param canManage 当前用户是否有权限修改部门信息
  * @param sortOrder 排序值
  * @param enabled 是否启用
  */
@@ -33,6 +34,7 @@ public record DepartmentVO(
         String contact,
         String recruitmentGroup,
         boolean hasQuestionnaire,
+        boolean canManage,
         Integer sortOrder,
         Boolean enabled
 ) {
@@ -48,6 +50,24 @@ public record DepartmentVO(
             List<DepartmentPosterVO> posters,
             boolean hasQuestionnaire
     ) {
+        return from(department, posters, hasQuestionnaire, false);
+    }
+
+    /**
+     * 根据部门实体、海报列表、问卷标记和当前用户管理权限创建部门详情
+     *
+     * @param department 部门实体
+     * @param posters 海报列表
+     * @param hasQuestionnaire 是否设置了报名问卷
+     * @param canManage 当前用户是否有权限修改部门信息
+     * @return 部门详情
+     */
+    public static DepartmentVO from(
+            Department department,
+            List<DepartmentPosterVO> posters,
+            boolean hasQuestionnaire,
+            boolean canManage
+    ) {
         return new DepartmentVO(
                 department.getId(),
                 department.getWorkstationId(),
@@ -60,6 +80,7 @@ public record DepartmentVO(
                 department.getContact(),
                 department.getRecruitmentGroup(),
                 hasQuestionnaire,
+                canManage,
                 department.getSortOrder(),
                 department.getEnabled()
         );

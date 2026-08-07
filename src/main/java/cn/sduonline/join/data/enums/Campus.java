@@ -21,15 +21,6 @@ public enum Campus {
         this.displayName = displayName;
     }
 
-    /**
-     * 获取接口使用的中文校区名称
-     *
-     * @return 中文校区名称
-     */
-    @JsonValue
-    public String displayName() {
-        return displayName;
-    }
 
     /**
      * 根据枚举编码或中文名称解析校区

@@ -136,6 +136,80 @@ class AdminRoleAssignmentServiceTest {
         assertEquals("DEPARTMENT_ASSISTANT", result.data().roleCode());
     }
 
+    @Test
+    void revokeDeletesAssignment() {
+        RoleAssignmentRequest request = request(
+                "DEPARTMENT_ADMIN", OrgType.DEPARTMENT, 12L
+        );
+        when(assignmentMapper.selectRoleId("DEPARTMENT_ADMIN")).thenReturn(3L);
+        when(assignmentMapper.countAssignment(
+                "20240001", 3L, "DEPARTMENT", 12L
+        )).thenReturn(1L);
+        when(assignmentMapper.countGrantAuthority(
+                "operator-01", 20, "DEPARTMENT", 12L
+        )).thenReturn(1L);
+
+        ServiceResult<Void> result = service.revoke("operator-01", request);
+
+        assertTrue(result.isSuccess());
+        verify(assignmentMapper).deleteAssignment(
+                "20240001", 3L, "DEPARTMENT", 12L
+        );
+    }
+
+    @Test
+    void revokeRejectsMissingAssignment() {
+        RoleAssignmentRequest request = request(
+                "DEPARTMENT_ADMIN", OrgType.DEPARTMENT, 12L
+        );
+        when(assignmentMapper.selectRoleId("DEPARTMENT_ADMIN")).thenReturn(3L);
+        when(assignmentMapper.countAssignment(
+                "20240001", 3L, "DEPARTMENT", 12L
+        )).thenReturn(0L);
+
+        ServiceResult<Void> result = service.revoke("operator-01", request);
+
+        assertEquals(BizCode.ROLE_ASSIGNMENT_NOT_FOUND, result.error());
+        verify(assignmentMapper, never()).deleteAssignment(
+                any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void revokeRejectsWhenOperatorLacksAuthority() {
+        RoleAssignmentRequest request = request(
+                "DEPARTMENT_ADMIN", OrgType.DEPARTMENT, 12L
+        );
+        when(assignmentMapper.selectRoleId("DEPARTMENT_ADMIN")).thenReturn(3L);
+        when(assignmentMapper.countAssignment(
+                "20240001", 3L, "DEPARTMENT", 12L
+        )).thenReturn(1L);
+        when(assignmentMapper.countGrantAuthority(
+                "operator-01", 20, "DEPARTMENT", 12L
+        )).thenReturn(0L);
+
+        ServiceResult<Void> result = service.revoke("operator-01", request);
+
+        assertEquals(BizCode.ROLE_ASSIGNMENT_FORBIDDEN, result.error());
+        verify(assignmentMapper, never()).deleteAssignment(
+                any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void revokeRejectsMismatchedScope() {
+        RoleAssignmentRequest request = request(
+                "BOARD_ADMIN", OrgType.DEPARTMENT, 12L
+        );
+
+        ServiceResult<Void> result = service.revoke("operator-01", request);
+
+        assertEquals(BizCode.ROLE_SCOPE_MISMATCH, result.error());
+        verify(assignmentMapper, never()).deleteAssignment(
+                any(), any(), any(), any()
+        );
+    }
+
     private static RoleAssignmentRequest request(
             String roleCode,
             OrgType scopeType,

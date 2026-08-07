@@ -139,26 +139,32 @@ public interface DepartmentInterviewMapper {
     );
 
     @Select("""
-            SELECT i.id, i.department_id, i.check_in_id, i.application_id,
-                   i.candidate_cas_id, u.name AS candidate_name,
-                   i.interviewer_cas_id, i.queue_number,
-                   i.started_at, i.ended_at, i.score, i.evaluation
+            SELECT i.id, i.department_id, i.room_id, i.check_in_id,
+                   i.application_id, i.candidate_cas_id,
+                   candidate.name AS candidate_name, i.interviewer_cas_id,
+                   interviewer.name AS interviewer_name,
+                   i.queue_number, i.started_at, i.ended_at
             FROM department_interview_active a
             JOIN department_interview i ON i.id = a.interview_id
-            JOIN `user` u ON u.cas_id = i.candidate_cas_id
-            WHERE a.interviewer_cas_id = #{interviewerCasId}
+            JOIN `user` candidate ON candidate.cas_id = i.candidate_cas_id
+            LEFT JOIN `user` interviewer
+                   ON interviewer.cas_id = i.interviewer_cas_id
+            WHERE a.room_id = #{roomId}
             """)
-    DepartmentInterview selectActiveByInterviewer(
-            @Param("interviewerCasId") String interviewerCasId
-    );
+    DepartmentInterview selectActiveByRoom(@Param("roomId") Long roomId);
 
     @Select("""
             SELECT i.id, i.department_id, i.check_in_id, i.application_id,
-                   i.candidate_cas_id, u.name AS candidate_name,
-                   i.interviewer_cas_id, i.queue_number,
-                   i.started_at, i.ended_at, i.score, i.evaluation
+                   i.candidate_cas_id,
+                   candidate.name AS candidate_name,
+                   i.interviewer_cas_id,
+                   interviewer.name AS interviewer_name,
+                   i.queue_number,
+                   i.started_at, i.ended_at
             FROM department_interview i
-            JOIN `user` u ON u.cas_id = i.candidate_cas_id
+            JOIN `user` candidate ON candidate.cas_id = i.candidate_cas_id
+            LEFT JOIN `user` interviewer
+                   ON interviewer.cas_id = i.interviewer_cas_id
             WHERE i.id = #{interviewId}
               AND i.department_id = #{departmentId}
             """)
@@ -252,51 +258,33 @@ public interface DepartmentInterviewMapper {
 
     @Insert("""
             INSERT INTO department_interview
-                (department_id, check_in_id, application_id,
+                (department_id, room_id, check_in_id, application_id,
                  candidate_cas_id, interviewer_cas_id,
                  queue_number, started_at)
             VALUES
-                (#{departmentId}, #{checkInId}, #{applicationId},
+                (#{departmentId}, #{roomId}, #{checkInId}, #{applicationId},
                  #{candidateCasId}, #{interviewerCasId},
                  #{queueNumber}, #{startedAt})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insertInterview(DepartmentInterview interview);
+    int insertRoomInterview(DepartmentInterview interview);
 
     @Insert("""
             INSERT INTO department_interview_active
-                (interview_id, check_in_id, interviewer_cas_id, candidate_cas_id)
+                (interview_id, room_id, check_in_id, candidate_cas_id)
             VALUES
-                (#{id}, #{checkInId}, #{interviewerCasId}, #{candidateCasId})
+                (#{id}, #{roomId}, #{checkInId}, #{candidateCasId})
             """)
-    int insertActive(DepartmentInterview interview);
+    int insertRoomActive(DepartmentInterview interview);
 
     @Update("""
             UPDATE department_interview
-            SET ended_at = #{endedAt},
-                score = #{score},
-                evaluation = #{evaluation}
+            SET ended_at = #{endedAt}
             WHERE id = #{id} AND ended_at IS NULL
             """)
     int finishInterview(
             @Param("id") Long id,
-            @Param("endedAt") java.time.LocalDateTime endedAt,
-            @Param("score") Integer score,
-            @Param("evaluation") String evaluation
-    );
-
-    @Update("""
-            UPDATE department_interview
-            SET score = #{score},
-                evaluation = #{evaluation}
-            WHERE id = #{id}
-              AND department_id = #{departmentId}
-            """)
-    int updateEvaluation(
-            @Param("departmentId") Long departmentId,
-            @Param("id") Long id,
-            @Param("score") Integer score,
-            @Param("evaluation") String evaluation
+            @Param("endedAt") java.time.LocalDateTime endedAt
     );
 
     @Delete("""
