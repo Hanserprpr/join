@@ -89,6 +89,7 @@ public interface AdminOrganizationMapper {
                    recruitment_group, sort_order, enabled
             FROM department
             WHERE id = #{id}
+              AND enabled = 1
             """)
     Department selectDepartmentById(@Param("id") Long id);
 

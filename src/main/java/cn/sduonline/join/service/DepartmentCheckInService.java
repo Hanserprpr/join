@@ -143,7 +143,7 @@ public class DepartmentCheckInService {
         if (carryoverId != null) {
             sessionMapper.useCarryover(carryoverId, sessionId);
         }
-        interviewSseService.publishAfterCommit(departmentId);
+        interviewSseService.publishQueueAfterCommit(departmentId);
         return ServiceResult.success(CheckInVO.from(checkIn));
     }
 

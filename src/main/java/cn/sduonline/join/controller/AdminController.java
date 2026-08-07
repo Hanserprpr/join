@@ -17,6 +17,7 @@ import cn.sduonline.join.service.AdminRoleAssignmentService;
 import cn.sduonline.join.service.ServiceResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -78,5 +79,19 @@ public class AdminController {
                 StpUtil.getLoginIdAsString(), request
         );
         return result.isSuccess() ? Result.ok(result.data()) : Result.fail(result.error());
+    }
+
+    /**
+     * 撤销角色分配
+     */
+    @DeleteMapping("/role-assignments")
+    @SaCheckLogin
+    public Result<Void> revokeRole(
+            @Valid @RequestBody RoleAssignmentRequest request
+    ) {
+        ServiceResult<Void> result = roleAssignmentService.revoke(
+                StpUtil.getLoginIdAsString(), request
+        );
+        return result.isSuccess() ? Result.ok() : Result.fail(result.error());
     }
 }

@@ -3,11 +3,13 @@ package cn.sduonline.join.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.data.dto.ContactUpdateRequest;
 import cn.sduonline.join.data.dto.ExternalStudentIdentity;
@@ -35,7 +37,10 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userMapper);
+        userService = new UserService(
+                userMapper,
+                new CollegeMajorService()
+        );
     }
 
     @Test
@@ -124,8 +129,10 @@ class UserServiceTest {
                 null
         );
 
-        User result = userService.updateContact("20240001", request).orElseThrow();
+        ServiceResult<User> outcome = userService.updateContact("20240001", request);
 
+        assertTrue(outcome.isSuccess());
+        User result = outcome.data();
         assertEquals("student@sdu.edu.cn", result.getEmail());
         assertEquals("13900000000", result.getPhone());
         assertEquals("软件学院", result.getCollege());
@@ -148,13 +155,61 @@ class UserServiceTest {
         user.setProfileCompleted(true);
         when(userMapper.selectById("20240001")).thenReturn(user);
 
-        User result = userService.updateContact(
+        ServiceResult<User> outcome = userService.updateContact(
                 "20240001",
                 new ContactUpdateRequest(null, null, null, null, null, "123456")
-        ).orElseThrow();
+        );
 
+        assertTrue(outcome.isSuccess());
+        User result = outcome.data();
         assertEquals("123456", result.getQq());
         assertEquals(true, result.getProfileCompleted());
+    }
+
+    @Test
+    void updateContactRejectsUnknownCollege() {
+        User user = new User();
+        user.setCasId("20240001");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+        ContactUpdateRequest request = new ContactUpdateRequest(
+                "student@sdu.edu.cn", "13900000000", "不存在学院", "软件工程", 2024, null
+        );
+
+        ServiceResult<User> outcome = userService.updateContact("20240001", request);
+
+        assertEquals(BizCode.COLLEGE_INVALID, outcome.error());
+        verify(userMapper, never()).updateById(any(User.class));
+    }
+
+    @Test
+    void updateContactRejectsMajorNotInCollege() {
+        User user = new User();
+        user.setCasId("20240001");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+        ContactUpdateRequest request = new ContactUpdateRequest(
+                "student@sdu.edu.cn", "13900000000", "软件学院", "临床医学（五年制）", 2024, null
+        );
+
+        ServiceResult<User> outcome = userService.updateContact("20240001", request);
+
+        assertEquals(BizCode.MAJOR_INVALID, outcome.error());
+        verify(userMapper, never()).updateById(any(User.class));
+    }
+
+    @Test
+    void updateContactValidatesMajorAgainstExistingCollege() {
+        User user = new User();
+        user.setCasId("20240001");
+        user.setCollege("软件学院");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+        ContactUpdateRequest request = new ContactUpdateRequest(
+                null, null, null, "临床医学（五年制）", null, null
+        );
+
+        ServiceResult<User> outcome = userService.updateContact("20240001", request);
+
+        assertEquals(BizCode.MAJOR_INVALID, outcome.error());
+        verify(userMapper, never()).updateById(any(User.class));
     }
 
     private static OidcUser oidcUser(String sub, String name, String casId) {

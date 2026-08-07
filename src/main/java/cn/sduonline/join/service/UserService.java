@@ -2,6 +2,7 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.dto.ExternalStudentIdentity;
 import cn.sduonline.join.data.dto.ContactUpdateRequest;
+import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.mapper.UserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -27,6 +28,7 @@ import org.springframework.util.StringUtils;
 public class UserService {
 
     private final UserMapper userMapper;
+    private final CollegeMajorService collegeMajorService;
 
     /**
      * 按 OIDC {@code sub} 查询本地用户。
@@ -116,19 +118,25 @@ public class UserService {
     /**
      * 更新请求中提供的个人资料
      * 未提供的字段保持不变
+     * <p>
+     * 提供学院或专业时，校验其是否属于系统维护的学院专业字典。
      *
      * @param casId 当前用户统一认证账号
      * @param request 个人资料更新请求
-     * @return 更新后的用户，不存在时返回空
+     * @return 更新后的用户；用户不存在或学院专业非法时返回对应业务错误
      */
     @Transactional
-    public Optional<User> updateContact(
+    public ServiceResult<User> updateContact(
             String casId,
             ContactUpdateRequest request
     ) {
         User user = userMapper.selectById(casId);
         if (user == null) {
-            return Optional.empty();
+            return ServiceResult.failure(BizCode.USER_NOT_FOUND);
+        }
+        ServiceResult<User> validation = validateCollegeMajor(user, request);
+        if (validation != null) {
+            return validation;
         }
         if (StringUtils.hasText(request.email())) {
             user.setEmail(request.email().trim().toLowerCase());
@@ -151,7 +159,39 @@ public class UserService {
         user.setProfileCompleted(isProfileComplete(user));
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
-        return Optional.of(user);
+        return ServiceResult.success(user);
+    }
+
+    /**
+     * 校验请求中的学院与专业是否合法
+     * 仅在请求提供学院或专业时触发，缺省字段回退到用户当前值
+     *
+     * @param user 当前用户
+     * @param request 个人资料更新请求
+     * @return 校验通过返回 null，否则返回对应业务错误
+     */
+    private ServiceResult<User> validateCollegeMajor(
+            User user,
+            ContactUpdateRequest request
+    ) {
+        if (!StringUtils.hasText(request.college())
+                && !StringUtils.hasText(request.major())) {
+            return null;
+        }
+        String college = StringUtils.hasText(request.college())
+                ? request.college().trim()
+                : user.getCollege();
+        String major = StringUtils.hasText(request.major())
+                ? request.major().trim()
+                : user.getMajor();
+        if (!collegeMajorService.isValidCollege(college)) {
+            return ServiceResult.failure(BizCode.COLLEGE_INVALID);
+        }
+        if (StringUtils.hasText(major)
+                && !collegeMajorService.isValidCollegeMajor(college, major)) {
+            return ServiceResult.failure(BizCode.MAJOR_INVALID);
+        }
+        return null;
     }
 
     /**

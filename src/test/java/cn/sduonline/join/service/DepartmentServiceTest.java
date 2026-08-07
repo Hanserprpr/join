@@ -1,6 +1,7 @@
 package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
@@ -16,6 +17,8 @@ import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentPoster;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
+import cn.sduonline.join.security.scope.OrgType;
+import cn.sduonline.join.security.scope.PermissionCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,12 +33,16 @@ class DepartmentServiceTest {
     private AdminOrganizationMapper organizationMapper;
     @Mock
     private DepartmentQuestionnaireMapper questionnaireMapper;
+    @Mock
+    private AuthorizationService authorizationService;
 
     private DepartmentService service;
 
     @BeforeEach
     void setUp() {
-        service = new DepartmentService(organizationMapper, questionnaireMapper);
+        service = new DepartmentService(
+                organizationMapper, questionnaireMapper, authorizationService
+        );
     }
 
     @Test
@@ -46,12 +53,66 @@ class DepartmentServiceTest {
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         when(questionnaireMapper.countQuestions(12L)).thenReturn(1L);
 
-        var result = service.findById(12L);
+        var result = service.findById(12L, "20240001");
 
         assertTrue(result.isSuccess());
         assertEquals(Campus.CENTRAL, result.data().campus());
         assertEquals("组织介绍", result.data().introduction());
         assertTrue(result.data().hasQuestionnaire());
+    }
+
+    @Test
+    void findByIdReturnsCanManageTrueWhenUserHasPermission() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(questionnaireMapper.countQuestions(12L)).thenReturn(0L);
+        when(authorizationService.canAccessWithPermission(
+                "20240001",
+                PermissionCode.RECRUITMENT_MANAGE.code(),
+                OrgType.DEPARTMENT,
+                12L
+        )).thenReturn(true);
+
+        var result = service.findById(12L, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.data().canManage());
+    }
+
+    @Test
+    void findByIdReturnsCanManageFalseWhenUserLacksPermission() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(questionnaireMapper.countQuestions(12L)).thenReturn(0L);
+        when(authorizationService.canAccessWithPermission(
+                "20240001",
+                PermissionCode.RECRUITMENT_MANAGE.code(),
+                OrgType.DEPARTMENT,
+                12L
+        )).thenReturn(false);
+
+        var result = service.findById(12L, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertFalse(result.data().canManage());
+    }
+
+    @Test
+    void findByIdReturnsCanManageFalseWhenNotLoggedIn() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(questionnaireMapper.countQuestions(12L)).thenReturn(0L);
+
+        var result = service.findById(12L, null);
+
+        assertTrue(result.isSuccess());
+        assertFalse(result.data().canManage());
+        verify(authorizationService, never()).canAccessWithPermission(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyLong()
+        );
     }
 
     @Test
@@ -79,7 +140,7 @@ class DepartmentServiceTest {
                 " 成果 ", " 要求 ", " QQ：123 ", " 456群 "
         );
 
-        var result = service.updateDetail(12L, request);
+        var result = service.updateDetail(12L, "20240001", request);
 
         assertTrue(result.isSuccess());
         assertEquals(Campus.CENTRAL, result.data().campus());
@@ -111,6 +172,7 @@ class DepartmentServiceTest {
 
         var result = service.updateDetail(
                 12L,
+                "20240001",
                 new DepartmentDetailUpdateRequest(
                         null, null, null, null, null, " ", null
                 )
@@ -126,6 +188,7 @@ class DepartmentServiceTest {
 
         var result = service.updateDetail(
                 99L,
+                "20240001",
                 new DepartmentDetailUpdateRequest(
                         null, null, null, null, null, null, null
                 )
@@ -149,7 +212,7 @@ class DepartmentServiceTest {
         DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
         request.setIntroduction(" 新介绍 ");
 
-        var result = service.patchDetail(12L, request);
+        var result = service.patchDetail(12L, "20240001", request);
 
         assertTrue(result.isSuccess());
         assertEquals("新介绍", result.data().introduction());
@@ -167,7 +230,7 @@ class DepartmentServiceTest {
         request.setContact(null);
         request.setPosters(null);
 
-        var result = service.patchDetail(12L, request);
+        var result = service.patchDetail(12L, "20240001", request);
 
         assertTrue(result.isSuccess());
         assertNull(result.data().contact());

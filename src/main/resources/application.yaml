@@ -34,7 +34,7 @@ spring:
             client-secret: ${OIDC_CLIENT_SECRET}
             client-name: SDU OIDC
             authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: ${OIDC_REDIRECT_URI:https://join.sduonline.cn/login/oauth2/code/sdu}
             # IdP scopes_supported: openid, profile
             scope:
               - openid
@@ -42,8 +42,11 @@ spring:
             client-authentication-method: client_secret_basic
         provider:
           sdu:
-            # https://i.sdu.edu.cn/pass-api/.well-known/openid-configuration
-            issuer-uri: ${OIDC_ISSUER_URI:https://i.sdu.edu.cn/pass-api}
+            # 不使用 issuer-uri 自动发现，避免代理环境改写元数据中的端点域名
+            authorization-uri: https://i.sdu.edu.cn/pass-api/auth/oidc/authorize
+            token-uri: https://i.sdu.edu.cn/pass-api/auth/oidc/token
+            user-info-uri: https://i.sdu.edu.cn/pass-api/auth/oidc/userinfo
+            jwk-set-uri: https://i.sdu.edu.cn/pass-api/auth/oidc/jwks
             user-name-attribute: sub
 
 mybatis-plus:
@@ -54,8 +57,23 @@ mybatis-plus:
       id-type: input
       table-underline: true
 
+sa-token:
+  cookie:
+    # 跨站请求需携带 Cookie，改为 None 并配合 secure（localhost 视为安全上下文）
+    same-site: None
+    secure: true
+
 server:
   port: ${SERVER_PORT:8080}
+  # 使用反向代理传入的 X-Forwarded-* 信息生成 HTTPS 公网地址
+  forward-headers-strategy: framework
+  tomcat:
+    # SSE 为长连接，每个连接占用一个连接槽位；默认 8192 会先于内存成为瓶颈。
+    # 按 20000 起步，部署时按需调大（注意操作系统文件句柄限制）。
+    max-connections: ${SERVER_TOMCAT_MAX_CONNECTIONS:20000}
+    threads:
+      # SSE 异步不长期占用线程，但其他业务仍需要；默认 200 一般够用
+      max: ${SERVER_TOMCAT_MAX_THREADS:200}
   error:
     include-message: never
     include-stacktrace: never
@@ -64,7 +82,9 @@ server:
     session:
       cookie:
         name: JOINSESSION
-        same-site: lax
+        # 跨站请求需携带 Cookie，改为 none 并配合 secure（localhost 视为安全上下文）
+        same-site: none
+        secure: true
         http-only: true
 
 app:
@@ -89,3 +109,7 @@ app:
     system-name: ${WECHAT_SYSTEM_NAME:学生在线纳新系统}
     # access_token 默认有效 7200 秒，提前刷新以避免临界时间请求失败
     token-refresh-ahead-seconds: ${WECHAT_TOKEN_REFRESH_AHEAD_SECONDS:300}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs

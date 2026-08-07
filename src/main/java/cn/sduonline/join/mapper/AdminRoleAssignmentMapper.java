@@ -1,6 +1,7 @@
 package cn.sduonline.join.mapper;
 
 import cn.sduonline.join.data.po.UserRoleScope;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -108,4 +109,18 @@ public interface AdminRoleAssignmentMapper {
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insertAssignment(UserRoleScope assignment);
+
+    @Delete("""
+            DELETE FROM user_role_scope
+            WHERE cas_id = #{casId}
+              AND role_id = #{roleId}
+              AND scope_type = #{scopeType}
+              AND scope_id = #{scopeId}
+            """)
+    int deleteAssignment(
+            @Param("casId") String casId,
+            @Param("roleId") Long roleId,
+            @Param("scopeType") String scopeType,
+            @Param("scopeId") Long scopeId
+    );
 }

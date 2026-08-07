@@ -9,8 +9,11 @@ import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigRequest;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
 import cn.sduonline.join.data.dto.InterviewEvaluationRequest;
+import cn.sduonline.join.data.dto.InterviewEvaluationVO;
 import cn.sduonline.join.data.dto.InterviewSessionRequest;
 import cn.sduonline.join.data.dto.InterviewSessionVO;
+import cn.sduonline.join.data.dto.sse.InterviewQueueSseEnvelope;
+import cn.sduonline.join.data.dto.sse.MyQueueStatusSseEnvelope;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.scope.DepartmentPermission;
 import cn.sduonline.join.security.scope.PermissionCode;
@@ -22,6 +25,10 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -252,6 +259,21 @@ public class DepartmentInterviewController {
      * @apiNote SSE 接口，推送 queue-updated 和 heartbeat 事件
      */
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(
+            summary = "订阅面试队列事件",
+            description = "queue-updated 的 data 是面试队列快照；"
+                    + "heartbeat 的 data 是 ISO-8601 时间字符串。"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "队列快照及心跳事件流",
+            content = @Content(
+                    mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
+                    schema = @Schema(
+                            implementation = InterviewQueueSseEnvelope.class
+                    )
+            )
+    )
     @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
     public SseEmitter subscribeQueue(
             @PathVariable @Positive Long departmentId
@@ -274,6 +296,22 @@ public class DepartmentInterviewController {
             value = "/my-events",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE
     )
+    @Operation(
+            summary = "订阅我的排队状态事件",
+            description = "my-queue-status-updated 的 data 是个人排队状态；"
+                    + "business-error 的 data 是统一错误响应；"
+                    + "heartbeat 的 data 是 ISO-8601 时间字符串。"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "个人排队状态、业务错误及心跳事件流",
+            content = @Content(
+                    mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
+                    schema = @Schema(
+                            implementation = MyQueueStatusSseEnvelope.class
+                    )
+            )
+    )
     public SseEmitter subscribeMyQueueStatus(
             @PathVariable @Positive Long departmentId
     ) {
@@ -290,57 +328,6 @@ public class DepartmentInterviewController {
                         .findMyQueueStatus(departmentId, casId)
                         .data()
         );
-    }
-
-    /**
-     * 从等待队列中叫取下一位可面试用户
-     *
-     * @param departmentId 部门 ID
-     * @return 新创建的进行中面试记录
-     */
-    @PostMapping("/call-next")
-    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
-    public Result<DepartmentInterviewVO> callNext(
-            @PathVariable @Positive Long departmentId
-    ) {
-        return toResult(interviewService.callNext(
-                departmentId, StpUtil.getLoginIdAsString()
-        ));
-    }
-
-    /**
-     * 查询当前管理员正在进行的面试
-     *
-     * @param departmentId 部门 ID
-     * @return 当前管理员的进行中面试记录
-     */
-    @GetMapping("/current")
-    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
-    public Result<DepartmentInterviewVO> findCurrent(
-            @PathVariable @Positive Long departmentId
-    ) {
-        return toResult(interviewService.findCurrent(
-                departmentId, StpUtil.getLoginIdAsString()
-        ));
-    }
-
-    /**
-     * 结束当前管理员正在进行的面试
-     *
-     * @param departmentId 部门 ID
-     * @param request 可选的评分和评价
-     * @return 已结束的面试记录
-     */
-    @PostMapping("/current/finish")
-    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
-    public Result<DepartmentInterviewVO> finish(
-            @PathVariable @Positive Long departmentId,
-            @Valid @RequestBody(required = false)
-            InterviewEvaluationRequest request
-    ) {
-        return toResult(interviewService.finish(
-                departmentId, StpUtil.getLoginIdAsString(), request
-        ));
     }
 
     /**
@@ -362,59 +349,25 @@ public class DepartmentInterviewController {
     }
 
     /**
-     * 补写或修改指定面试记录的评分、评价
+     * 补写或修改当前用户对指定面试的评价。
+     * 一个面试有多位面试官各自提交的评价，本接口只更新当前用户的那一份。
      *
      * @param departmentId 部门 ID
      * @param interviewId 面试记录 ID
      * @param request 评分和评价
-     * @return 修改后的面试记录
+     * @return 当前用户对该面试的评价
      */
     @PutMapping("/{interviewId}/evaluation")
     @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
-    public Result<DepartmentInterviewVO> updateEvaluation(
+    public Result<InterviewEvaluationVO> updateEvaluation(
             @PathVariable @Positive Long departmentId,
             @PathVariable @Positive Long interviewId,
             @Valid @RequestBody InterviewEvaluationRequest request
     ) {
-        return toResult(interviewService.updateEvaluation(
-                departmentId, interviewId, request
-        ));
-    }
-
-    /**
-     * 将当前叫到的用户标记为过号并向后顺延
-     *
-     * @param departmentId 部门 ID
-     * @return 重新排队后的用户状态
-     */
-    @PostMapping("/current/pass")
-    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
-    public Result<InterviewQueueItemVO> passCurrent(
-            @PathVariable @Positive Long departmentId
-    ) {
-        ServiceResult<InterviewQueueItemVO> result =
-                interviewService.passCurrent(
-                        departmentId, StpUtil.getLoginIdAsString()
-                );
-        return result.isSuccess()
-                ? Result.ok(result.data())
-                : Result.fail(result.error());
-    }
-
-    /**
-     * 停止当前管理员的叫号，不影响面试场次和其他管理员
-     *
-     * @param departmentId 部门 ID
-     * @return 被释放并回到等待状态的用户
-     */
-    @PostMapping("/current/stop-calling")
-    @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
-    public Result<InterviewQueueItemVO> stopCalling(
-            @PathVariable @Positive Long departmentId
-    ) {
-        ServiceResult<InterviewQueueItemVO> result =
-                interviewService.stopCalling(
-                        departmentId, StpUtil.getLoginIdAsString()
+        ServiceResult<InterviewEvaluationVO> result =
+                interviewService.updateEvaluation(
+                        departmentId, interviewId,
+                        StpUtil.getLoginIdAsString(), request
                 );
         return result.isSuccess()
                 ? Result.ok(result.data())

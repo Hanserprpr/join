@@ -39,7 +39,10 @@ public class AuthController {
     }
 
     /**
-     * 登录态检查
+     * 登录态检查。
+     * 保持匿名可调用以便登录页判断是否已登录，但只返回登录状态，
+     * 不回显身份明细（学号/姓名），避免被跨站请求探测。
+     * 身份信息请通过 {@link #me} 获取。
      */
     @GetMapping("/status")
     public Result<Map<String, Object>> status(@AuthenticationPrincipal OidcUser oidcUser) {
@@ -49,13 +52,9 @@ public class AuthController {
         if (externalIdentity != null) {
             data.put("loggedIn", true);
             data.put("source", "external-token");
-            data.put("casId", externalIdentity.studentNumber());
-            data.put("name", externalIdentity.name());
         } else if (oidcUser != null) {
             data.put("loggedIn", true);
             data.put("source", "oidc");
-            data.put("sub", oidcUser.getSubject());
-            data.put("name", oidcUser.getFullName());
         } else {
             data.put("loggedIn", false);
         }

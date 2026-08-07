@@ -12,6 +12,10 @@ public record ServiceResult<T>(T data, BizCode error) {
         return new ServiceResult<>(null, error);
     }
 
+    public static <T> ServiceResult<T> failure(BizCode error, T data) {
+        return new ServiceResult<>(data, error);
+    }
+
     public boolean isSuccess() {
         return error == null;
     }

@@ -1,6 +1,7 @@
 package cn.sduonline.join.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.data.dto.DepartmentDetailUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
@@ -47,7 +48,8 @@ public class DepartmentController {
     public Result<DepartmentVO> getDepartment(
             @PathVariable @Positive Long departmentId
     ) {
-        return toResult(departmentService.findById(departmentId));
+        String casId = StpUtil.isLogin() ? StpUtil.getLoginIdAsString() : null;
+        return toResult(departmentService.findById(departmentId, casId));
     }
 
     /**
@@ -64,7 +66,9 @@ public class DepartmentController {
             @PathVariable @Positive Long departmentId,
             @Valid @RequestBody DepartmentDetailUpdateRequest request
     ) {
-        return toResult(departmentService.updateDetail(departmentId, request));
+        return toResult(departmentService.updateDetail(
+                departmentId, StpUtil.getLoginIdAsString(), request
+        ));
     }
 
     /**
@@ -81,7 +85,9 @@ public class DepartmentController {
             @PathVariable @Positive Long departmentId,
             @Valid @RequestBody DepartmentDetailPatchRequest request
     ) {
-        return toResult(departmentService.patchDetail(departmentId, request));
+        return toResult(departmentService.patchDetail(
+                departmentId, StpUtil.getLoginIdAsString(), request
+        ));
     }
 
     /**

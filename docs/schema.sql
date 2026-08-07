@@ -228,9 +228,44 @@ CREATE TABLE `department_check_in_sequence` (
     FOREIGN KEY (`session_id`) REFERENCES `department_interview_session` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门签到叫号序列';
 
+CREATE TABLE `department_interview_room` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `department_id` BIGINT NOT NULL,
+  `session_id` BIGINT NOT NULL,
+  `name` VARCHAR(64) NOT NULL,
+  `status` VARCHAR(16) NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN/CLOSED',
+  `created_by` VARCHAR(32)
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_interview_room_session_name` (`session_id`, `name`),
+  KEY `idx_interview_room_department_status` (`department_id`, `status`),
+  CONSTRAINT `fk_interview_room_department`
+    FOREIGN KEY (`department_id`) REFERENCES `department` (`id`),
+  CONSTRAINT `fk_interview_room_session`
+    FOREIGN KEY (`session_id`) REFERENCES `department_interview_session` (`id`),
+  CONSTRAINT `fk_interview_room_creator`
+    FOREIGN KEY (`created_by`) REFERENCES `user` (`cas_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='面试室';
+
+CREATE TABLE `department_interview_room_member` (
+  `room_id` BIGINT NOT NULL,
+  `admin_cas_id` VARCHAR(32)
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `joined_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`room_id`, `admin_cas_id`),
+  KEY `idx_interview_room_member_admin` (`admin_cas_id`),
+  CONSTRAINT `fk_interview_room_member_room`
+    FOREIGN KEY (`room_id`) REFERENCES `department_interview_room` (`id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_interview_room_member_admin`
+    FOREIGN KEY (`admin_cas_id`) REFERENCES `user` (`cas_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='面试室管理员成员';
+
 CREATE TABLE `department_interview` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `department_id` BIGINT NOT NULL,
+  `room_id` BIGINT NULL,
   `check_in_id` BIGINT NOT NULL,
   `application_id` BIGINT NOT NULL,
   `candidate_cas_id` VARCHAR(32)
@@ -240,17 +275,16 @@ CREATE TABLE `department_interview` (
   `queue_number` INT NOT NULL,
   `started_at` DATETIME NOT NULL,
   `ended_at` DATETIME NULL,
-  `score` TINYINT UNSIGNED NULL COMMENT '面试评分，1-5分',
-  `evaluation` VARCHAR(2000) NULL COMMENT '面试评价',
   PRIMARY KEY (`id`),
-  CONSTRAINT `chk_interview_score`
-    CHECK (`score` IS NULL OR (`score` BETWEEN 1 AND 5)),
   UNIQUE KEY `uk_department_interview_check_in` (`check_in_id`),
   KEY `idx_department_interview_department` (`department_id`, `started_at`),
   KEY `idx_department_interview_candidate` (`candidate_cas_id`),
   KEY `idx_department_interview_interviewer` (`interviewer_cas_id`),
+  KEY `idx_department_interview_room` (`room_id`, `started_at`),
   CONSTRAINT `fk_interview_department`
     FOREIGN KEY (`department_id`) REFERENCES `department` (`id`),
+  CONSTRAINT `fk_interview_room`
+    FOREIGN KEY (`room_id`) REFERENCES `department_interview_room` (`id`),
   CONSTRAINT `fk_interview_check_in`
     FOREIGN KEY (`check_in_id`) REFERENCES `department_check_in` (`id`),
   CONSTRAINT `fk_interview_application`
@@ -263,25 +297,41 @@ CREATE TABLE `department_interview` (
 
 CREATE TABLE `department_interview_active` (
   `interview_id` BIGINT NOT NULL,
+  `room_id` BIGINT NULL,
   `check_in_id` BIGINT NOT NULL,
-  `interviewer_cas_id` VARCHAR(32)
-    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `candidate_cas_id` VARCHAR(32)
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`interview_id`),
   UNIQUE KEY `uk_active_interview_check_in` (`check_in_id`),
-  UNIQUE KEY `uk_active_interview_interviewer` (`interviewer_cas_id`),
   UNIQUE KEY `uk_active_interview_candidate` (`candidate_cas_id`),
+  UNIQUE KEY `uk_active_interview_room` (`room_id`),
   CONSTRAINT `fk_active_interview`
     FOREIGN KEY (`interview_id`) REFERENCES `department_interview` (`id`)
     ON DELETE CASCADE,
+  CONSTRAINT `fk_active_interview_room`
+    FOREIGN KEY (`room_id`) REFERENCES `department_interview_room` (`id`),
   CONSTRAINT `fk_active_interview_check_in`
     FOREIGN KEY (`check_in_id`) REFERENCES `department_check_in` (`id`),
-  CONSTRAINT `fk_active_interview_interviewer`
-    FOREIGN KEY (`interviewer_cas_id`) REFERENCES `user` (`cas_id`),
   CONSTRAINT `fk_active_interview_candidate`
     FOREIGN KEY (`candidate_cas_id`) REFERENCES `user` (`cas_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='当前进行中的面试占用';
+
+CREATE TABLE `department_interview_evaluation` (
+  `interview_id` BIGINT NOT NULL,
+  `admin_cas_id` VARCHAR(32)
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `score` TINYINT UNSIGNED NOT NULL,
+  `evaluation` VARCHAR(2000) NULL,
+  `submitted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`interview_id`, `admin_cas_id`),
+  CONSTRAINT `chk_interview_evaluation_score`
+    CHECK (`score` BETWEEN 1 AND 5),
+  CONSTRAINT `fk_interview_evaluation_interview`
+    FOREIGN KEY (`interview_id`) REFERENCES `department_interview` (`id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_interview_evaluation_admin`
+    FOREIGN KEY (`admin_cas_id`) REFERENCES `user` (`cas_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员独立面试评价';
 
 CREATE TABLE `department_interview_carryover` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
