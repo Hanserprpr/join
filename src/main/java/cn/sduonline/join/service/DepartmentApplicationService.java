@@ -1,6 +1,8 @@
 package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.dto.ApplicationAnswerRequest;
+import cn.sduonline.join.data.dto.AdmissionPublishRequest;
+import cn.sduonline.join.data.dto.AdmissionPublishVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
@@ -41,6 +43,7 @@ public class DepartmentApplicationService {
     private final DepartmentQuestionnaireMapper questionnaireMapper;
     private final DepartmentApplicationMapper applicationMapper;
     private final UserMapper userMapper;
+    private final AdmissionEmailService admissionEmailService;
 
     public ServiceResult<PageVO<DepartmentApplicationSummaryVO>> findApplications(
             Long departmentId,
@@ -89,6 +92,101 @@ public class DepartmentApplicationService {
             return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
         }
         return ServiceResult.success(toDetailVO(application));
+    }
+
+    @Transactional
+    public ServiceResult<DepartmentApplicationVO> admit(
+            Long departmentId,
+            Long applicationId
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        DepartmentApplication application = applicationMapper
+                .selectByDepartmentAndId(departmentId, applicationId);
+        if (application == null) {
+            return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
+        }
+        if (application.getStatus() == ApplicationStatus.ADMITTED) {
+            return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
+        }
+        if (application.getStatus() != ApplicationStatus.ADMISSION_DRAFT) {
+            applicationMapper.updateStatus(
+                    departmentId, applicationId, ApplicationStatus.ADMISSION_DRAFT
+            );
+            application.setStatus(ApplicationStatus.ADMISSION_DRAFT);
+        }
+        return ServiceResult.success(DepartmentApplicationVO.from(application));
+    }
+
+    @Transactional
+    public ServiceResult<DepartmentApplicationVO> cancelAdmissionDraft(
+            Long departmentId,
+            Long applicationId
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        DepartmentApplication application = applicationMapper
+                .selectByDepartmentAndId(departmentId, applicationId);
+        if (application == null) {
+            return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
+        }
+        if (application.getStatus() == ApplicationStatus.ADMITTED) {
+            return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
+        }
+        if (application.getStatus() == ApplicationStatus.ADMISSION_DRAFT) {
+            applicationMapper.updateStatus(
+                    departmentId, applicationId, ApplicationStatus.SUBMITTED
+            );
+            application.setStatus(ApplicationStatus.SUBMITTED);
+        }
+        return ServiceResult.success(DepartmentApplicationVO.from(application));
+    }
+
+    @Transactional
+    public ServiceResult<AdmissionPublishVO> publishAdmissions(
+            Long departmentId,
+            AdmissionPublishRequest request
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        List<DepartmentApplication> drafts =
+                applicationMapper.selectAdmissionDrafts(departmentId);
+        if (drafts.isEmpty()) {
+            return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
+        }
+        if (drafts.stream().anyMatch(application ->
+                !StringUtils.hasText(application.getEmail()))) {
+            return ServiceResult.failure(BizCode.EMAIL_INVALID);
+        }
+        int published = applicationMapper.publishAdmissionDrafts(departmentId);
+        if (published == 0) {
+            return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
+        }
+        admissionEmailService.sendAfterCommit(
+                drafts, request.subject(), request.content()
+        );
+        return ServiceResult.success(new AdmissionPublishVO(published));
+    }
+
+    public ServiceResult<DepartmentApplicationVO> findMyApplication(
+            Long departmentId,
+            String casId
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        DepartmentApplication application = applicationMapper
+                .selectByDepartmentAndUser(departmentId, casId);
+        if (application == null) {
+            return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
+        }
+        if (application.getStatus() == ApplicationStatus.ADMISSION_DRAFT) {
+            application.setStatus(ApplicationStatus.SUBMITTED);
+        }
+        return ServiceResult.success(DepartmentApplicationVO.from(application));
     }
 
     public ServiceResult<List<DepartmentApplicationDetailVO>> findForExport(

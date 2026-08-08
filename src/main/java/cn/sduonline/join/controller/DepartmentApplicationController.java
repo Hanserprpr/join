@@ -3,6 +3,8 @@ package cn.sduonline.join.controller;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
+import cn.sduonline.join.data.dto.AdmissionPublishRequest;
+import cn.sduonline.join.data.dto.AdmissionPublishVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationSummaryVO;
@@ -28,6 +30,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -98,6 +102,67 @@ public class DepartmentApplicationController {
         ServiceResult<DepartmentApplicationDetailVO> result =
                 applicationService.findApplicationDetail(
                         departmentId, applicationId
+                );
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    /**
+     * 将指定报名人设置为录取
+     *
+     * @param departmentId 部门 ID
+     * @param applicationId 报名记录 ID
+     * @return 更新后的报名状态
+     */
+    @PutMapping("/{departmentId}/applications/{applicationId}/admission")
+    @DepartmentPermission(PermissionCode.ADMISSION_MANAGE)
+    public Result<DepartmentApplicationVO> admit(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable @Positive Long applicationId
+    ) {
+        ServiceResult<DepartmentApplicationVO> result =
+                applicationService.admit(departmentId, applicationId);
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    @DeleteMapping("/{departmentId}/applications/{applicationId}/admission")
+    @DepartmentPermission(PermissionCode.ADMISSION_MANAGE)
+    public Result<DepartmentApplicationVO> cancelAdmissionDraft(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable @Positive Long applicationId
+    ) {
+        ServiceResult<DepartmentApplicationVO> result =
+                applicationService.cancelAdmissionDraft(
+                        departmentId, applicationId
+                );
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    @PostMapping("/{departmentId}/applications/admissions/publish")
+    @DepartmentPermission(PermissionCode.ADMISSION_MANAGE)
+    public Result<AdmissionPublishVO> publishAdmissions(
+            @PathVariable @Positive Long departmentId,
+            @Valid @RequestBody AdmissionPublishRequest request
+    ) {
+        ServiceResult<AdmissionPublishVO> result =
+                applicationService.publishAdmissions(departmentId, request);
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    @GetMapping("/{departmentId}/applications/me")
+    public Result<DepartmentApplicationVO> findMyApplication(
+            @PathVariable @Positive Long departmentId
+    ) {
+        ServiceResult<DepartmentApplicationVO> result =
+                applicationService.findMyApplication(
+                        departmentId, StpUtil.getLoginIdAsString()
                 );
         return result.isSuccess()
                 ? Result.ok(result.data())
