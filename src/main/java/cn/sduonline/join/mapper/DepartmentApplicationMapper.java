@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface DepartmentApplicationMapper {
@@ -167,6 +168,48 @@ public interface DepartmentApplicationMapper {
             @Param("departmentId") Long departmentId,
             @Param("casId") String casId
     );
+
+    @Select("""
+            SELECT id, department_id, cas_id, status, submitted_at
+            FROM department_application
+            WHERE department_id = #{departmentId} AND id = #{applicationId}
+            """)
+    DepartmentApplication selectByDepartmentAndId(
+            @Param("departmentId") Long departmentId,
+            @Param("applicationId") Long applicationId
+    );
+
+    @Update("""
+            UPDATE department_application
+            SET status = #{status}
+            WHERE department_id = #{departmentId} AND id = #{applicationId}
+            """)
+    int updateStatus(
+            @Param("departmentId") Long departmentId,
+            @Param("applicationId") Long applicationId,
+            @Param("status") cn.sduonline.join.data.enums.ApplicationStatus status
+    );
+
+    @Select("""
+            SELECT a.id, a.department_id, a.cas_id, a.status, a.submitted_at,
+                   u.name AS applicant_name, u.email
+            FROM department_application a
+            JOIN `user` u ON u.cas_id = a.cas_id
+            WHERE a.department_id = #{departmentId}
+              AND a.status = 'ADMISSION_DRAFT'
+            ORDER BY a.id ASC
+            """)
+    java.util.List<DepartmentApplication> selectAdmissionDrafts(
+            @Param("departmentId") Long departmentId
+    );
+
+    @Update("""
+            UPDATE department_application
+            SET status = 'ADMITTED'
+            WHERE department_id = #{departmentId}
+              AND status = 'ADMISSION_DRAFT'
+            """)
+    int publishAdmissionDrafts(@Param("departmentId") Long departmentId);
 
     @Insert("""
             INSERT INTO department_application

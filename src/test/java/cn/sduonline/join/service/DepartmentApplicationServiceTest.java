@@ -10,7 +10,9 @@ import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.data.dto.ApplicationAnswerRequest;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
+import cn.sduonline.join.data.dto.AdmissionPublishRequest;
 import cn.sduonline.join.data.enums.BizCode;
+import cn.sduonline.join.data.enums.ApplicationStatus;
 import cn.sduonline.join.data.enums.QuestionType;
 import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentApplication;
@@ -38,13 +40,14 @@ class DepartmentApplicationServiceTest {
     @Mock DepartmentQuestionnaireMapper questionnaireMapper;
     @Mock DepartmentApplicationMapper applicationMapper;
     @Mock UserMapper userMapper;
+    @Mock AdmissionEmailService admissionEmailService;
     private DepartmentApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new DepartmentApplicationService(
                 organizationMapper, questionnaireMapper,
-                applicationMapper, userMapper
+                applicationMapper, userMapper, admissionEmailService
         );
     }
 
@@ -201,6 +204,79 @@ class DepartmentApplicationServiceTest {
                 result.data().answers().getFirst()
                         .selectedOptions().getFirst().content()
         );
+    }
+
+    @Test
+    void admitsApplicationInSpecifiedDepartment() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setDepartmentId(12L);
+        application.setStatus(ApplicationStatus.SUBMITTED);
+        when(applicationMapper.selectByDepartmentAndId(12L, 100L))
+                .thenReturn(application);
+
+        var result = service.admit(12L, 100L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(ApplicationStatus.ADMISSION_DRAFT, result.data().status());
+        verify(applicationMapper).updateStatus(
+                12L, 100L, ApplicationStatus.ADMISSION_DRAFT
+        );
+    }
+
+    @Test
+    void rejectsAdmissionForApplicationOutsideDepartment() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        when(applicationMapper.selectByDepartmentAndId(12L, 100L))
+                .thenReturn(null);
+
+        var result = service.admit(12L, 100L);
+
+        assertEquals(BizCode.APPLICATION_NOT_FOUND, result.error());
+        verify(applicationMapper, never()).updateStatus(any(), any(), any());
+    }
+
+    @Test
+    void publishesDraftAdmissionsAndSendsPersonalizedEmails() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setApplicantName("张三");
+        application.setEmail("zhangsan@example.com");
+        when(applicationMapper.selectAdmissionDrafts(12L))
+                .thenReturn(List.of(application));
+        when(applicationMapper.publishAdmissionDrafts(12L)).thenReturn(1);
+        AdmissionPublishRequest request =
+                new AdmissionPublishRequest("录取通知", "恭喜你被录取。");
+
+        var result = service.publishAdmissions(12L, request);
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, result.data().publishedCount());
+        verify(admissionEmailService).sendAfterCommit(
+                List.of(application), "录取通知", "恭喜你被录取。"
+        );
+    }
+
+    @Test
+    void hidesDraftAdmissionFromApplicant() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setDepartmentId(12L);
+        application.setStatus(ApplicationStatus.ADMISSION_DRAFT);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+
+        var result = service.findMyApplication(12L, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(ApplicationStatus.SUBMITTED, result.data().status());
     }
 
     private void prepareEligibleUser() {
