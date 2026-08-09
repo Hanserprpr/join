@@ -2,6 +2,7 @@ package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -70,6 +71,8 @@ class DepartmentInterviewSessionServiceTest {
     void endingSessionCreatesCarryoversForNeverCalledCandidates() {
         DepartmentInterviewSession ended = session();
         ended.setStatus(InterviewSessionStatus.ENDED);
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session());
         when(sessionMapper.end(
                 org.mockito.ArgumentMatchers.eq(12L),
                 org.mockito.ArgumentMatchers.eq(30L),
@@ -80,12 +83,22 @@ class DepartmentInterviewSessionServiceTest {
         var result = service.end(12L, 30L);
 
         assertTrue(result.isSuccess());
+        var order = inOrder(sessionMapper);
+        order.verify(sessionMapper).selectPublishedForUpdate(12L, 30L);
+        order.verify(sessionMapper).countActiveInterviews(30L);
+        order.verify(sessionMapper).end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(30L),
+                org.mockito.ArgumentMatchers.any()
+        );
         verify(sessionMapper).cancelUnusedCarryovers(30L);
         verify(sessionMapper).createCarryovers(30L);
     }
 
     @Test
     void refusesToEndWhileAnInterviewIsStillActive() {
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session());
         when(sessionMapper.countActiveInterviews(30L)).thenReturn(1);
 
         var result = service.end(12L, 30L);
@@ -93,6 +106,24 @@ class DepartmentInterviewSessionServiceTest {
         assertEquals(
                 BizCode.INTERVIEW_SESSION_STATE_INVALID, result.error()
         );
+        verify(sessionMapper, never()).end(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void refusesToEndUnlessPublishedSessionCanBeLocked() {
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(null);
+
+        var result = service.end(12L, 30L);
+
+        assertEquals(
+                BizCode.INTERVIEW_SESSION_STATE_INVALID, result.error()
+        );
+        verify(sessionMapper, never()).countActiveInterviews(30L);
         verify(sessionMapper, never()).end(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),

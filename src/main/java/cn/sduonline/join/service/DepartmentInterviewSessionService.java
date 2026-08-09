@@ -76,6 +76,13 @@ public class DepartmentInterviewSessionService {
             Long departmentId,
             Long sessionId
     ) {
+        if (sessionMapper.selectPublishedForUpdate(
+                departmentId, sessionId
+        ) == null) {
+            return ServiceResult.failure(
+                    BizCode.INTERVIEW_SESSION_STATE_INVALID
+            );
+        }
         if (sessionMapper.countActiveInterviews(sessionId) > 0) {
             return ServiceResult.failure(
                     BizCode.INTERVIEW_SESSION_STATE_INVALID

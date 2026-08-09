@@ -1,6 +1,7 @@
 package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -214,7 +215,7 @@ class DepartmentApplicationServiceTest {
         application.setId(100L);
         application.setDepartmentId(12L);
         application.setStatus(ApplicationStatus.SUBMITTED);
-        when(applicationMapper.selectByDepartmentAndId(12L, 100L))
+        when(applicationMapper.selectByDepartmentAndIdForUpdate(12L, 100L))
                 .thenReturn(application);
 
         var result = service.admit(12L, 100L);
@@ -230,7 +231,7 @@ class DepartmentApplicationServiceTest {
     void rejectsAdmissionForApplicationOutsideDepartment() {
         when(organizationMapper.selectDepartmentById(12L))
                 .thenReturn(new Department());
-        when(applicationMapper.selectByDepartmentAndId(12L, 100L))
+        when(applicationMapper.selectByDepartmentAndIdForUpdate(12L, 100L))
                 .thenReturn(null);
 
         var result = service.admit(12L, 100L);
@@ -247,9 +248,11 @@ class DepartmentApplicationServiceTest {
         application.setId(100L);
         application.setApplicantName("张三");
         application.setEmail("zhangsan@example.com");
-        when(applicationMapper.selectAdmissionDrafts(12L))
+        when(applicationMapper.selectAdmissionDraftsForUpdate(12L))
                 .thenReturn(List.of(application));
-        when(applicationMapper.publishAdmissionDrafts(12L)).thenReturn(1);
+        when(applicationMapper.publishAdmissionDraftsByIds(
+                12L, List.of(100L)
+        )).thenReturn(1);
         AdmissionPublishRequest request =
                 new AdmissionPublishRequest("录取通知", "恭喜你被录取。");
 
@@ -257,9 +260,33 @@ class DepartmentApplicationServiceTest {
 
         assertTrue(result.isSuccess());
         assertEquals(1, result.data().publishedCount());
-        verify(admissionEmailService).sendAfterCommit(
+        verify(admissionEmailService).enqueue(
                 List.of(application), "录取通知", "恭喜你被录取。"
         );
+    }
+
+    @Test
+    void abortsPublishingIfLockedDraftSetCannotBeUpdatedExactly() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setApplicantName("张三");
+        application.setEmail("zhangsan@example.com");
+        when(applicationMapper.selectAdmissionDraftsForUpdate(12L))
+                .thenReturn(List.of(application));
+        when(applicationMapper.publishAdmissionDraftsByIds(
+                12L, List.of(100L)
+        )).thenReturn(0);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.publishAdmissions(
+                        12L,
+                        new AdmissionPublishRequest("录取通知", "恭喜你被录取。")
+                )
+        );
+        verify(admissionEmailService, never()).enqueue(any(), any(), any());
     }
 
     @Test

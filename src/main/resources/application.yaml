@@ -14,10 +14,10 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
   mail:
-    host: ${MAIL_HOST}
+    host: ${MAIL_HOST:}
     port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -88,6 +88,9 @@ server:
         http-only: true
 
 app:
+  admission-email:
+    enabled: ${ADMISSION_EMAIL_ENABLED:false}
+    poll-delay-ms: ${ADMISSION_EMAIL_POLL_DELAY_MS:5000}
   # 登录成功后回跳的前端地址
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   # 允许的跨域来源，多个用逗号分隔

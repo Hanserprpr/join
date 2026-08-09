@@ -74,7 +74,8 @@ class DepartmentInterviewServiceTest {
         next.setRoomId(9L);
         when(interviewMapper.selectActiveByRoom(9L))
                 .thenReturn(null, next);
-        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
+        when(interviewMapper.selectNextWaitingForUpdate(12L, 5L))
+                .thenReturn(next);
         when(userMapper.selectById("20240001")).thenReturn(user(
                 "20240001", "张三", "candidate-openid"
         ));
@@ -367,7 +368,8 @@ class DepartmentInterviewServiceTest {
         when(interviewMapper.selectActiveByRoom(9L))
                 .thenReturn(null, next);
         when(roomMapper.selectById(12L, 9L)).thenReturn(room);
-        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
+        when(interviewMapper.selectNextWaitingForUpdate(12L, 5L))
+                .thenReturn(next);
 
         var result = service.callNextInRoom(12L, 9L, "admin01");
 
@@ -404,7 +406,9 @@ class DepartmentInterviewServiceTest {
                 result.data().pendingAdministrators().getFirst().casId()
         );
         assertEquals(false, result.data().canForce());
-        verify(interviewMapper, never()).selectNextWaitingForUpdate(any());
+        verify(interviewMapper, never()).selectNextWaitingForUpdate(
+                any(), any()
+        );
     }
 
     @Test
@@ -474,7 +478,8 @@ class DepartmentInterviewServiceTest {
                         "admin02", "王老师", false, null
                 )
         ));
-        when(interviewMapper.selectNextWaitingForUpdate(12L)).thenReturn(next);
+        when(interviewMapper.selectNextWaitingForUpdate(12L, 5L))
+                .thenReturn(next);
 
         var result = service.callNextInRoom(12L, 9L, "admin01");
 

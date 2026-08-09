@@ -103,7 +103,9 @@ public class DepartmentApplicationService {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         DepartmentApplication application = applicationMapper
-                .selectByDepartmentAndId(departmentId, applicationId);
+                .selectByDepartmentAndIdForUpdate(
+                        departmentId, applicationId
+                );
         if (application == null) {
             return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
         }
@@ -128,7 +130,9 @@ public class DepartmentApplicationService {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         DepartmentApplication application = applicationMapper
-                .selectByDepartmentAndId(departmentId, applicationId);
+                .selectByDepartmentAndIdForUpdate(
+                        departmentId, applicationId
+                );
         if (application == null) {
             return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
         }
@@ -153,7 +157,7 @@ public class DepartmentApplicationService {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         List<DepartmentApplication> drafts =
-                applicationMapper.selectAdmissionDrafts(departmentId);
+                applicationMapper.selectAdmissionDraftsForUpdate(departmentId);
         if (drafts.isEmpty()) {
             return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
         }
@@ -161,11 +165,18 @@ public class DepartmentApplicationService {
                 !StringUtils.hasText(application.getEmail()))) {
             return ServiceResult.failure(BizCode.EMAIL_INVALID);
         }
-        int published = applicationMapper.publishAdmissionDrafts(departmentId);
-        if (published == 0) {
-            return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
+        List<Long> applicationIds = drafts.stream()
+                .map(DepartmentApplication::getId)
+                .toList();
+        int published = applicationMapper.publishAdmissionDraftsByIds(
+                departmentId, applicationIds
+        );
+        if (published != drafts.size()) {
+            throw new IllegalStateException(
+                    "Admission draft set changed while publishing"
+            );
         }
-        admissionEmailService.sendAfterCommit(
+        admissionEmailService.enqueue(
                 drafts, request.subject(), request.content()
         );
         return ServiceResult.success(new AdmissionPublishVO(published));
