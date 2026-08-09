@@ -173,8 +173,9 @@ public interface DepartmentApplicationMapper {
             SELECT id, department_id, cas_id, status, submitted_at
             FROM department_application
             WHERE department_id = #{departmentId} AND id = #{applicationId}
+            FOR UPDATE
             """)
-    DepartmentApplication selectByDepartmentAndId(
+    DepartmentApplication selectByDepartmentAndIdForUpdate(
             @Param("departmentId") Long departmentId,
             @Param("applicationId") Long applicationId
     );
@@ -198,18 +199,29 @@ public interface DepartmentApplicationMapper {
             WHERE a.department_id = #{departmentId}
               AND a.status = 'ADMISSION_DRAFT'
             ORDER BY a.id ASC
+            FOR UPDATE
             """)
-    java.util.List<DepartmentApplication> selectAdmissionDrafts(
+    java.util.List<DepartmentApplication> selectAdmissionDraftsForUpdate(
             @Param("departmentId") Long departmentId
     );
 
     @Update("""
+            <script>
             UPDATE department_application
             SET status = 'ADMITTED'
             WHERE department_id = #{departmentId}
               AND status = 'ADMISSION_DRAFT'
+              AND id IN
+              <foreach collection="applicationIds" item="applicationId"
+                       open="(" separator="," close=")">
+                #{applicationId}
+              </foreach>
+            </script>
             """)
-    int publishAdmissionDrafts(@Param("departmentId") Long departmentId);
+    int publishAdmissionDraftsByIds(
+            @Param("departmentId") Long departmentId,
+            @Param("applicationIds") java.util.List<Long> applicationIds
+    );
 
     @Insert("""
             INSERT INTO department_application

@@ -15,6 +15,7 @@ import cn.sduonline.join.data.dto.InterviewRoomStateVO;
 import cn.sduonline.join.data.enums.InterviewQueueStatus;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.DepartmentInterview;
+import cn.sduonline.join.data.po.DepartmentInterviewRoom;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
@@ -50,7 +51,8 @@ public class DepartmentInterviewService {
     ) {
         ServiceResult<InterviewRoomStateVO> result =
                 transactionTemplate.execute(status -> {
-            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+            ServiceResult<DepartmentInterviewRoom> access =
+                    lockOpenRoomAndCheckMember(
                     departmentId, roomId, administratorCasId
             );
             if (!access.isSuccess()) {
@@ -69,7 +71,9 @@ public class DepartmentInterviewService {
                 }
             }
             DepartmentInterview next =
-                    interviewMapper.selectNextWaitingForUpdate(departmentId);
+                    interviewMapper.selectNextWaitingForUpdate(
+                            departmentId, access.data().getSessionId()
+                    );
             if (next == null) {
                 return ServiceResult.failure(BizCode.INTERVIEW_QUEUE_EMPTY);
             }
@@ -98,7 +102,8 @@ public class DepartmentInterviewService {
     ) {
         ServiceResult<InterviewRoomStateVO> result =
                 transactionTemplate.execute(status -> {
-            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+            ServiceResult<DepartmentInterviewRoom> access =
+                    lockOpenRoomAndCheckMember(
                     departmentId, roomId, administratorCasId
             );
             if (!access.isSuccess()) {
@@ -110,7 +115,9 @@ public class DepartmentInterviewService {
             DepartmentInterview active =
                     interviewMapper.selectActiveByRoom(roomId);
             DepartmentInterview next =
-                    interviewMapper.selectNextWaitingForUpdate(departmentId);
+                    interviewMapper.selectNextWaitingForUpdate(
+                            departmentId, access.data().getSessionId()
+                    );
             if (next == null) {
                 return ServiceResult.failure(BizCode.INTERVIEW_QUEUE_EMPTY);
             }
@@ -156,7 +163,8 @@ public class DepartmentInterviewService {
     ) {
         ServiceResult<InterviewRoomStateVO> result =
                 transactionTemplate.execute(status -> {
-            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+            ServiceResult<DepartmentInterviewRoom> access =
+                    lockOpenRoomAndCheckMember(
                     departmentId, roomId, administratorCasId
             );
             if (!access.isSuccess()) {
@@ -203,7 +211,8 @@ public class DepartmentInterviewService {
     ) {
         ServiceResult<InterviewRoomStateVO> result =
                 transactionTemplate.execute(status -> {
-            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+            ServiceResult<DepartmentInterviewRoom> access =
+                    lockOpenRoomAndCheckMember(
                     departmentId, roomId, administratorCasId
             );
             if (!access.isSuccess()) {
@@ -241,7 +250,8 @@ public class DepartmentInterviewService {
     ) {
         ServiceResult<InterviewQueueItemVO> result =
                 transactionTemplate.execute(status -> {
-            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+            ServiceResult<DepartmentInterviewRoom> access =
+                    lockOpenRoomAndCheckMember(
                     departmentId, roomId, administratorCasId
             );
             if (!access.isSuccess()) {
@@ -272,7 +282,8 @@ public class DepartmentInterviewService {
     ) {
         ServiceResult<InterviewQueueItemVO> result =
                 transactionTemplate.execute(status -> {
-            ServiceResult<?> access = lockOpenRoomAndCheckMember(
+            ServiceResult<DepartmentInterviewRoom> access =
+                    lockOpenRoomAndCheckMember(
                     departmentId, roomId, administratorCasId
             );
             if (!access.isSuccess()) {
@@ -378,7 +389,7 @@ public class DepartmentInterviewService {
         interviewMapper.deleteActive(active.getId());
     }
 
-    private ServiceResult<?> lockOpenRoomAndCheckMember(
+    private ServiceResult<DepartmentInterviewRoom> lockOpenRoomAndCheckMember(
             Long departmentId, Long roomId, String administratorCasId
     ) {
         var room = roomMapper.selectByIdForUpdate(departmentId, roomId);

@@ -32,9 +32,17 @@ public class DepartmentInterviewRoomService {
             InterviewRoomRequest request
     ) {
         DepartmentInterviewSession session =
-                sessionMapper.selectById(departmentId, request.sessionId());
+                sessionMapper.selectPublishedForUpdate(
+                        departmentId, request.sessionId()
+                );
         if (session == null) {
-            return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_FOUND);
+            return sessionMapper.selectById(
+                    departmentId, request.sessionId()
+            ) == null
+                    ? ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_FOUND)
+                    : ServiceResult.failure(
+                            BizCode.INTERVIEW_SESSION_STATE_INVALID
+                    );
         }
         DepartmentInterviewRoom room = new DepartmentInterviewRoom();
         room.setDepartmentId(departmentId);

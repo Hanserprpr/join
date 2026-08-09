@@ -154,7 +154,8 @@ public interface DepartmentInterviewMapper {
     DepartmentInterview selectActiveByRoom(@Param("roomId") Long roomId);
 
     @Select("""
-            SELECT i.id, i.department_id, i.check_in_id, i.application_id,
+            SELECT i.id, i.department_id, i.room_id,
+                   i.check_in_id, i.application_id,
                    i.candidate_cas_id,
                    candidate.name AS candidate_name,
                    i.interviewer_cas_id,
@@ -185,6 +186,7 @@ public interface DepartmentInterviewMapper {
             LEFT JOIN department_interview_active a
                    ON a.candidate_cas_id = c.cas_id
             WHERE c.department_id = #{departmentId}
+              AND c.session_id = #{sessionId}
               AND i.id IS NULL
               AND a.interview_id IS NULL
             ORDER BY c.priority DESC, c.queue_order ASC
@@ -192,7 +194,8 @@ public interface DepartmentInterviewMapper {
             FOR UPDATE SKIP LOCKED
             """)
     DepartmentInterview selectNextWaitingForUpdate(
-            @Param("departmentId") Long departmentId
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
     );
 
     @Select("""
