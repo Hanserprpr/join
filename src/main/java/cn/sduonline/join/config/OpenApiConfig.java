@@ -27,6 +27,7 @@ public class OpenApiConfig {
             Map.entry("AuthController.status", "检查登录状态"),
             Map.entry("AuthController.me", "获取当前登录用户资料"),
             Map.entry("AuthController.oidcClaims", "获取当前用户的 OIDC Claims"),
+            Map.entry("BannerController.getBanners", "获取轮播图列表"),
             Map.entry("BoardController.getBoards", "获取板块列表"),
             Map.entry("CollegeMajorController.getCollegeMajors", "获取学院与专业列表"),
             Map.entry("DepartmentApplicationController.findApplications", "分页查询部门报名信息"),
@@ -79,6 +80,7 @@ public class OpenApiConfig {
     private static final Map<String, String> CONTROLLER_TAGS = Map.ofEntries(
             Map.entry("AdminController", "系统管理"),
             Map.entry("AuthController", "认证"),
+            Map.entry("BannerController", "轮播图"),
             Map.entry("BoardController", "板块"),
             Map.entry("CollegeMajorController", "学院专业"),
             Map.entry("DepartmentApplicationController", "部门报名"),

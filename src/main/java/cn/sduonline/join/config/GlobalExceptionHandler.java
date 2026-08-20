@@ -6,6 +6,7 @@ import cn.dev33.satoken.exception.NotRoleException;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.ProfileIncompleteException;
+import cn.sduonline.join.security.SaTokenAuthErrors;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -31,7 +32,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotLoginException.class)
     public ResponseEntity<Result<Void>> handleNotLogin(NotLoginException exception) {
-        return response(HttpStatus.UNAUTHORIZED, BizCode.NOT_LOGIN);
+        return response(HttpStatus.UNAUTHORIZED, SaTokenAuthErrors.toBizCode(exception));
     }
 
     @ExceptionHandler(ProfileIncompleteException.class)

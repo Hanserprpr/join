@@ -1,6 +1,5 @@
 package cn.sduonline.join.security;
 
-import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.stp.StpLogic;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.context.SaHolder;
@@ -28,11 +27,16 @@ public class ExternalStpLogic extends StpLogic {
     }
 
     /**
-     * 替换默认 login 类型，使普通 {@link StpUtil} 同时兼容两种登录来源。
+     * 替换 {@link StpUtil} 默认 login 逻辑，使 {@code @SaCheckLogin} 与业务代码
+     * 同时兼容 OIDC Cookie 和外部 Token。
+     * <p>
+     * 必须调用 {@link StpUtil#setStpLogic(StpLogic)}；只写入
+     * {@link cn.dev33.satoken.SaManager} 不会替换 {@code @SaCheckLogin}
+     * 实际使用的默认实例。
      */
     @EventListener(ApplicationReadyEvent.class)
     public void registerAsDefaultStpLogic() {
-        SaManager.putStpLogic(this);
+        StpUtil.setStpLogic(this);
     }
 
     /**
