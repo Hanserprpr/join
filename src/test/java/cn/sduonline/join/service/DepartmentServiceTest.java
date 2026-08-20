@@ -5,15 +5,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cn.sduonline.join.data.dto.DepartmentAchievementRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
 import cn.sduonline.join.data.dto.DepartmentPosterRequest;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.po.Department;
+import cn.sduonline.join.data.po.DepartmentAchievement;
 import cn.sduonline.join.data.po.DepartmentPoster;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
@@ -98,6 +101,30 @@ class DepartmentServiceTest {
     }
 
     @Test
+    void findByIdReflectsRevokedPermissionOnTheVeryNextCall() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(questionnaireMapper.countQuestions(12L)).thenReturn(0L);
+        when(authorizationService.canAccessWithPermission(
+                "20240001",
+                PermissionCode.RECRUITMENT_MANAGE.code(),
+                OrgType.DEPARTMENT,
+                12L
+        )).thenReturn(true, false);
+
+        assertTrue(service.findById(12L, "20240001").data().canManage());
+
+        // canManage 不做缓存，撤销授权后下一次请求就必须翻转。
+        assertFalse(service.findById(12L, "20240001").data().canManage());
+        verify(authorizationService, times(2)).canAccessWithPermission(
+                "20240001",
+                PermissionCode.RECRUITMENT_MANAGE.code(),
+                OrgType.DEPARTMENT,
+                12L
+        );
+    }
+
+    @Test
     void findByIdReturnsCanManageFalseWhenNotLoggedIn() {
         Department department = department();
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
@@ -137,8 +164,17 @@ class DepartmentServiceTest {
                                 "https://example.com/poster-2.jpg", 5
                         )
                 ),
-                " 成果 ", " 要求 ", " QQ：123 ", " 456群 "
+                java.util.List.of(
+                        new DepartmentAchievementRequest(" 获奖 ", " 国一 "),
+                        new DepartmentAchievementRequest("立项", null)
+                ),
+                " 要求 ", " QQ：123 ", " 456群 "
         );
+        when(organizationMapper.selectDepartmentAchievements(12L))
+                .thenReturn(java.util.List.of(
+                        achievement("获奖", "国一", 0),
+                        achievement("立项", null, 1)
+                ));
 
         var result = service.updateDetail(12L, "20240001", request);
 
@@ -150,7 +186,9 @@ class DepartmentServiceTest {
                 "https://example.com/poster-1.jpg",
                 result.data().posters().getFirst().url()
         );
-        assertEquals("成果", result.data().achievements());
+        assertEquals(2, result.data().achievements().size());
+        assertEquals("获奖", result.data().achievements().getFirst().title());
+        assertEquals("国一", result.data().achievements().getFirst().content());
         assertEquals("要求", result.data().recruitmentRequirements());
         assertEquals("QQ：123", result.data().contact());
         assertEquals("456群", result.data().recruitmentGroup());
@@ -162,6 +200,71 @@ class DepartmentServiceTest {
                 .insertDepartmentPoster(posterCaptor.capture());
         assertEquals(0, posterCaptor.getAllValues().getFirst().getSortOrder());
         assertEquals(5, posterCaptor.getAllValues().get(1).getSortOrder());
+        verify(organizationMapper).deleteDepartmentAchievements(12L);
+        ArgumentCaptor<DepartmentAchievement> achievementCaptor =
+                ArgumentCaptor.forClass(DepartmentAchievement.class);
+        verify(organizationMapper, org.mockito.Mockito.times(2))
+                .insertDepartmentAchievement(achievementCaptor.capture());
+        DepartmentAchievement first = achievementCaptor.getAllValues().getFirst();
+        assertEquals("获奖", first.getTitle());
+        assertEquals("国一", first.getContent());
+        // 排序取请求数组下标，前端传什么顺序就按什么顺序展示。
+        assertEquals(0, first.getSortOrder());
+        assertEquals(1, achievementCaptor.getAllValues().get(1).getSortOrder());
+        assertNull(achievementCaptor.getAllValues().get(1).getContent());
+    }
+
+    @Test
+    void patchDetailKeepsAchievementsThatAreNotPresent() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(organizationMapper.selectDepartmentAchievements(12L))
+                .thenReturn(java.util.List.of(achievement("原成果", "原内容", 0)));
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setContact("新联系方式");
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, result.data().achievements().size());
+        assertEquals("原成果", result.data().achievements().getFirst().title());
+        verify(organizationMapper, never()).deleteDepartmentAchievements(12L);
+    }
+
+    @Test
+    void patchDetailReplacesAchievementsWhenPresent() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setAchievements(java.util.List.of(
+                new DepartmentAchievementRequest("新成果", "新内容")
+        ));
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertTrue(result.isSuccess());
+        verify(organizationMapper).deleteDepartmentAchievements(12L);
+        ArgumentCaptor<DepartmentAchievement> captor =
+                ArgumentCaptor.forClass(DepartmentAchievement.class);
+        verify(organizationMapper).insertDepartmentAchievement(captor.capture());
+        assertEquals("新成果", captor.getValue().getTitle());
+    }
+
+    @Test
+    void patchDetailClearsAchievementsOnExplicitNull() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setAchievements(null);
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.data().achievements().isEmpty());
+        verify(organizationMapper).deleteDepartmentAchievements(12L);
+        verify(organizationMapper, never()).insertDepartmentAchievement(
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 
     @Test
@@ -245,6 +348,17 @@ class DepartmentServiceTest {
         department.setSortOrder(0);
         department.setEnabled(true);
         return department;
+    }
+
+    private static DepartmentAchievement achievement(
+            String title, String content, Integer sortOrder
+    ) {
+        DepartmentAchievement achievement = new DepartmentAchievement();
+        achievement.setDepartmentId(12L);
+        achievement.setTitle(title);
+        achievement.setContent(content);
+        achievement.setSortOrder(sortOrder);
+        return achievement;
     }
 
     private static DepartmentPoster poster(Long id, String url, Integer sortOrder) {

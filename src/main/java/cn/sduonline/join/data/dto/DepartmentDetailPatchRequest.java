@@ -22,8 +22,9 @@ public class DepartmentDetailPatchRequest {
     @Size(max = 20)
     private List<DepartmentPosterRequest> posters;
 
-    @Size(max = 10000)
-    private String achievements;
+    @Valid
+    @Size(max = 50)
+    private List<DepartmentAchievementRequest> achievements;
 
     @Size(max = 10000)
     private String recruitmentRequirements;
@@ -68,7 +69,7 @@ public class DepartmentDetailPatchRequest {
     }
 
     @JsonSetter
-    public void setAchievements(String achievements) {
+    public void setAchievements(List<DepartmentAchievementRequest> achievements) {
         this.achievementsPresent = true;
         this.achievements = achievements;
     }
@@ -103,7 +104,7 @@ public class DepartmentDetailPatchRequest {
         return posters;
     }
 
-    public String getAchievements() {
+    public List<DepartmentAchievementRequest> getAchievements() {
         return achievements;
     }
 

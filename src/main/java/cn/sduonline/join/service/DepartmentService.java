@@ -1,5 +1,7 @@
 package cn.sduonline.join.service;
 
+import cn.sduonline.join.data.dto.DepartmentAchievementRequest;
+import cn.sduonline.join.data.dto.DepartmentAchievementVO;
 import cn.sduonline.join.data.dto.DepartmentDetailUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
@@ -7,14 +9,13 @@ import cn.sduonline.join.data.dto.DepartmentPosterRequest;
 import cn.sduonline.join.data.dto.DepartmentPosterVO;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.Department;
+import cn.sduonline.join.data.po.DepartmentAchievement;
 import cn.sduonline.join.data.po.DepartmentPoster;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,11 +30,6 @@ public class DepartmentService {
     private final AdminOrganizationMapper organizationMapper;
     private final DepartmentQuestionnaireMapper questionnaireMapper;
     private final AuthorizationService authorizationService;
-
-    /** canManage 显示层短缓存（30 秒）；操作层权限校验仍实时走 AOP，不受缓存影响。 */
-    private static final long CAN_MANAGE_CACHE_TTL_MILLIS = 30_000L;
-    private final Map<String, CachedCanManage> canManageCache =
-            new ConcurrentHashMap<>();
 
     /**
      * 查询部门详情和海报
@@ -71,7 +67,6 @@ public class DepartmentService {
 
         department.setCampus(request.campus());
         department.setIntroduction(trimToNull(request.introduction()));
-        department.setAchievements(trimToNull(request.achievements()));
         department.setRecruitmentRequirements(
                 trimToNull(request.recruitmentRequirements())
         );
@@ -79,6 +74,7 @@ public class DepartmentService {
         department.setRecruitmentGroup(trimToNull(request.recruitmentGroup()));
         organizationMapper.updateDepartmentDetail(department);
         replacePosters(departmentId, request.posters());
+        replaceAchievements(departmentId, request.achievements());
         return ServiceResult.success(toVO(department, casId));
     }
 
@@ -107,9 +103,6 @@ public class DepartmentService {
         if (request.isIntroductionPresent()) {
             department.setIntroduction(trimToNull(request.getIntroduction()));
         }
-        if (request.isAchievementsPresent()) {
-            department.setAchievements(trimToNull(request.getAchievements()));
-        }
         if (request.isRecruitmentRequirementsPresent()) {
             department.setRecruitmentRequirements(
                     trimToNull(request.getRecruitmentRequirements())
@@ -126,6 +119,9 @@ public class DepartmentService {
         organizationMapper.updateDepartmentDetail(department);
         if (request.isPostersPresent()) {
             replacePosters(departmentId, request.getPosters());
+        }
+        if (request.isAchievementsPresent()) {
+            replaceAchievements(departmentId, request.getAchievements());
         }
         return ServiceResult.success(toVO(department, casId));
     }
@@ -158,41 +154,59 @@ public class DepartmentService {
         }
     }
 
+    private void replaceAchievements(
+            Long departmentId,
+            List<DepartmentAchievementRequest> requests
+    ) {
+        organizationMapper.deleteDepartmentAchievements(departmentId);
+        if (requests == null) {
+            return;
+        }
+        for (int index = 0; index < requests.size(); index++) {
+            DepartmentAchievementRequest request = requests.get(index);
+            DepartmentAchievement achievement = new DepartmentAchievement();
+            achievement.setDepartmentId(departmentId);
+            achievement.setTitle(request.title().trim());
+            achievement.setContent(trimToNull(request.content()));
+            achievement.setSortOrder(index);
+            organizationMapper.insertDepartmentAchievement(achievement);
+        }
+    }
+
     private DepartmentVO toVO(Department department, String casId) {
         List<DepartmentPosterVO> posters = organizationMapper
                 .selectDepartmentPosters(department.getId())
                 .stream()
                 .map(DepartmentPosterVO::from)
                 .toList();
+        List<DepartmentAchievementVO> achievements = organizationMapper
+                .selectDepartmentAchievements(department.getId())
+                .stream()
+                .map(DepartmentAchievementVO::from)
+                .toList();
         return DepartmentVO.from(
                 department,
                 posters,
+                achievements,
                 questionnaireMapper.countQuestions(department.getId()) > 0,
                 canManage(casId, department.getId())
         );
     }
 
+    /**
+     * 计算展示层的 canManage 标记。
+     * 不做缓存：这一次查询走 cas_id 索引且关联表都很小，实时查询可以让角色
+     * 授予和撤销立刻反映到前端，也避免缓存条目随用户数无限增长。
+     */
     private boolean canManage(String casId, Long departmentId) {
         if (casId == null) {
             return false;
         }
-        String key = casId + ":" + departmentId;
-        long now = System.currentTimeMillis();
-        CachedCanManage cached = canManageCache.get(key);
-        if (cached != null && cached.expiresAt() > now) {
-            return cached.value();
-        }
-        boolean value = authorizationService.canAccessWithPermission(
+        return authorizationService.canAccessWithPermission(
                 casId,
                 PermissionCode.RECRUITMENT_MANAGE.code(),
                 OrgType.DEPARTMENT,
                 departmentId
         );
-        canManageCache.put(
-                key, new CachedCanManage(value, now + CAN_MANAGE_CACHE_TTL_MILLIS)
-        );
-        return value;
     }
-
-    private record CachedCanManage(boolean value, long expiresAt) {}
 }

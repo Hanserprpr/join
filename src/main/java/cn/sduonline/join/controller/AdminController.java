@@ -18,6 +18,7 @@ import cn.sduonline.join.service.ServiceResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -65,6 +66,36 @@ public class AdminController {
     ) {
         ServiceResult<DepartmentVO> result = organizationService.createDepartment(request);
         return result.isSuccess() ? Result.ok(result.data()) : Result.fail(result.error());
+    }
+
+    /**
+     * 删除板块(级联删除其下所有工作站、部门及关联数据)
+     */
+    @DeleteMapping("/boards/{boardId}")
+    @SaCheckRole("SYSTEM_ADMIN")
+    public Result<Void> deleteBoard(@PathVariable Long boardId) {
+        ServiceResult<Void> result = organizationService.deleteBoard(boardId);
+        return result.isSuccess() ? Result.ok() : Result.fail(result.error());
+    }
+
+    /**
+     * 删除工作站(级联删除其下所有部门及关联数据)
+     */
+    @DeleteMapping("/workstations/{workstationId}")
+    @SaCheckRole("SYSTEM_ADMIN")
+    public Result<Void> deleteWorkstation(@PathVariable Long workstationId) {
+        ServiceResult<Void> result = organizationService.deleteWorkstation(workstationId);
+        return result.isSuccess() ? Result.ok() : Result.fail(result.error());
+    }
+
+    /**
+     * 删除部门(级联删除报名、面试、签到等关联数据)
+     */
+    @DeleteMapping("/departments/{departmentId}")
+    @SaCheckRole("SYSTEM_ADMIN")
+    public Result<Void> deleteDepartment(@PathVariable Long departmentId) {
+        ServiceResult<Void> result = organizationService.deleteDepartment(departmentId);
+        return result.isSuccess() ? Result.ok() : Result.fail(result.error());
     }
 
     /**

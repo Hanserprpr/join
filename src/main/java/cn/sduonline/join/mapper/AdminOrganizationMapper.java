@@ -2,6 +2,7 @@ package cn.sduonline.join.mapper;
 
 import cn.sduonline.join.data.po.Board;
 import cn.sduonline.join.data.po.Department;
+import cn.sduonline.join.data.po.DepartmentAchievement;
 import cn.sduonline.join.data.po.DepartmentPoster;
 import cn.sduonline.join.data.po.Workstation;
 import org.apache.ibatis.annotations.Insert;
@@ -21,6 +22,15 @@ public interface AdminOrganizationMapper {
 
     @Select("SELECT COUNT(1) FROM workstation WHERE id = #{id} AND enabled = 1")
     long countEnabledWorkstation(@Param("id") Long id);
+
+    @Select("SELECT COUNT(1) FROM board WHERE id = #{id}")
+    long countBoard(@Param("id") Long id);
+
+    @Select("SELECT COUNT(1) FROM workstation WHERE id = #{id}")
+    long countWorkstation(@Param("id") Long id);
+
+    @Select("SELECT COUNT(1) FROM department WHERE id = #{id}")
+    long countDepartment(@Param("id") Long id);
 
     @Insert("""
             INSERT INTO board (name, sort_order, enabled)
@@ -85,7 +95,7 @@ public interface AdminOrganizationMapper {
 
     @Select("""
             SELECT id, workstation_id, name, campus, introduction,
-                   achievements, recruitment_requirements, contact,
+                   recruitment_requirements, contact,
                    recruitment_group, sort_order, enabled
             FROM department
             WHERE id = #{id}
@@ -97,13 +107,34 @@ public interface AdminOrganizationMapper {
             UPDATE department
             SET campus = #{campus},
                 introduction = #{introduction},
-                achievements = #{achievements},
                 recruitment_requirements = #{recruitmentRequirements},
                 contact = #{contact},
                 recruitment_group = #{recruitmentGroup}
             WHERE id = #{id}
             """)
     int updateDepartmentDetail(Department department);
+
+    @Select("""
+            SELECT id, department_id, title, content, sort_order
+            FROM department_achievement
+            WHERE department_id = #{departmentId}
+            ORDER BY sort_order ASC, id ASC
+            """)
+    List<DepartmentAchievement> selectDepartmentAchievements(
+            @Param("departmentId") Long departmentId
+    );
+
+    @Delete("DELETE FROM department_achievement WHERE department_id = #{departmentId}")
+    int deleteDepartmentAchievements(@Param("departmentId") Long departmentId);
+
+    @Insert("""
+            INSERT INTO department_achievement
+                (department_id, title, content, sort_order)
+            VALUES
+                (#{departmentId}, #{title}, #{content}, #{sortOrder})
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insertDepartmentAchievement(DepartmentAchievement achievement);
 
     @Select("""
             SELECT id, department_id, url, sort_order
@@ -124,4 +155,60 @@ public interface AdminOrganizationMapper {
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insertDepartmentPoster(DepartmentPoster poster);
+
+    @Select("SELECT id FROM workstation WHERE board_id = #{boardId}")
+    List<Long> selectWorkstationIdsByBoard(@Param("boardId") Long boardId);
+
+    @Select("SELECT id FROM department WHERE workstation_id = #{workstationId}")
+    List<Long> selectDepartmentIdsByWorkstation(@Param("workstationId") Long workstationId);
+
+    @Delete("DELETE FROM department_interview WHERE department_id = #{departmentId}")
+    int deleteInterviewsByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("DELETE FROM department_interview_carryover WHERE department_id = #{departmentId}")
+    int deleteInterviewCarryoversByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("""
+            DELETE s FROM department_check_in_sequence s
+            JOIN department_interview_session sess ON sess.id = s.session_id
+            WHERE sess.department_id = #{departmentId}
+            """)
+    int deleteCheckInSequencesByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("DELETE FROM department_check_in WHERE department_id = #{departmentId}")
+    int deleteCheckInsByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("DELETE FROM department_interview_room WHERE department_id = #{departmentId}")
+    int deleteInterviewRoomsByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("""
+            DELETE o FROM admission_email_outbox o
+            JOIN department_application a ON a.id = o.application_id
+            WHERE a.department_id = #{departmentId}
+            """)
+    int deleteAdmissionEmailOutboxByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("DELETE FROM department_application WHERE department_id = #{departmentId}")
+    int deleteApplicationsByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("DELETE FROM department_interview_session WHERE department_id = #{departmentId}")
+    int deleteInterviewSessionsByDepartment(@Param("departmentId") Long departmentId);
+
+    @Delete("""
+            DELETE FROM user_role_scope
+            WHERE scope_type = #{scopeType} AND scope_id = #{scopeId}
+            """)
+    int deleteRoleScopesByScope(
+            @Param("scopeType") String scopeType,
+            @Param("scopeId") Long scopeId
+    );
+
+    @Delete("DELETE FROM department WHERE id = #{id}")
+    int deleteDepartmentById(@Param("id") Long id);
+
+    @Delete("DELETE FROM workstation WHERE id = #{id}")
+    int deleteWorkstationById(@Param("id") Long id);
+
+    @Delete("DELETE FROM board WHERE id = #{id}")
+    int deleteBoardById(@Param("id") Long id);
 }

@@ -11,7 +11,6 @@ public class Department {
     private String name;
     private Campus campus;
     private String introduction;
-    private String achievements;
     private String recruitmentRequirements;
     private String contact;
     private String recruitmentGroup;
