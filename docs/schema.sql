@@ -434,6 +434,14 @@ CREATE TABLE `user_role_scope` (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='用户角色及数据范围';
 
+CREATE TABLE `banner` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `url` VARCHAR(2048) NOT NULL COMMENT '轮播图图片地址',
+  `route` VARCHAR(255) NULL COMMENT '点击跳转路径，可空',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='首页轮播图';
+
 INSERT INTO `role` (`code`, `name`) VALUES
   ('BOARD_ADMIN', '板块管理员'),
   ('WORKSTATION_ADMIN', '站长管理员'),

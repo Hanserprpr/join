@@ -1,6 +1,5 @@
 package cn.sduonline.join.config;
 
-import cn.dev33.satoken.interceptor.SaInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -11,6 +10,7 @@ public class SaTokenConfigure implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // 注册 Sa-Token 拦截器，打开注解式鉴权功能
-        registry.addInterceptor(new SaInterceptor()).addPathPatterns("/**");
+        // 使用 SaAsyncAwareInterceptor 跳过 ASYNC 等异步重派发时的重复鉴权
+        registry.addInterceptor(new SaAsyncAwareInterceptor()).addPathPatterns("/**");
     }
 }

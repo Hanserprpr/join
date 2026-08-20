@@ -3,6 +3,7 @@ package cn.sduonline.join.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import cn.dev33.satoken.exception.NotLoginException;
 import cn.sduonline.join.config.GlobalExceptionHandler;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.vo.Result;
@@ -15,6 +16,40 @@ import org.springframework.web.context.request.async.AsyncRequestNotUsableExcept
 class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
+    @Test
+    void expiredLoginTokenUsesTokenInvalidBusinessCode() {
+        NotLoginException exception = NotLoginException.newInstance(
+                "login",
+                NotLoginException.TOKEN_TIMEOUT,
+                "token 已过期",
+                "aa7000"
+        );
+
+        ResponseEntity<Result<Void>> response = handler.handleNotLogin(exception);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(BizCode.TOKEN_INVALID.getCode(), response.getBody().getCode());
+        assertEquals(BizCode.TOKEN_INVALID.getMsg(), response.getBody().getMsg());
+    }
+
+    @Test
+    void missingLoginTokenUsesNotLoginBusinessCode() {
+        NotLoginException exception = NotLoginException.newInstance(
+                "login",
+                NotLoginException.NOT_TOKEN,
+                "未能读取到有效 token",
+                null
+        );
+
+        ResponseEntity<Result<Void>> response = handler.handleNotLogin(exception);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(BizCode.NOT_LOGIN.getCode(), response.getBody().getCode());
+        assertEquals(BizCode.NOT_LOGIN.getMsg(), response.getBody().getMsg());
+    }
 
     @Test
     void permissionFailureUsesUnifiedResultWithoutTrace() {
