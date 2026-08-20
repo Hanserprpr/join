@@ -11,7 +11,7 @@ import java.util.List;
  * @param campus 所在校区
  * @param introduction 组织介绍
  * @param posters 部门海报
- * @param achievements 部门成果
+ * @param achievements 部门成果列表
  * @param recruitmentRequirements 纳新要求
  * @param contact 联系方式
  * @param recruitmentGroup 纳新群信息
@@ -26,8 +26,9 @@ public record DepartmentDetailUpdateRequest(
         @Size(max = 20)
         List<DepartmentPosterRequest> posters,
 
-        @Size(max = 10000)
-        String achievements,
+        @Valid
+        @Size(max = 50)
+        List<DepartmentAchievementRequest> achievements,
 
         @Size(max = 10000)
         String recruitmentRequirements,

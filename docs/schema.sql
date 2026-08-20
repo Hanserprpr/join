@@ -62,7 +62,6 @@ CREATE TABLE `department` (
     'XINGLONGSHAN', 'HONGJIALOU', 'BAOTUQUAN'
   ) NULL COMMENT '部门所在校区',
   `introduction` TEXT NULL COMMENT '组织介绍',
-  `achievements` TEXT NULL COMMENT '部门成果',
   `recruitment_requirements` TEXT NULL COMMENT '纳新要求',
   `contact` VARCHAR(1000) NULL COMMENT '联系方式',
   `recruitment_group` VARCHAR(1000) NULL COMMENT '纳新群信息或链接',
@@ -89,6 +88,20 @@ CREATE TABLE `department_poster` (
     FOREIGN KEY (`department_id`) REFERENCES `department` (`id`)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门海报';
+
+CREATE TABLE `department_achievement` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `department_id` BIGINT NOT NULL,
+  `title` VARCHAR(200) NOT NULL COMMENT '成果标题',
+  `content` TEXT NULL COMMENT '成果内容',
+  `sort_order` INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_department_achievement_department_sort`
+    (`department_id`, `sort_order`, `id`),
+  CONSTRAINT `fk_department_achievement_department`
+    FOREIGN KEY (`department_id`) REFERENCES `department` (`id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门成果';
 
 CREATE TABLE `department_question` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,

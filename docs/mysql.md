@@ -59,7 +59,6 @@
 | `name` | VARCHAR(64) | 非空 | 部门名称 |
 | `campus` | ENUM | 可空 | 部门所在校区 |
 | `introduction` | TEXT | 可空 | 组织介绍 |
-| `achievements` | TEXT | 可空 | 部门成果 |
 | `recruitment_requirements` | TEXT | 可空 | 纳新要求 |
 | `contact` | VARCHAR(1000) | 可空 | 联系方式 |
 | `recruitment_group` | VARCHAR(1000) | 可空 | 纳新群信息或链接 |
@@ -101,6 +100,25 @@
 - 联合索引：`(department_id, sort_order, id)`
 - 外键：`department_id → department.id`
 - 部门删除时通过 `ON DELETE CASCADE` 自动删除所属海报
+
+## `department_achievement`
+
+一个部门可以关联多条成果，查询时按照 `sort_order`、`id` 升序排列。
+`sort_order` 由接口请求数组的下标决定，不需要调用方单独传。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| `id` | BIGINT | PK，自增 | 成果 ID |
+| `department_id` | BIGINT | FK，非空 | 所属部门 |
+| `title` | VARCHAR(200) | 非空 | 成果标题 |
+| `content` | TEXT | 可空 | 成果内容 |
+| `sort_order` | INT | 非空，默认 0 | 展示顺序 |
+
+索引与外键：
+
+- 联合索引：`(department_id, sort_order, id)`
+- 外键：`department_id → department.id`
+- 部门删除时通过 `ON DELETE CASCADE` 自动删除所属成果
 
 ## `department_question`
 

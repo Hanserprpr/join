@@ -61,4 +61,64 @@ public class AdminOrganizationService {
         organizationMapper.insertDepartment(department);
         return ServiceResult.success(DepartmentVO.from(department));
     }
+
+    @Transactional
+    public ServiceResult<Void> deleteBoard(Long boardId) {
+        if (organizationMapper.countBoard(boardId) == 0) {
+            return ServiceResult.failure(BizCode.BOARD_NOT_FOUND);
+        }
+
+        for (Long workstationId : organizationMapper.selectWorkstationIdsByBoard(boardId)) {
+            deleteWorkstationCascade(workstationId);
+        }
+        organizationMapper.deleteRoleScopesByScope("BOARD", boardId);
+        organizationMapper.deleteBoardById(boardId);
+        return ServiceResult.success(null);
+    }
+
+    @Transactional
+    public ServiceResult<Void> deleteWorkstation(Long workstationId) {
+        if (organizationMapper.countWorkstation(workstationId) == 0) {
+            return ServiceResult.failure(BizCode.WORKSTATION_NOT_FOUND);
+        }
+
+        deleteWorkstationCascade(workstationId);
+        return ServiceResult.success(null);
+    }
+
+    @Transactional
+    public ServiceResult<Void> deleteDepartment(Long departmentId) {
+        if (organizationMapper.countDepartment(departmentId) == 0) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+
+        deleteDepartmentCascade(departmentId);
+        return ServiceResult.success(null);
+    }
+
+    private void deleteWorkstationCascade(Long workstationId) {
+        for (Long departmentId : organizationMapper.selectDepartmentIdsByWorkstation(workstationId)) {
+            deleteDepartmentCascade(departmentId);
+        }
+        organizationMapper.deleteRoleScopesByScope("WORKSTATION", workstationId);
+        organizationMapper.deleteWorkstationById(workstationId);
+    }
+
+    /**
+     * 按外键依赖顺序清理部门下的报名、面试、签到等数据；
+     * department_poster/department_question 等表在数据库层已配置 ON DELETE CASCADE，
+     * 随 department 行删除自动清理，此处无需重复处理。
+     */
+    private void deleteDepartmentCascade(Long departmentId) {
+        organizationMapper.deleteInterviewsByDepartment(departmentId);
+        organizationMapper.deleteInterviewCarryoversByDepartment(departmentId);
+        organizationMapper.deleteCheckInSequencesByDepartment(departmentId);
+        organizationMapper.deleteCheckInsByDepartment(departmentId);
+        organizationMapper.deleteInterviewRoomsByDepartment(departmentId);
+        organizationMapper.deleteAdmissionEmailOutboxByDepartment(departmentId);
+        organizationMapper.deleteApplicationsByDepartment(departmentId);
+        organizationMapper.deleteInterviewSessionsByDepartment(departmentId);
+        organizationMapper.deleteRoleScopesByScope("DEPARTMENT", departmentId);
+        organizationMapper.deleteDepartmentById(departmentId);
+    }
 }

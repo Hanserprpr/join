@@ -18,10 +18,13 @@ import cn.sduonline.join.data.po.Board;
 import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.Workstation;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -110,6 +113,89 @@ class AdminOrganizationServiceTest {
 
         assertEquals(BizCode.WORKSTATION_NOT_FOUND, result.error());
         verify(organizationMapper, never()).insertDepartment(any());
+    }
+
+    @Test
+    void deleteDepartmentRejectsMissingDepartment() {
+        when(organizationMapper.countDepartment(12L)).thenReturn(0L);
+
+        ServiceResult<Void> result = service.deleteDepartment(12L);
+
+        assertEquals(BizCode.DEPARTMENT_NOT_FOUND, result.error());
+        verify(organizationMapper, never()).deleteDepartmentById(any());
+    }
+
+    @Test
+    void deleteDepartmentCascadesInForeignKeyOrder() {
+        when(organizationMapper.countDepartment(12L)).thenReturn(1L);
+
+        ServiceResult<Void> result = service.deleteDepartment(12L);
+
+        assertTrue(result.isSuccess());
+        InOrder order = Mockito.inOrder(organizationMapper);
+        order.verify(organizationMapper).deleteInterviewsByDepartment(12L);
+        order.verify(organizationMapper).deleteInterviewCarryoversByDepartment(12L);
+        order.verify(organizationMapper).deleteCheckInSequencesByDepartment(12L);
+        order.verify(organizationMapper).deleteCheckInsByDepartment(12L);
+        order.verify(organizationMapper).deleteInterviewRoomsByDepartment(12L);
+        order.verify(organizationMapper).deleteAdmissionEmailOutboxByDepartment(12L);
+        order.verify(organizationMapper).deleteApplicationsByDepartment(12L);
+        order.verify(organizationMapper).deleteInterviewSessionsByDepartment(12L);
+        order.verify(organizationMapper).deleteRoleScopesByScope("DEPARTMENT", 12L);
+        order.verify(organizationMapper).deleteDepartmentById(12L);
+    }
+
+    @Test
+    void deleteWorkstationRejectsMissingWorkstation() {
+        when(organizationMapper.countWorkstation(5L)).thenReturn(0L);
+
+        ServiceResult<Void> result = service.deleteWorkstation(5L);
+
+        assertEquals(BizCode.WORKSTATION_NOT_FOUND, result.error());
+        verify(organizationMapper, never()).deleteWorkstationById(any());
+    }
+
+    @Test
+    void deleteWorkstationCascadesToItsDepartments() {
+        when(organizationMapper.countWorkstation(5L)).thenReturn(1L);
+        when(organizationMapper.selectDepartmentIdsByWorkstation(5L))
+                .thenReturn(List.of(12L, 13L));
+
+        ServiceResult<Void> result = service.deleteWorkstation(5L);
+
+        assertTrue(result.isSuccess());
+        verify(organizationMapper).deleteDepartmentById(12L);
+        verify(organizationMapper).deleteDepartmentById(13L);
+        InOrder order = Mockito.inOrder(organizationMapper);
+        order.verify(organizationMapper).deleteDepartmentById(13L);
+        order.verify(organizationMapper).deleteRoleScopesByScope("WORKSTATION", 5L);
+        order.verify(organizationMapper).deleteWorkstationById(5L);
+    }
+
+    @Test
+    void deleteBoardRejectsMissingBoard() {
+        when(organizationMapper.countBoard(1L)).thenReturn(0L);
+
+        ServiceResult<Void> result = service.deleteBoard(1L);
+
+        assertEquals(BizCode.BOARD_NOT_FOUND, result.error());
+        verify(organizationMapper, never()).deleteBoardById(any());
+    }
+
+    @Test
+    void deleteBoardCascadesToItsWorkstationsAndDepartments() {
+        when(organizationMapper.countBoard(1L)).thenReturn(1L);
+        when(organizationMapper.selectWorkstationIdsByBoard(1L)).thenReturn(List.of(5L));
+        when(organizationMapper.selectDepartmentIdsByWorkstation(5L)).thenReturn(List.of(12L));
+
+        ServiceResult<Void> result = service.deleteBoard(1L);
+
+        assertTrue(result.isSuccess());
+        InOrder order = Mockito.inOrder(organizationMapper);
+        order.verify(organizationMapper).deleteDepartmentById(12L);
+        order.verify(organizationMapper).deleteWorkstationById(5L);
+        order.verify(organizationMapper).deleteRoleScopesByScope("BOARD", 1L);
+        order.verify(organizationMapper).deleteBoardById(1L);
     }
 
     private static DepartmentCreateRequest request() {

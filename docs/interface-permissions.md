@@ -18,6 +18,9 @@
 除公开接口外,所有接口都要求已登录(`@SaCheckLogin` 或类级);带组织归属的接口
 额外要求"权限 + 范围"同时满足(`@DepartmentPermission`)。
 
+目标组织必须是启用状态(`enabled = 1`):停用的板块、工作站和部门一律拒绝,
+与 `/api/user/permissions` 只列出启用组织保持一致。
+
 ---
 
 ## `SYSTEM_ADMIN` 平台管理员
@@ -29,12 +32,26 @@
 | POST | `/api/admin/boards` | 创建板块 |
 | POST | `/api/admin/workstations` | 创建工作站 |
 | POST | `/api/admin/departments` | 创建部门 |
+| DELETE | `/api/admin/boards/{boardId}` | 删除板块(级联删除其下所有工作站、部门及关联数据) |
+| DELETE | `/api/admin/workstations/{workstationId}` | 删除工作站(级联删除其下所有部门及关联数据) |
+| DELETE | `/api/admin/departments/{departmentId}` | 删除部门(级联删除报名、面试、签到等关联数据) |
 | POST | `/api/admin/role-assignments` | 分配角色(所有可分配角色) |
 | DELETE | `/api/admin/role-assignments` | 撤销角色 |
+
+> 删除接口为硬删除且不可恢复:板块删除会级联删除其下所有工作站与部门,
+> 工作站删除会级联删除其下所有部门;部门删除会一并清理该部门的报名、面试场次、
+> 签到、面试室、录取邮件队列等数据,以及指向该组织的 `user_role_scope` 角色分配。
+> `department_poster`/`department_question` 等表在数据库层已配置
+> `ON DELETE CASCADE`,随部门行删除自动清理。
 
 > 角色分配接口本身只要求登录,实际按"操作者持有**更高级**身份且范围覆盖目标组织"在
 > Service 层校验(等级:BOARD_ADMIN 40 > WORKSTATION_ADMIN 30 > DEPARTMENT_ADMIN 20
 > > DEPARTMENT_ASSISTANT 10),`SYSTEM_ADMIN` 等级最高、范围全平台。
+>
+> **判定只看角色等级和数据范围,不看权限码。** `admin:assistant:assign` 和
+> `admin:role:assign` 这两个权限码不参与本接口的校验:把 `admin:assistant:assign`
+> 从 `DEPARTMENT_ADMIN` 的 `role_permission` 里删掉,他照样能任命辅助管理员。
+> 这是刻意的设计——"能任命比自己低级的、且部门对得上"就是完整规则。
 
 ---
 
@@ -65,6 +82,14 @@
 | GET | `/api/departments/{departmentId}/applications` | 分页查询报名 | `application:read` |
 | GET | `/api/departments/{departmentId}/applications/{applicationId}` | 报名详情 | `application:read` |
 | GET | `/api/departments/{departmentId}/applications/export` | 导出报名 | `application:export` |
+
+### admission:manage — 录取结果
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| PUT | `/api/departments/{departmentId}/applications/{applicationId}/admission` | 标记为拟录取(草稿) |
+| DELETE | `/api/departments/{departmentId}/applications/{applicationId}/admission` | 撤销拟录取草稿 |
+| POST | `/api/departments/{departmentId}/applications/admissions/publish` | 发布本部门全部录取草稿 |
 
 ### check-in:manage — 签到
 
@@ -110,8 +135,9 @@
 | GET | `/api/departments/{departmentId}/interview-rooms/{roomId}/interviews/{interviewId}/evaluations` | 面试评价列表 |
 | GET | `/api/departments/{departmentId}/interview-rooms/{roomId}/events` | SSE 订阅房间事件 |
 
-> `admission:manage`、`notification:manage`、`statistics:read` 已授予本身份,但当前
-> 还没有对应的接口(见文末"未接线权限"章节)。
+> `notification:manage`、`statistics:read` 已授予本身份,但当前还没有对应的接口
+> (见文末"未接线权限"章节)。`DEPARTMENT_ASSISTANT` 没有 `admission:manage`,
+> 因此上面的录取接口对辅助管理员一律 403。
 
 ---
 
@@ -122,9 +148,13 @@
 | 方法 | 路径 | 说明 | 权限 |
 |---|---|---|---|
 | (全部板块/站长管理员接口) | 同上 | 同上 | 同上 |
-| — | `admin:assistant:assign` 任命辅助管理员 | **已授权,暂无接口** | `admin:assistant:assign` |
+| POST | `/api/admin/role-assignments` | 任命本部门辅助管理员 | 按角色等级校验 |
+| DELETE | `/api/admin/role-assignments` | 撤销本部门辅助管理员 | 按角色等级校验 |
 
 数据范围:仅本部门(`DEPARTMENT/{departmentId}`)。
+
+任命接口走的是角色等级 + 数据范围(DEPARTMENT_ADMIN 20 > DEPARTMENT_ASSISTANT 10,
+且 scope 必须覆盖目标部门),`admin:assistant:assign` 权限码本身不参与判定。
 
 ---
 
@@ -207,14 +237,15 @@
 
 | 权限码 | 说明 | 已授予的角色 |
 |---|---|---|
-| `admission:manage` | 管理录取结果 | BOARD/WORKSTATION/DEPARTMENT_ADMIN |
 | `notification:manage` | 发布纳新通知 | BOARD/WORKSTATION/DEPARTMENT_ADMIN |
 | `statistics:read` | 查看纳新统计 | BOARD/WORKSTATION/DEPARTMENT_ADMIN、DEPARTMENT_ASSISTANT |
-| `admin:assistant:assign` | 任命部门辅助管理员 | DEPARTMENT_ADMIN |
-| `admin:role:assign` | 分配管理员角色 | 仅 `SYSTEM_ADMIN`(`*`;角色分配实际走角色等级校验) |
 | `system:user:manage` | 管理平台用户 | 仅 `SYSTEM_ADMIN` |
 | `system:organization:manage` | 管理板块/工作站/部门 | 仅 `SYSTEM_ADMIN` |
 | `system:config:manage` | 管理系统配置 | 仅 `SYSTEM_ADMIN` |
 
-> `system:*` 与 `admin:role:assign` 未写入 `role_permission`,由 `SYSTEM_ADMIN` 的 `*`
-> 权限覆盖;创建板块/工作站/部门的接口直接使用 `@SaCheckRole("SYSTEM_ADMIN")` 硬校验。
+> `system:*` 未写入 `role_permission`,由 `SYSTEM_ADMIN` 的 `*` 权限覆盖;
+> 创建板块/工作站/部门的接口直接使用 `@SaCheckRole("SYSTEM_ADMIN")` 硬校验。
+>
+> `admin:assistant:assign` 和 `admin:role:assign` 不在本表内,因为它们不是"暂无接口",
+> 而是**接口存在但刻意不按权限码校验**——角色分配统一走角色等级 + 数据范围,
+> 详见上文 `SYSTEM_ADMIN` 章节的说明。
