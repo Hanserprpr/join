@@ -54,6 +54,42 @@ class MapperSqlContractTest {
                 .contains("collection=\"applicationIds\""));
     }
 
+    @Test
+    void departmentRoleAccessExcludesRolesWithoutAnyPermission()
+            throws NoSuchMethodException {
+        Method method = AuthorizationMapper.class.getMethod(
+                "selectDepartmentRoleAccess", String.class
+        );
+        String sql = sql(method.getAnnotation(Select.class).value());
+
+        // COALESCE(p.code, '*') 只应该给 SYSTEM_ADMIN 兜底；没有配置任何权限的
+        // 角色必须整行剔除，否则会被误报成该部门的 * 全权限。
+        assertTrue(sql.contains("r.code = 'SYSTEM_ADMIN' OR p.code IS NOT NULL"));
+    }
+
+    @Test
+    void organizationScopeChecksRequireAnEnabledTarget()
+            throws NoSuchMethodException {
+        Method board = AuthorizationMapper.class.getMethod(
+                "countBoardPermissionAccess", String.class, String.class, Long.class
+        );
+        Method workstation = AuthorizationMapper.class.getMethod(
+                "countWorkstationPermissionAccess",
+                String.class, String.class, Long.class
+        );
+        Method department = AuthorizationMapper.class.getMethod(
+                "countDepartmentPermissionAccess",
+                String.class, String.class, Long.class
+        );
+
+        assertTrue(sql(board.getAnnotation(Select.class).value())
+                .contains("b.id = #{boardId} AND b.enabled = 1"));
+        assertTrue(sql(workstation.getAnnotation(Select.class).value())
+                .contains("w.id = #{workstationId} AND w.enabled = 1"));
+        assertTrue(sql(department.getAnnotation(Select.class).value())
+                .contains("dt.id = #{departmentId} AND dt.enabled = 1"));
+    }
+
     private static String sql(String[] fragments) {
         return String.join("\n", fragments);
     }

@@ -281,7 +281,9 @@ public class DepartmentInterviewController {
         return interviewSseService.subscribe(
                 departmentId,
                 "queue-updated",
-                () -> interviewService.findQueue(departmentId).data()
+                () -> interviewService.findQueue(departmentId).data(),
+                StpUtil.getLoginIdAsString(),
+                PermissionCode.INTERVIEW_EVALUATE
         );
     }
 
@@ -389,4 +391,5 @@ public class DepartmentInterviewController {
                 ? Result.ok(result.data())
                 : Result.fail(result.error());
     }
+
 }

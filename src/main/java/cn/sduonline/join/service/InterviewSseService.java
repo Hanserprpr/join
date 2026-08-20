@@ -2,21 +2,30 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.vo.Result;
+import cn.sduonline.join.security.scope.OrgType;
+import cn.sduonline.join.security.scope.PermissionCode;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class InterviewSseService {
+
+    private final AuthorizationService authorizationService;
 
     /** 候选人个人排队状态事件名。 */
     private static final String CANDIDATE_EVENT = "my-queue-status-updated";
@@ -27,11 +36,14 @@ public class InterviewSseService {
     /** 每部门面试室状态订阅上限（多个面试室并发处理同一队列）。 */
     private static final int MAX_ROOM_SUBSCRIPTIONS_PER_DEPARTMENT = 200;
     private static final long TIMEOUT_MILLIS = 30 * 60 * 1000L;
+    /** 权限复查周期；比心跳稀疏，避免长连接把权限查询放大成持续负载。 */
+    private static final long AUTHORIZATION_RECHECK_MILLIS = 60_000L;
     private final Map<Long, List<Subscription>> subscriptions =
             new ConcurrentHashMap<>();
 
     /**
      * 订阅部门级事件（队列、个人排队状态），随队列变化广播。
+     * 用于候选人查看自己的排队状态，数据本身就属于订阅者，无需复查权限。
      *
      * @param departmentId 部门 ID
      * @param eventName 事件名
@@ -43,36 +55,70 @@ public class InterviewSseService {
             String eventName,
             Supplier<?> snapshotSupplier
     ) {
-        return subscribeInternal(departmentId, null, eventName, snapshotSupplier);
+        return subscribeInternal(
+                departmentId, null, eventName, snapshotSupplier, null
+        );
     }
 
     /**
-     * 订阅指定面试室事件，仅在面试室状态变化时推送。
+     * 订阅部门级事件，并周期性复查订阅者权限。
+     *
+     * @param departmentId 部门 ID
+     * @param eventName 事件名
+     * @param snapshotSupplier 快照函数
+     * @param casId 订阅者学号
+     * @param permission 订阅期间必须持续持有的权限
+     * @return SSE 连接
+     */
+    public SseEmitter subscribe(
+            Long departmentId,
+            String eventName,
+            Supplier<?> snapshotSupplier,
+            String casId,
+            PermissionCode permission
+    ) {
+        return subscribeInternal(
+                departmentId, null, eventName, snapshotSupplier,
+                new AccessCheck(casId, permission.code(), departmentId)
+        );
+    }
+
+    /**
+     * 订阅指定面试室事件，仅在面试室状态变化时推送，并周期性复查权限。
      *
      * @param departmentId 部门 ID
      * @param roomId 面试室 ID
      * @param eventName 事件名
      * @param snapshotSupplier 快照函数
+     * @param casId 订阅者学号
+     * @param permission 订阅期间必须持续持有的权限
      * @return SSE 连接
      */
     public SseEmitter subscribeRoom(
             Long departmentId,
             Long roomId,
             String eventName,
-            Supplier<?> snapshotSupplier
+            Supplier<?> snapshotSupplier,
+            String casId,
+            PermissionCode permission
     ) {
-        return subscribeInternal(departmentId, roomId, eventName, snapshotSupplier);
+        return subscribeInternal(
+                departmentId, roomId, eventName, snapshotSupplier,
+                new AccessCheck(casId, permission.code(), departmentId)
+        );
     }
 
     private SseEmitter subscribeInternal(
             Long departmentId,
             Long roomId,
             String eventName,
-            Supplier<?> snapshotSupplier
+            Supplier<?> snapshotSupplier,
+            AccessCheck access
     ) {
         SseEmitter emitter = new SseEmitter(TIMEOUT_MILLIS);
-        Subscription subscription =
-                new Subscription(emitter, eventName, snapshotSupplier, roomId);
+        Subscription subscription = new Subscription(
+                emitter, eventName, snapshotSupplier, roomId, access
+        );
         List<Subscription> departmentSubscriptions = subscriptions.computeIfAbsent(
                 departmentId, ignored -> new CopyOnWriteArrayList<>()
         );
@@ -212,6 +258,11 @@ public class InterviewSseService {
         }
     }
 
+    /**
+     * 心跳。只负责保活，权限复查交给
+     * {@link #revokeUnauthorizedSubscriptions()}，避免每 20 秒把权限查询
+     * 按订阅数放大成持续的数据库负载。
+     */
     @Scheduled(fixedRate = 20_000)
     public void heartbeat() {
         subscriptions.forEach((departmentId, departmentSubscriptions) -> {
@@ -228,6 +279,72 @@ public class InterviewSseService {
                 }
             }
         });
+    }
+
+    /**
+     * 周期性复查订阅者权限，让角色撤销最多 60 秒内断开对应的长连接。
+     * <p>
+     * SSE 建立连接时的 {@code @DepartmentPermission} 只校验一次，之后不再经过
+     * 拦截器和切面，因此必须在这里补一次复查。同一个 {@link AccessCheck}
+     * 在一轮里只查一次数据库：一位面试官通常同时订阅队列和多个面试室，
+     * 去重后查询次数按"人数 × 部门"而不是"连接数"增长。
+     * <p>
+     * 只能复查权限，复查不了登录态：连接建立后不再持有 Token，登录态失效要靠
+     * {@link #TIMEOUT_MILLIS} 到期后前端重连时重新走完整鉴权。
+     */
+    @Scheduled(fixedRate = AUTHORIZATION_RECHECK_MILLIS)
+    public void revokeUnauthorizedSubscriptions() {
+        Map<AccessCheck, Boolean> decided = new HashMap<>();
+        subscriptions.forEach((departmentId, departmentSubscriptions) -> {
+            for (Subscription subscription : departmentSubscriptions) {
+                AccessCheck access = subscription.access();
+                if (access == null) {
+                    continue;
+                }
+                if (decided.computeIfAbsent(access, this::stillAuthorized)) {
+                    continue;
+                }
+                revoke(departmentId, subscription);
+            }
+        });
+    }
+
+    /**
+     * 复查一条授权。复查本身失败（例如数据库抖动）按失去权限处理：断开后前端
+     * 重连会重新走一遍完整鉴权，比继续推送陈旧数据安全。
+     */
+    private boolean stillAuthorized(AccessCheck access) {
+        try {
+            return authorizationService.canAccessWithPermission(
+                    access.casId(),
+                    access.permission(),
+                    OrgType.DEPARTMENT,
+                    access.departmentId()
+            );
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "SSE authorization re-check failed, casId={}, departmentId={}",
+                    access.casId(),
+                    access.departmentId(),
+                    exception
+            );
+            return false;
+        }
+    }
+
+    /** 下发无权限事件并断开该订阅。 */
+    private void revoke(Long departmentId, Subscription subscription) {
+        remove(departmentId, subscription);
+        try {
+            subscription.emitter().send(
+                    SseEmitter.event()
+                            .name("business-error")
+                            .data(Result.fail(BizCode.NO_PERMISSION))
+            );
+        } catch (Exception ignored) {
+            // 连接可能已经断开，直接进入 complete。
+        }
+        quietlyComplete(subscription.emitter());
     }
 
     private void sendSnapshot(
@@ -269,7 +386,18 @@ public class InterviewSseService {
             SseEmitter emitter,
             String eventName,
             Supplier<?> snapshotSupplier,
-            Long roomId
+            Long roomId,
+            AccessCheck access
+    ) {
+    }
+
+    /**
+     * 一条订阅需要持续满足的授权条件，同时用作复查去重的键。
+     */
+    private record AccessCheck(
+            String casId,
+            String permission,
+            Long departmentId
     ) {
     }
 }

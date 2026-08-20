@@ -28,6 +28,8 @@ public interface AdminRoleAssignmentMapper {
 
     /**
      * 查找一条级别高于待授予角色、且数据范围覆盖目标组织的操作者授权。
+     * 授予资格只看角色等级和数据范围，不校验 admin:role:assign 等权限码，
+     * 因此这两个权限码不参与本接口的判定。
      */
     @Select("""
             SELECT COUNT(1)

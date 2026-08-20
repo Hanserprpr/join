@@ -30,7 +30,8 @@ public class AuthorizationService {
 
     /**
      * 校验某条角色授权是否同时提供指定权限并覆盖目标组织，防止把不同角色的
-     * Permission 与 Scope 拼接使用。
+     * Permission 与 Scope 拼接使用。目标组织必须是启用状态，已停用的板块、
+     * 工作站和部门一律拒绝，与权限画像只列出启用组织保持一致。
      */
     public boolean canAccessWithPermission(
             String casId,

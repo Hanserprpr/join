@@ -128,6 +128,25 @@
             <artifactId>sa-token-spring-boot4-starter</artifactId>
             <version>1.45.0</version>
         </dependency>
+        <!--
+            把登录态从默认的内存 DAO 换成 Redis：重启不掉线，多实例共享登录态。
+            SaTokenDaoForRedisTemplate 通过 @Autowired RedisConnectionFactory
+            复用 spring.data.redis 配置，无需额外配置项。
+        -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-redis-template</artifactId>
+            <version>1.45.0</version>
+        </dependency>
+        <!--
+            Spring Boot 4 用的是 Jackson 3（tools.jackson），因此这里必须选
+            sa-token-jackson3；sa-token-redis-jackson 会拖进 Jackson 2。
+        -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-jackson3</artifactId>
+            <version>1.45.0</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
