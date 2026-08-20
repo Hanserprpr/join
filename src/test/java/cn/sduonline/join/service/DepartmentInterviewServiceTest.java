@@ -80,6 +80,11 @@ class DepartmentInterviewServiceTest {
                 "20240001", "张三", "candidate-openid"
         ));
         when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        Department department = new Department();
+        department.setId(12L);
+        department.setName("技术部");
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(department);
 
         var result = service.callNextInRoom(12L, 9L, "admin01");
 
@@ -98,9 +103,13 @@ class DepartmentInterviewServiceTest {
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "7"
                         ),
-                        "thing9",
+                        "thing23",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "第一面试室"
+                        ),
+                        "thing31",
+                        new cn.sduonline.join.client.WeChatApiClient.TemplateData(
+                                "技术部"
                         )
                 ))
         );

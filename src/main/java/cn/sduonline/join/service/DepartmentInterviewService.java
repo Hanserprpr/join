@@ -418,6 +418,7 @@ public class DepartmentInterviewService {
                 return;
             }
             String window = resolveInterviewRoomName(interview);
+            String departmentName = resolveDepartmentName(interview);
             templateMessageService.send(
                     candidate.getWechatOpenid(),
                     weChatProperties.getInterviewCallTemplateId(),
@@ -427,7 +428,8 @@ public class DepartmentInterviewService {
                             "character_string14",
                             new TemplateData(String.valueOf(
                                     interview.queueNumber())),
-                            "thing9", new TemplateData(window)
+                            "thing23", new TemplateData(window),
+                            "thing31", new TemplateData(departmentName)
                     )
             );
         } catch (RuntimeException exception) {
@@ -451,6 +453,18 @@ public class DepartmentInterviewService {
             return room.getName();
         }
         return "面试室";
+    }
+
+    private String resolveDepartmentName(DepartmentInterviewVO interview) {
+        var department = organizationMapper.selectDepartmentById(
+                interview.departmentId()
+        );
+        if (department != null
+                && org.springframework.util.StringUtils.hasText(
+                        department.getName())) {
+            return department.getName();
+        }
+        return "部门";
     }
 
     public ServiceResult<List<InterviewQueueItemVO>> findQueue(
