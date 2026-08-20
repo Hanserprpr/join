@@ -21,7 +21,7 @@ public class WeChatProperties {
     private String bindingTemplateId =
             "Tw8ThFuRhgMOkrTirVHRnTPbxFdxyaFo2PIJdFqkxQw";
     private String interviewCallTemplateId =
-            "gmRpMS8vWvQuR02-tcVMp-lBRyH_qKelfziA3yKiRyY";
+            "gmRpMS8vWvQuR02-tcVMpyuOC3sLafkpErxPfAFE1DQ";
     private String systemName = "学生在线纳新系统";
     private long tokenRefreshAheadSeconds = 300;
 
