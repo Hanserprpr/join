@@ -228,7 +228,9 @@ public class DepartmentInterviewRoomController {
                 "interview-room-state-updated",
                 () -> interviewService
                         .findRoomState(departmentId, roomId, casId)
-                        .data()
+                        .data(),
+                casId,
+                PermissionCode.INTERVIEW_EVALUATE
         );
     }
 

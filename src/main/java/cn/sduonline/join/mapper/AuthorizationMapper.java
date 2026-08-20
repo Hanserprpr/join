@@ -35,6 +35,10 @@ public interface AuthorizationMapper {
             LEFT JOIN permission p ON p.id = rp.permission_id
             WHERE s.cas_id = #{casId}
               AND (r.code = 'SYSTEM_ADMIN' OR p.code = #{permission})
+              AND EXISTS (
+                    SELECT 1 FROM board b
+                    WHERE b.id = #{boardId} AND b.enabled = 1
+              )
               AND (
                     s.scope_type = 'ALL'
                     OR (s.scope_type = 'BOARD' AND s.scope_id = #{boardId})
@@ -54,6 +58,10 @@ public interface AuthorizationMapper {
             LEFT JOIN permission p ON p.id = rp.permission_id
             WHERE s.cas_id = #{casId}
               AND (r.code = 'SYSTEM_ADMIN' OR p.code = #{permission})
+              AND EXISTS (
+                    SELECT 1 FROM workstation w
+                    WHERE w.id = #{workstationId} AND w.enabled = 1
+              )
               AND (
                     s.scope_type = 'ALL'
                     OR (s.scope_type = 'WORKSTATION' AND s.scope_id = #{workstationId})
@@ -81,6 +89,10 @@ public interface AuthorizationMapper {
             LEFT JOIN permission p ON p.id = rp.permission_id
             WHERE s.cas_id = #{casId}
               AND (r.code = 'SYSTEM_ADMIN' OR p.code = #{permission})
+              AND EXISTS (
+                    SELECT 1 FROM department dt
+                    WHERE dt.id = #{departmentId} AND dt.enabled = 1
+              )
               AND (
                     s.scope_type = 'ALL'
                     OR (s.scope_type = 'DEPARTMENT' AND s.scope_id = #{departmentId})
@@ -147,6 +159,8 @@ public interface AuthorizationMapper {
      * 查询该用户在各部门担任的角色及权限。
      * 作用域按 ALL → BOARD → WORKSTATION → DEPARTMENT 逐级展开到部门；
      * SYSTEM_ADMIN 无角色权限关联，权限码统一映射为 {@code *}。
+     * 其余角色必须命中 role_permission，否则整行剔除，避免没有配置任何权限的
+     * 角色被 COALESCE 误报成 {@code *}。
      *
      * @param casId 学号
      * @return 部门、角色与权限的去重组合
@@ -165,6 +179,7 @@ public interface AuthorizationMapper {
             LEFT JOIN `permission` p ON p.id = rp.permission_id
             JOIN department d
             WHERE s.cas_id = #{casId}
+              AND (r.code = 'SYSTEM_ADMIN' OR p.code IS NOT NULL)
               AND d.enabled = 1
               AND (
                     s.scope_type = 'ALL'
