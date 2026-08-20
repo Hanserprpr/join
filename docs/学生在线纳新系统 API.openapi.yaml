@@ -1,0 +1,3978 @@
+openapi: 3.1.0
+info:
+  title: 学生在线纳新系统 API
+  description: 学生在线纳新系统后端接口
+  version: 1.0.0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/user/profile:
+    get:
+      tags:
+      - 个人资料
+      summary: 获取个人资料
+      operationId: profile
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultUserProfileVO"
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - 个人资料
+      summary: 更新联系方式
+      operationId: updateContact
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultUserProfileVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}:
+    get:
+      tags:
+      - 部门
+      summary: 获取部门详情
+      operationId: getDepartment
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentVO"
+    put:
+      tags:
+      - 部门
+      summary: 完整更新部门详情
+      operationId: updateDepartment
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentDetailUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentVO"
+      security:
+      - sessionCookie: []
+    patch:
+      tags:
+      - 部门
+      summary: 部分更新部门详情
+      operationId: patchDepartment
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentDetailPatchRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/questionnaire:
+    get:
+      tags:
+      - 部门
+      summary: 获取部门报名问卷
+      operationId: getQuestionnaire
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentQuestionnaireVO"
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - 部门
+      summary: 完整更新部门报名问卷
+      operationId: updateQuestionnaire
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentQuestionnaireUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentQuestionnaireVO"
+      security:
+      - sessionCookie: []
+    delete:
+      tags:
+      - 部门
+      summary: 清空部门报名问卷
+      operationId: clearQuestionnaire
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentQuestionnaireVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/{interviewId}/evaluation:
+    put:
+      tags:
+      - 面试
+      summary: 更新面试评价
+      operationId: updateEvaluation
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewEvaluationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewEvaluationVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/sessions/{sessionId}:
+    put:
+      tags:
+      - 面试
+      summary: 修改面试场次
+      operationId: updateSession
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewSessionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewSessionVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/queue-config:
+    get:
+      tags:
+      - 面试
+      summary: 查询过号配置
+      operationId: findQueueConfig
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewQueueConfigVO"
+      security:
+      - sessionCookie: []
+    put:
+      tags:
+      - 面试
+      summary: 完整更新过号配置
+      operationId: updateQueueConfig
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewQueueConfigRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewQueueConfigVO"
+      security:
+      - sessionCookie: []
+    patch:
+      tags:
+      - 面试
+      summary: 部分更新过号配置
+      operationId: patchQueueConfig
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewQueueConfigPatchRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewQueueConfigVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/applications/{applicationId}/admission:
+    put:
+      tags:
+      - 部门报名
+      operationId: admit
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentApplicationVO"
+      security:
+      - sessionCookie: []
+    delete:
+      tags:
+      - 部门报名
+      operationId: cancelAdmissionDraft
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentApplicationVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/sessions:
+    get:
+      tags:
+      - 面试
+      summary: 查询全部面试场次
+      operationId: findSessions
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListInterviewSessionVO"
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - 面试
+      summary: 创建面试场次
+      operationId: createSession
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewSessionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewSessionVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/sessions/{sessionId}/publish:
+    post:
+      tags:
+      - 面试
+      summary: 发布面试场次
+      operationId: publishSession
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewSessionVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/sessions/{sessionId}/end:
+    post:
+      tags:
+      - 面试
+      summary: 结束面试场次
+      operationId: endSession
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewSessionVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms:
+    get:
+      tags:
+      - DepartmentInterviewRoomController
+      operationId: findAll
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListInterviewRoomVO"
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      operationId: create
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewRoomRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/leave:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      operationId: leave
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/join:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      operationId: join
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/force-call-next:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 强制结束并呼叫下一位
+      operationId: forceCallNext
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomStateVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/current/stop-calling:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 停止面试室叫号
+      operationId: stopCalling
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewQueueItemVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/current/pass:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 将面试室当前面试者标记为过号
+      operationId: pass
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewQueueItemVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/current/force-finish:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 强制结束面试室当前面试
+      operationId: forceFinish
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomStateVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/current/finish:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 结束面试室当前面试
+      operationId: finish
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomStateVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/current/evaluation:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 提交管理员独立评价
+      operationId: submitEvaluation
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewEvaluationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomStateVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/close:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      operationId: close
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/call-next:
+    post:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 面试室呼叫下一位面试者
+      operationId: callNext
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomStateVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/applications:
+    get:
+      tags:
+      - 部门报名
+      summary: 分页查询部门报名信息
+      operationId: findApplications
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 0
+      - name: college
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 64
+          minLength: 0
+      - name: grade
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          maximum: 2100
+          minimum: 2000
+      - name: interviewed
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: sortBy
+        in: query
+        required: false
+        schema:
+          type: string
+          default: submittedAt
+          pattern: submittedAt|score
+      - name: sortOrder
+        in: query
+        required: false
+        schema:
+          type: string
+          default: desc
+          pattern: asc|desc
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultPageVODepartmentApplicationSummaryVO"
+      security:
+      - sessionCookie: []
+    post:
+      tags:
+      - 部门报名
+      summary: 提交部门报名
+      operationId: submit
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentApplicationRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentApplicationVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/applications/admissions/publish:
+    post:
+      tags:
+      - 部门报名
+      operationId: publishAdmissions
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdmissionPublishRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultAdmissionPublishVO"
+      security:
+      - sessionCookie: []
+  /api/check-ins:
+    post:
+      tags:
+      - 签到
+      summary: 扫码签到
+      operationId: checkIn
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultCheckInVO"
+      security:
+      - sessionCookie: []
+  /api/admin/workstations:
+    post:
+      tags:
+      - 系统管理
+      summary: 创建工作站
+      operationId: createWorkstation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkstationCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultWorkstationVO"
+      security:
+      - sessionCookie: []
+  /api/admin/role-assignments:
+    post:
+      tags:
+      - 系统管理
+      summary: 分配角色
+      operationId: assignRole
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleAssignmentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultRoleAssignmentVO"
+      security:
+      - sessionCookie: []
+    delete:
+      tags:
+      - 系统管理
+      operationId: revokeRole
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleAssignmentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultVoid"
+      security:
+      - sessionCookie: []
+  /api/admin/departments:
+    post:
+      tags:
+      - 系统管理
+      summary: 创建部门
+      operationId: createDepartment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentVO"
+      security:
+      - sessionCookie: []
+  /api/admin/boards:
+    post:
+      tags:
+      - 系统管理
+      summary: 创建板块
+      operationId: createBoard
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BoardCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultBoardVO"
+      security:
+      - sessionCookie: []
+  /api/workstations/{workstationId}:
+    get:
+      tags:
+      - 工作站
+      summary: 获取工作站详情
+      operationId: getWorkstation
+      parameters:
+      - name: workstationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultWorkstationDetailVO"
+  /api/wechat/binding/url:
+    get:
+      tags:
+      - 微信绑定
+      summary: 获取微信授权绑定地址
+      operationId: authorizationUrl
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultMapStringString"
+      security:
+      - sessionCookie: []
+  /api/wechat/binding/status:
+    get:
+      tags:
+      - 微信绑定
+      summary: 查询微信绑定状态
+      operationId: status
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultWeChatBindingStatusVO"
+      security:
+      - sessionCookie: []
+  /api/wechat/binding/callback:
+    get:
+      tags:
+      - 微信绑定
+      summary: 处理微信授权回调
+      operationId: callback
+      parameters:
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RedirectView"
+  /api/user/permissions:
+    get:
+      tags:
+      - UserPermissionsController
+      operationId: getMyPermissions
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultUserPermissionsVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/{interviewId}:
+    get:
+      tags:
+      - 面试
+      summary: 查询面试记录
+      operationId: findById
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentInterviewVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/sessions/current:
+    get:
+      tags:
+      - 面试
+      summary: 查询当前已发布场次
+      operationId: findPublishedSession
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewSessionVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/queue:
+    get:
+      tags:
+      - 面试
+      summary: 查询面试队列
+      operationId: findQueue
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListInterviewQueueItemVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/my-queue-status:
+    get:
+      tags:
+      - 面试
+      summary: 查询我的排队状态
+      operationId: findMyQueueStatus
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultMyInterviewQueueStatusVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/my-events:
+    get:
+      tags:
+      - 面试
+      summary: 订阅我的排队状态事件
+      description: my-queue-status-updated 的 data 是个人排队状态；business-error 的 data 是统一错误响应；heartbeat
+        的 data 是 ISO-8601 时间字符串。
+      operationId: subscribeMyQueueStatus
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: 个人排队状态、业务错误及心跳事件流
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/MyQueueStatusSseEnvelope"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interviews/events:
+    get:
+      tags:
+      - 面试
+      summary: 订阅面试队列事件
+      description: queue-updated 的 data 是面试队列快照；heartbeat 的 data 是 ISO-8601 时间字符串。
+      operationId: subscribeQueue
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: 队列快照及心跳事件流
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/InterviewQueueSseEnvelope"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/state:
+    get:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 查询面试室实时状态
+      operationId: state
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultInterviewRoomStateVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/interviews/{interviewId}/evaluations:
+    get:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 查询面试的全部管理员评价
+      operationId: evaluations
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListInterviewEvaluationVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/events:
+    get:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 订阅面试室实时状态
+      description: interview-room-state-updated 的 data 是房间状态；business-error 的 data
+        是统一错误响应；heartbeat 的 data 是 ISO-8601 时间字符串。
+      operationId: events
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: 房间状态、业务错误及心跳事件流
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/InterviewRoomSseEnvelope"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/interview-rooms/{roomId}/current:
+    get:
+      tags:
+      - DepartmentInterviewRoomController
+      summary: 查询面试室当前面试
+      operationId: current
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentInterviewVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/check-in/qr-code:
+    get:
+      tags:
+      - 签到
+      summary: 生成部门签到二维码
+      operationId: createQrCode
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultCheckInQrCodeVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/applications/{applicationId}:
+    get:
+      tags:
+      - 部门报名
+      summary: 获取报名记录详情
+      operationId: getApplicationDetail
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentApplicationDetailVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/applications/me:
+    get:
+      tags:
+      - 部门报名
+      operationId: findMyApplication
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultDepartmentApplicationVO"
+      security:
+      - sessionCookie: []
+  /api/departments/{departmentId}/applications/export:
+    get:
+      tags:
+      - 部门报名
+      summary: 导出部门报名信息
+      operationId: exportApplications
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 0
+      - name: college
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 64
+          minLength: 0
+      - name: grade
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          maximum: 2100
+          minimum: 2000
+      - name: interviewed
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+      security:
+      - sessionCookie: []
+  /api/college-majors:
+    get:
+      tags:
+      - 学院专业
+      summary: 获取学院与专业列表
+      operationId: getCollegeMajors
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultMapStringListString"
+  /api/boards:
+    get:
+      tags:
+      - 板块
+      summary: 获取板块列表
+      operationId: getBoards
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListBoardWithWorkstationsVO"
+  /api/banners:
+    get:
+      tags:
+      - 轮播图
+      summary: 获取轮播图列表
+      operationId: getBanners
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListBannerVO"
+  /api/auth/status:
+    get:
+      tags:
+      - 认证
+      summary: 检查登录状态
+      operationId: status_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultMapStringObject"
+  /api/auth/oidc:
+    get:
+      tags:
+      - 认证
+      summary: 获取当前用户的 OIDC Claims
+      operationId: oidcClaims
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultMapStringObject"
+      security:
+      - sessionCookie: []
+  /api/auth/me:
+    get:
+      tags:
+      - 认证
+      summary: 获取当前登录用户资料
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultUserProfileVO"
+      security:
+      - sessionCookie: []
+  /api/auth/login:
+    get:
+      tags:
+      - 认证
+      summary: 获取 OIDC 登录地址
+      operationId: login
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultMapStringString"
+  /api/wechat/binding:
+    delete:
+      tags:
+      - 微信绑定
+      summary: 解除微信绑定
+      operationId: unbind
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultVoid"
+      security:
+      - sessionCookie: []
+components:
+  schemas:
+    ContactUpdateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^\S+@\S+\.\S+$
+        phone:
+          type: string
+          pattern: "^1\\d{10}$"
+        college:
+          type: string
+          maxLength: 64
+          minLength: 0
+        major:
+          type: string
+          maxLength: 64
+          minLength: 0
+        grade:
+          type: integer
+          format: int32
+          maximum: 2100
+          minimum: 2000
+        qq:
+          type: string
+          pattern: "^(?:[1-9]\\d{4,11})?$"
+    ResultUserProfileVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/UserProfileVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    UserProfileVO:
+      type: object
+      properties:
+        sub:
+          type: string
+        name:
+          type: string
+        casId:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        wechatBound:
+          type: boolean
+        profileCompleted:
+          type: boolean
+        qq:
+          type: string
+        college:
+          type: string
+        major:
+          type: string
+        grade:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DepartmentDetailUpdateRequest:
+      type: object
+      properties:
+        campus:
+          type: string
+          enum:
+          - SOFTWARE_PARK
+          - CENTRAL
+          - QIANFOSHAN
+          - XINGLONGSHAN
+          - HONGJIALOU
+          - BAOTUQUAN
+        introduction:
+          type: string
+          maxLength: 10000
+          minLength: 0
+        posters:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentPosterRequest"
+          maxItems: 20
+          minItems: 0
+        achievements:
+          type: string
+          maxLength: 10000
+          minLength: 0
+        recruitmentRequirements:
+          type: string
+          maxLength: 10000
+          minLength: 0
+        contact:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        recruitmentGroup:
+          type: string
+          maxLength: 1000
+          minLength: 0
+    DepartmentPosterRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          maxLength: 2048
+          minLength: 0
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - url
+    DepartmentPosterVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        url:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+    DepartmentVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workstationId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        campus:
+          type: string
+          enum:
+          - SOFTWARE_PARK
+          - CENTRAL
+          - QIANFOSHAN
+          - XINGLONGSHAN
+          - HONGJIALOU
+          - BAOTUQUAN
+        introduction:
+          type: string
+        posters:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentPosterVO"
+        achievements:
+          type: string
+        recruitmentRequirements:
+          type: string
+        contact:
+          type: string
+        recruitmentGroup:
+          type: string
+        hasQuestionnaire:
+          type: boolean
+        canManage:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        enabled:
+          type: boolean
+    ResultDepartmentVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/DepartmentVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    DepartmentQuestionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+          minLength: 0
+        description:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        type:
+          type: string
+          enum:
+          - SINGLE_CHOICE
+          - MULTIPLE_CHOICE
+          - SHORT_TEXT
+          - LONG_TEXT
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionOptionRequest"
+          maxItems: 50
+          minItems: 0
+        optionsValid:
+          type: boolean
+      required:
+      - required
+      - title
+      - type
+    DepartmentQuestionnaireUpdateRequest:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentQuestionRequest"
+          maxItems: 100
+          minItems: 0
+      required:
+      - questions
+    QuestionOptionRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - content
+    DepartmentQuestionVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum:
+          - SINGLE_CHOICE
+          - MULTIPLE_CHOICE
+          - SHORT_TEXT
+          - LONG_TEXT
+        required:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionOptionVO"
+    DepartmentQuestionnaireVO:
+      type: object
+      properties:
+        departmentId:
+          type: integer
+          format: int64
+        configured:
+          type: boolean
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentQuestionVO"
+    QuestionOptionVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        content:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+    ResultDepartmentQuestionnaireVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/DepartmentQuestionnaireVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    InterviewEvaluationRequest:
+      type: object
+      properties:
+        score:
+          type: integer
+          format: int32
+          maximum: 5
+          minimum: 1
+        evaluation:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - score
+    InterviewEvaluationVO:
+      type: object
+      properties:
+        interviewId:
+          type: integer
+          format: int64
+        administratorCasId:
+          type: string
+        administratorName:
+          type: string
+        score:
+          type: integer
+          format: int32
+        evaluation:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+    ResultInterviewEvaluationVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/InterviewEvaluationVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    InterviewSessionRequest:
+      type: object
+      properties:
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        location:
+          type: string
+          maxLength: 255
+          minLength: 0
+        checkInLimit:
+          type: integer
+          format: int32
+      required:
+      - checkInLimit
+      - endsAt
+      - location
+      - startsAt
+    InterviewSessionVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        location:
+          type: string
+        checkInLimit:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - PUBLISHED
+          - ENDED
+        publishedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+    ResultInterviewSessionVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/InterviewSessionVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    InterviewQueueConfigRequest:
+      type: object
+      properties:
+        passDelayCount:
+          type: integer
+          format: int32
+          maximum: 100
+          minimum: 1
+        maxPassCount:
+          type: integer
+          format: int32
+          maximum: 20
+          minimum: 0
+    InterviewQueueConfigVO:
+      type: object
+      properties:
+        passDelayCount:
+          type: integer
+          format: int32
+        maxPassCount:
+          type: integer
+          format: int32
+    ResultInterviewQueueConfigVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/InterviewQueueConfigVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    DepartmentApplicationVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - SUBMITTED
+          - ADMISSION_DRAFT
+          - ADMITTED
+        submittedAt:
+          type: string
+          format: date-time
+    ResultDepartmentApplicationVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/DepartmentApplicationVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    InterviewRoomRequest:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 64
+          minLength: 0
+      required:
+      - name
+    InterviewRoomVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        sessionId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        status:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        administratorCasIds:
+          type: array
+          items:
+            type: string
+    ResultInterviewRoomVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/InterviewRoomVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    DepartmentInterviewVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        applicationId:
+          type: integer
+          format: int64
+        candidateCasId:
+          type: string
+        candidateName:
+          type: string
+        interviewerCasId:
+          type: string
+        interviewerName:
+          type: string
+        queueNumber:
+          type: integer
+          format: int32
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+    InterviewRoomMemberStatusVO:
+      type: object
+      properties:
+        casId:
+          type: string
+        name:
+          type: string
+        submitted:
+          type: boolean
+        submittedAt:
+          type: string
+          format: date-time
+    InterviewRoomStateVO:
+      type: object
+      properties:
+        roomId:
+          type: integer
+          format: int64
+        roomName:
+          type: string
+        roomStatus:
+          type: string
+        currentInterview:
+          $ref: "#/components/schemas/DepartmentInterviewVO"
+        administrators:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewRoomMemberStatusVO"
+        submittedCount:
+          type: integer
+          format: int32
+        administratorCount:
+          type: integer
+          format: int32
+        pendingAdministrators:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewRoomMemberStatusVO"
+        currentUserSubmitted:
+          type: boolean
+        canForce:
+          type: boolean
+    ResultInterviewRoomStateVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/InterviewRoomStateVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    InterviewQueueItemVO:
+      type: object
+      properties:
+        checkInId:
+          type: integer
+          format: int64
+        applicationId:
+          type: integer
+          format: int64
+        candidateCasId:
+          type: string
+        candidateName:
+          type: string
+        queueNumber:
+          type: integer
+          format: int32
+        queueOrder:
+          type: integer
+          format: int64
+        passCount:
+          type: integer
+          format: int32
+        checkedInAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - WAITING
+          - INTERVIEWING
+          - INTERVIEWING_ELSEWHERE
+          - COMPLETED
+        interviewerCasId:
+          type: string
+        interviewerName:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        priority:
+          type: boolean
+    ResultInterviewQueueItemVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/InterviewQueueItemVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ApplicationAnswerRequest:
+      type: object
+      properties:
+        questionId:
+          type: integer
+          format: int64
+        answerText:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        optionIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 50
+          minItems: 0
+    DepartmentApplicationRequest:
+      type: object
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationAnswerRequest"
+          maxItems: 100
+          minItems: 0
+    AdmissionPublishRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          maxLength: 200
+          minLength: 0
+        content:
+          type: string
+          maxLength: 10000
+          minLength: 0
+      required:
+      - content
+      - subject
+    AdmissionPublishVO:
+      type: object
+      properties:
+        publishedCount:
+          type: integer
+          format: int32
+    ResultAdmissionPublishVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/AdmissionPublishVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    CheckInRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 128
+          minLength: 0
+      required:
+      - token
+    CheckInVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        sessionId:
+          type: integer
+          format: int64
+        applicationId:
+          type: integer
+          format: int64
+        checkedInAt:
+          type: string
+          format: date-time
+        queueNumber:
+          type: integer
+          format: int32
+        priority:
+          type: boolean
+    ResultCheckInVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/CheckInVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    WorkstationCreateRequest:
+      type: object
+      properties:
+        boardId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 64
+          minLength: 0
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+        enabled:
+          type: boolean
+      required:
+      - boardId
+      - name
+    ResultWorkstationVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/WorkstationVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    WorkstationVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        boardId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        enabled:
+          type: boolean
+    RoleAssignmentRequest:
+      type: object
+      properties:
+        casId:
+          type: string
+          minLength: 1
+          pattern: "^[A-Za-z0-9_-]{1,32}$"
+        roleCode:
+          type: string
+          minLength: 1
+        scopeType:
+          type: string
+          enum:
+          - BOARD
+          - WORKSTATION
+          - DEPARTMENT
+        scopeId:
+          type: integer
+          format: int64
+      required:
+      - casId
+      - roleCode
+      - scopeId
+      - scopeType
+    ResultRoleAssignmentVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/RoleAssignmentVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    RoleAssignmentVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        casId:
+          type: string
+        roleCode:
+          type: string
+        scopeType:
+          type: string
+          enum:
+          - BOARD
+          - WORKSTATION
+          - DEPARTMENT
+        scopeId:
+          type: integer
+          format: int64
+    DepartmentCreateRequest:
+      type: object
+      properties:
+        workstationId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 64
+          minLength: 0
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+        enabled:
+          type: boolean
+      required:
+      - name
+      - workstationId
+    BoardCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 64
+          minLength: 0
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+        enabled:
+          type: boolean
+      required:
+      - name
+    BoardVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        enabled:
+          type: boolean
+    ResultBoardVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/BoardVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    DepartmentDetailPatchRequest:
+      type: object
+      properties:
+        campus:
+          type: string
+          enum:
+          - SOFTWARE_PARK
+          - CENTRAL
+          - QIANFOSHAN
+          - XINGLONGSHAN
+          - HONGJIALOU
+          - BAOTUQUAN
+        introduction:
+          type: string
+          maxLength: 10000
+          minLength: 0
+        posters:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentPosterRequest"
+          maxItems: 20
+          minItems: 0
+        achievements:
+          type: string
+          maxLength: 10000
+          minLength: 0
+        recruitmentRequirements:
+          type: string
+          maxLength: 10000
+          minLength: 0
+        contact:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        recruitmentGroup:
+          type: string
+          maxLength: 1000
+          minLength: 0
+    InterviewQueueConfigPatchRequest:
+      type: object
+      properties:
+        passDelayCount:
+          type: integer
+          format: int32
+          maximum: 100
+          minimum: 1
+        maxPassCount:
+          type: integer
+          format: int32
+          maximum: 20
+          minimum: 0
+    DepartmentSummaryVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        campus:
+          type: string
+          enum:
+          - SOFTWARE_PARK
+          - CENTRAL
+          - QIANFOSHAN
+          - XINGLONGSHAN
+          - HONGJIALOU
+          - BAOTUQUAN
+    ResultWorkstationDetailVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/WorkstationDetailVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    WorkstationDetailVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        boardId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        departments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentSummaryVO"
+    ResultMapStringString:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: object
+          additionalProperties:
+            type: string
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ResultWeChatBindingStatusVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/WeChatBindingStatusVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    WeChatBindingStatusVO:
+      type: object
+      properties:
+        bound:
+          type: boolean
+    ApplicationContext:
+      type: object
+      properties:
+        autowireCapableBeanFactory:
+          $ref: "#/components/schemas/AutowireCapableBeanFactory"
+        applicationName:
+          type: string
+        startupDate:
+          type: integer
+          format: int64
+        parent:
+          $ref: "#/components/schemas/ApplicationContext"
+        id:
+          type: string
+        displayName:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        beanDefinitionNames:
+          type: array
+          items:
+            type: string
+        beanDefinitionCount:
+          type: integer
+          format: int32
+        parentBeanFactory:
+          $ref: "#/components/schemas/BeanFactory"
+        classLoader:
+          type: object
+          properties:
+            name:
+              type: string
+            registeredAsParallelCapable:
+              type: boolean
+            parent:
+              type: object
+              properties:
+                name:
+                  type: string
+                registeredAsParallelCapable:
+                  type: boolean
+                unnamedModule:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    descriptor:
+                      type: object
+                      properties:
+                        open:
+                          type: boolean
+                        automatic:
+                          type: boolean
+                    named:
+                      type: boolean
+                    annotations:
+                      type: array
+                      items: {}
+                    declaredAnnotations:
+                      type: array
+                      items: {}
+                    packages:
+                      type: array
+                      items:
+                        type: string
+                      uniqueItems: true
+                    nativeAccessEnabled:
+                      type: boolean
+                    layer: {}
+                definedPackages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      annotations:
+                        type: array
+                        items: {}
+                      declaredAnnotations:
+                        type: array
+                        items: {}
+                      sealed:
+                        type: boolean
+                      specificationTitle:
+                        type: string
+                      specificationVersion:
+                        type: string
+                      specificationVendor:
+                        type: string
+                      implementationTitle:
+                        type: string
+                      implementationVersion:
+                        type: string
+                      implementationVendor:
+                        type: string
+                defaultAssertionStatus:
+                  type: boolean
+                  writeOnly: true
+            unnamedModule:
+              type: object
+              properties:
+                name:
+                  type: string
+                descriptor:
+                  type: object
+                  properties:
+                    open:
+                      type: boolean
+                    automatic:
+                      type: boolean
+                named:
+                  type: boolean
+                annotations:
+                  type: array
+                  items: {}
+                declaredAnnotations:
+                  type: array
+                  items: {}
+                packages:
+                  type: array
+                  items:
+                    type: string
+                  uniqueItems: true
+                nativeAccessEnabled:
+                  type: boolean
+                layer: {}
+            definedPackages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  annotations:
+                    type: array
+                    items: {}
+                  declaredAnnotations:
+                    type: array
+                    items: {}
+                  sealed:
+                    type: boolean
+                  specificationTitle:
+                    type: string
+                  specificationVersion:
+                    type: string
+                  specificationVendor:
+                    type: string
+                  implementationTitle:
+                    type: string
+                  implementationVersion:
+                    type: string
+                  implementationVendor:
+                    type: string
+            defaultAssertionStatus:
+              type: boolean
+              writeOnly: true
+    AutowireCapableBeanFactory: {}
+    BeanFactory: {}
+    DefaultHttpStatusCode:
+      allOf:
+      - $ref: "#/components/schemas/HttpStatusCode"
+    Environment:
+      type: object
+      properties:
+        activeProfiles:
+          type: array
+          items:
+            type: string
+        defaultProfiles:
+          type: array
+          items:
+            type: string
+    FilterRegistration:
+      type: object
+      properties:
+        servletNameMappings:
+          type: array
+          items:
+            type: string
+        urlPatternMappings:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        className:
+          type: string
+        initParameters:
+          type: object
+          additionalProperties:
+            type: string
+    HttpStatus:
+      allOf:
+      - $ref: "#/components/schemas/HttpStatusCode"
+      enum:
+      - 100 CONTINUE
+      - 101 SWITCHING_PROTOCOLS
+      - 102 PROCESSING
+      - 103 EARLY_HINTS
+      - 200 OK
+      - 201 CREATED
+      - 202 ACCEPTED
+      - 203 NON_AUTHORITATIVE_INFORMATION
+      - 204 NO_CONTENT
+      - 205 RESET_CONTENT
+      - 206 PARTIAL_CONTENT
+      - 207 MULTI_STATUS
+      - 208 ALREADY_REPORTED
+      - 226 IM_USED
+      - 300 MULTIPLE_CHOICES
+      - 301 MOVED_PERMANENTLY
+      - 302 FOUND
+      - 303 SEE_OTHER
+      - 304 NOT_MODIFIED
+      - 307 TEMPORARY_REDIRECT
+      - 308 PERMANENT_REDIRECT
+      - 400 BAD_REQUEST
+      - 401 UNAUTHORIZED
+      - 402 PAYMENT_REQUIRED
+      - 403 FORBIDDEN
+      - 404 NOT_FOUND
+      - 405 METHOD_NOT_ALLOWED
+      - 406 NOT_ACCEPTABLE
+      - 407 PROXY_AUTHENTICATION_REQUIRED
+      - 408 REQUEST_TIMEOUT
+      - 409 CONFLICT
+      - 410 GONE
+      - 411 LENGTH_REQUIRED
+      - 412 PRECONDITION_FAILED
+      - 413 CONTENT_TOO_LARGE
+      - 413 PAYLOAD_TOO_LARGE
+      - 414 URI_TOO_LONG
+      - 415 UNSUPPORTED_MEDIA_TYPE
+      - 416 REQUESTED_RANGE_NOT_SATISFIABLE
+      - 417 EXPECTATION_FAILED
+      - 418 I_AM_A_TEAPOT
+      - 421 MISDIRECTED_REQUEST
+      - 422 UNPROCESSABLE_CONTENT
+      - 422 UNPROCESSABLE_ENTITY
+      - 423 LOCKED
+      - 424 FAILED_DEPENDENCY
+      - 425 TOO_EARLY
+      - 426 UPGRADE_REQUIRED
+      - 428 PRECONDITION_REQUIRED
+      - 429 TOO_MANY_REQUESTS
+      - 431 REQUEST_HEADER_FIELDS_TOO_LARGE
+      - 451 UNAVAILABLE_FOR_LEGAL_REASONS
+      - 500 INTERNAL_SERVER_ERROR
+      - 501 NOT_IMPLEMENTED
+      - 502 BAD_GATEWAY
+      - 503 SERVICE_UNAVAILABLE
+      - 504 GATEWAY_TIMEOUT
+      - 505 HTTP_VERSION_NOT_SUPPORTED
+      - 506 VARIANT_ALSO_NEGOTIATES
+      - 507 INSUFFICIENT_STORAGE
+      - 508 LOOP_DETECTED
+      - 509 BANDWIDTH_LIMIT_EXCEEDED
+      - 510 NOT_EXTENDED
+      - 511 NETWORK_AUTHENTICATION_REQUIRED
+    HttpStatusCode:
+      type: object
+      properties:
+        error:
+          type: boolean
+        is4xxClientError:
+          type: boolean
+        is5xxServerError:
+          type: boolean
+        is3xxRedirection:
+          type: boolean
+        is1xxInformational:
+          type: boolean
+        is2xxSuccessful:
+          type: boolean
+    JspConfigDescriptor:
+      type: object
+      properties:
+        jspPropertyGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/JspPropertyGroupDescriptor"
+        taglibs:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaglibDescriptor"
+    JspPropertyGroupDescriptor:
+      type: object
+      properties:
+        buffer:
+          type: string
+        defaultContentType:
+          type: string
+        urlPatterns:
+          type: array
+          items:
+            type: string
+        isXml:
+          type: string
+        elIgnored:
+          type: string
+        pageEncoding:
+          type: string
+        includePreludes:
+          type: array
+          items:
+            type: string
+        includeCodas:
+          type: array
+          items:
+            type: string
+        errorOnELNotFound:
+          type: string
+        scriptingInvalid:
+          type: string
+        errorOnUndeclaredNamespace:
+          type: string
+        deferredSyntaxAllowedAsLiteral:
+          type: string
+        trimDirectiveWhitespaces:
+          type: string
+    RedirectView:
+      type: object
+      properties:
+        applicationContext:
+          $ref: "#/components/schemas/ApplicationContext"
+        servletContext:
+          $ref: "#/components/schemas/ServletContext"
+          writeOnly: true
+        contentType:
+          type: string
+        requestContextAttribute:
+          type: string
+        staticAttributes:
+          type: object
+          additionalProperties: {}
+        exposePathVariables:
+          type: boolean
+        exposeContextBeansAsAttributes:
+          type: boolean
+          writeOnly: true
+        exposedContextBeanNames:
+          type: array
+          items:
+            type: string
+          writeOnly: true
+        beanName:
+          type: string
+        url:
+          type: string
+        contextRelative:
+          type: boolean
+          writeOnly: true
+        http10Compatible:
+          type: boolean
+          writeOnly: true
+        exposeModelAttributes:
+          type: boolean
+          writeOnly: true
+        encodingScheme:
+          type: string
+          writeOnly: true
+        statusCode:
+          oneOf:
+          - $ref: "#/components/schemas/DefaultHttpStatusCode"
+          - $ref: "#/components/schemas/HttpStatus"
+          writeOnly: true
+        expandUriTemplateVariables:
+          type: boolean
+          writeOnly: true
+        propagateQueryParams:
+          type: boolean
+          writeOnly: true
+        hosts:
+          type: array
+          items:
+            type: string
+        redirectView:
+          type: boolean
+        propagateQueryProperties:
+          type: boolean
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+          writeOnly: true
+        attributesMap:
+          type: object
+          additionalProperties: {}
+        attributesCSV:
+          type: string
+          writeOnly: true
+    ServletContext:
+      type: object
+      properties:
+        classLoader:
+          type: object
+          properties:
+            name:
+              type: string
+            registeredAsParallelCapable:
+              type: boolean
+            parent:
+              type: object
+              properties:
+                name:
+                  type: string
+                registeredAsParallelCapable:
+                  type: boolean
+                unnamedModule:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    descriptor:
+                      type: object
+                      properties:
+                        open:
+                          type: boolean
+                        automatic:
+                          type: boolean
+                    named:
+                      type: boolean
+                    annotations:
+                      type: array
+                      items: {}
+                    declaredAnnotations:
+                      type: array
+                      items: {}
+                    packages:
+                      type: array
+                      items:
+                        type: string
+                      uniqueItems: true
+                    nativeAccessEnabled:
+                      type: boolean
+                    layer: {}
+                definedPackages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      annotations:
+                        type: array
+                        items: {}
+                      declaredAnnotations:
+                        type: array
+                        items: {}
+                      sealed:
+                        type: boolean
+                      specificationTitle:
+                        type: string
+                      specificationVersion:
+                        type: string
+                      specificationVendor:
+                        type: string
+                      implementationTitle:
+                        type: string
+                      implementationVersion:
+                        type: string
+                      implementationVendor:
+                        type: string
+                defaultAssertionStatus:
+                  type: boolean
+                  writeOnly: true
+            unnamedModule:
+              type: object
+              properties:
+                name:
+                  type: string
+                descriptor:
+                  type: object
+                  properties:
+                    open:
+                      type: boolean
+                    automatic:
+                      type: boolean
+                named:
+                  type: boolean
+                annotations:
+                  type: array
+                  items: {}
+                declaredAnnotations:
+                  type: array
+                  items: {}
+                packages:
+                  type: array
+                  items:
+                    type: string
+                  uniqueItems: true
+                nativeAccessEnabled:
+                  type: boolean
+                layer: {}
+            definedPackages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  annotations:
+                    type: array
+                    items: {}
+                  declaredAnnotations:
+                    type: array
+                    items: {}
+                  sealed:
+                    type: boolean
+                  specificationTitle:
+                    type: string
+                  specificationVersion:
+                    type: string
+                  specificationVendor:
+                    type: string
+                  implementationTitle:
+                    type: string
+                  implementationVersion:
+                    type: string
+                  implementationVendor:
+                    type: string
+            defaultAssertionStatus:
+              type: boolean
+              writeOnly: true
+        majorVersion:
+          type: integer
+          format: int32
+        minorVersion:
+          type: integer
+          format: int32
+        attributeNames: {}
+        contextPath:
+          type: string
+        initParameterNames: {}
+        filterRegistrations:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/FilterRegistration"
+        sessionTrackingModes:
+          type: array
+          items:
+            type: string
+            enum:
+            - COOKIE
+            - URL
+            - SSL
+          uniqueItems: true
+          writeOnly: true
+        jspConfigDescriptor:
+          $ref: "#/components/schemas/JspConfigDescriptor"
+        servletContextName:
+          type: string
+        effectiveMinorVersion:
+          type: integer
+          format: int32
+        sessionCookieConfig:
+          $ref: "#/components/schemas/SessionCookieConfig"
+        effectiveMajorVersion:
+          type: integer
+          format: int32
+        virtualServerName:
+          type: string
+        servletRegistrations:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ServletRegistration"
+        serverInfo:
+          type: string
+        sessionTimeout:
+          type: integer
+          format: int32
+        requestCharacterEncoding:
+          type: string
+        effectiveSessionTrackingModes:
+          type: array
+          items:
+            type: string
+            enum:
+            - COOKIE
+            - URL
+            - SSL
+          uniqueItems: true
+        responseCharacterEncoding:
+          type: string
+        defaultSessionTrackingModes:
+          type: array
+          items:
+            type: string
+            enum:
+            - COOKIE
+            - URL
+            - SSL
+          uniqueItems: true
+    ServletRegistration:
+      type: object
+      properties:
+        mappings:
+          type: array
+          items:
+            type: string
+        runAsRole:
+          type: string
+        name:
+          type: string
+        className:
+          type: string
+        initParameters:
+          type: object
+          additionalProperties:
+            type: string
+    SessionCookieConfig:
+      type: object
+      properties:
+        domain:
+          type: string
+        maxAge:
+          type: integer
+          format: int32
+        name:
+          type: string
+        path:
+          type: string
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+        comment:
+          type: string
+          deprecated: true
+        secure:
+          type: boolean
+        httpOnly:
+          type: boolean
+    TaglibDescriptor:
+      type: object
+      properties:
+        taglibURI:
+          type: string
+        taglibLocation:
+          type: string
+    DepartmentAccessVO:
+      type: object
+      properties:
+        departmentId:
+          type: integer
+          format: int64
+        departmentName:
+          type: string
+        identities:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentIdentityVO"
+    DepartmentIdentityVO:
+      type: object
+      properties:
+        roleCode:
+          type: string
+        roleName:
+          type: string
+        scopeType:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    ResultUserPermissionsVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/UserPermissionsVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    UserPermissionsVO:
+      type: object
+      properties:
+        casId:
+          type: string
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        isSystemAdmin:
+          type: boolean
+        scopedDepartments:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: integer
+              format: int64
+        departmentAccess:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentAccessVO"
+    ResultDepartmentInterviewVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/DepartmentInterviewVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ResultListInterviewSessionVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewSessionVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ResultListInterviewQueueItemVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewQueueItemVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    MyInterviewQueueStatusVO:
+      type: object
+      properties:
+        departmentId:
+          type: integer
+          format: int64
+        queueNumber:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - WAITING
+          - INTERVIEWING
+          - INTERVIEWING_ELSEWHERE
+          - COMPLETED
+        peopleAhead:
+          type: integer
+          format: int32
+        interviewingQueueNumbers:
+          type: array
+          items:
+            type: integer
+            format: int32
+    ResultMyInterviewQueueStatusVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/MyInterviewQueueStatusVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    MyQueueStatusSseEnvelope:
+      type: object
+      description: 个人排队状态 SSE 封装结构
+      properties:
+        event:
+          type: string
+          description: SSE 事件名
+          enum:
+          - my-queue-status-updated
+          - business-error
+          - heartbeat
+        data:
+          type: string
+          contentMediaType: application/json
+          contentSchema:
+            $ref: "#/components/schemas/MyInterviewQueueStatusVO"
+          description: SSE data 字段；状态更新时为 JSON 对象
+        id:
+          type: string
+          description: SSE 事件 ID
+        retry:
+          type: integer
+          format: int32
+          description: 客户端重连等待时间（毫秒）
+          minimum: 0
+    InterviewQueueSseEnvelope:
+      type: object
+      description: 面试队列 SSE 封装结构
+      properties:
+        event:
+          type: string
+          description: SSE 事件名
+          enum:
+          - queue-updated
+          - heartbeat
+        data:
+          type: string
+          contentMediaType: application/json
+          contentSchema:
+            type: array
+            items:
+              $ref: "#/components/schemas/InterviewQueueItemVO"
+          description: SSE data 字段；queue-updated 时为 JSON 数组
+        id:
+          type: string
+          description: SSE 事件 ID
+        retry:
+          type: integer
+          format: int32
+          description: 客户端重连等待时间（毫秒）
+          minimum: 0
+    ResultListInterviewRoomVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewRoomVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ResultListInterviewEvaluationVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewEvaluationVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    InterviewRoomSseEnvelope:
+      type: object
+      description: 面试房间状态 SSE 封装结构
+      properties:
+        event:
+          type: string
+          description: SSE 事件名
+          enum:
+          - interview-room-state-updated
+          - business-error
+          - heartbeat
+        data:
+          type: string
+          contentMediaType: application/json
+          contentSchema:
+            $ref: "#/components/schemas/InterviewRoomStateVO"
+          description: SSE data 字段；房间状态更新时为 JSON 对象
+        id:
+          type: string
+          description: SSE 事件 ID
+        retry:
+          type: integer
+          format: int32
+          description: 客户端重连等待时间（毫秒）
+          minimum: 0
+    CheckInQrCodeVO:
+      type: object
+      properties:
+        content:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        refreshAfterSeconds:
+          type: integer
+          format: int64
+    ResultCheckInQrCodeVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/CheckInQrCodeVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    DepartmentApplicationSummaryVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        casId:
+          type: string
+        applicantName:
+          type: string
+        college:
+          type: string
+        major:
+          type: string
+        grade:
+          type: integer
+          format: int32
+        phone:
+          type: string
+        qq:
+          type: string
+        status:
+          type: string
+          enum:
+          - SUBMITTED
+          - ADMISSION_DRAFT
+          - ADMITTED
+        submittedAt:
+          type: string
+          format: date-time
+        interviewed:
+          type: boolean
+        interviewId:
+          type: integer
+          format: int64
+        score:
+          type: integer
+          format: int32
+    PageVODepartmentApplicationSummaryVO:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentApplicationSummaryVO"
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalPages:
+          type: integer
+          format: int32
+    ResultPageVODepartmentApplicationSummaryVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/PageVODepartmentApplicationSummaryVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ApplicationAnswerOptionVO:
+      type: object
+      properties:
+        optionId:
+          type: integer
+          format: int64
+        content:
+          type: string
+    ApplicationAnswerVO:
+      type: object
+      properties:
+        questionId:
+          type: integer
+          format: int64
+        questionTitle:
+          type: string
+        questionType:
+          type: string
+          enum:
+          - SINGLE_CHOICE
+          - MULTIPLE_CHOICE
+          - SHORT_TEXT
+          - LONG_TEXT
+        answerText:
+          type: string
+        selectedOptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationAnswerOptionVO"
+    DepartmentApplicationDetailVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        casId:
+          type: string
+        applicantName:
+          type: string
+        college:
+          type: string
+        major:
+          type: string
+        grade:
+          type: integer
+          format: int32
+        phone:
+          type: string
+        email:
+          type: string
+        qq:
+          type: string
+        status:
+          type: string
+          enum:
+          - SUBMITTED
+          - ADMISSION_DRAFT
+          - ADMITTED
+        submittedAt:
+          type: string
+          format: date-time
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationAnswerVO"
+    ResultDepartmentApplicationDetailVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/DepartmentApplicationDetailVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ResultMapStringListString:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    BoardWithWorkstationsVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        workstations:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkstationSummaryVO"
+    ResultListBoardWithWorkstationsVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BoardWithWorkstationsVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    WorkstationSummaryVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    BannerVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        url:
+          type: string
+        route:
+          type: string
+    ResultListBannerVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BannerVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ResultMapStringObject:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: object
+          additionalProperties: {}
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    ResultVoid:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data: {}
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      name: JOINSESSION
+      in: cookie
