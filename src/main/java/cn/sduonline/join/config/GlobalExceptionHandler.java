@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 /**
  * REST 接口统一异常出口。异常详情只记录在服务端日志，不返回堆栈给调用方。
@@ -96,6 +97,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleDatabaseError(DataAccessException exception) {
         log.error("Database operation failed", exception);
         return response(HttpStatus.INTERNAL_SERVER_ERROR, BizCode.SYSTEM_ERROR);
+    }
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(AsyncRequestNotUsableException exception) {
+        log.debug("Async response already closed", exception);
     }
 
     @ExceptionHandler(Exception.class)

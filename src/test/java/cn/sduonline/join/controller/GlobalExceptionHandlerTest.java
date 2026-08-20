@@ -10,6 +10,7 @@ import cn.sduonline.join.security.ProfileIncompleteException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 class GlobalExceptionHandlerTest {
 
@@ -35,6 +36,15 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response.getBody());
         assertEquals(BizCode.PROFILE_INCOMPLETE.getCode(), response.getBody().getCode());
         assertEquals(BizCode.PROFILE_INCOMPLETE.getMsg(), response.getBody().getMsg());
+    }
+
+    @Test
+    void disconnectedAsyncResponseIsIgnored() {
+        handler.handleAsyncRequestNotUsable(
+                new AsyncRequestNotUsableException(
+                        "Response not usable after response errors."
+                )
+        );
     }
 
     @Test
