@@ -2,7 +2,6 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.vo.Result;
-import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -98,8 +97,8 @@ public class InterviewSseService {
                             .data(payload)
             );
             emitter.complete();
-        } catch (IOException exception) {
-            emitter.completeWithError(exception);
+        } catch (Exception exception) {
+            quietlyComplete(emitter);
         }
         return emitter;
     }
@@ -223,9 +222,9 @@ public class InterviewSseService {
                                     .name("heartbeat")
                                     .data(Instant.now().toString())
                     );
-                } catch (IOException exception) {
+                } catch (Exception exception) {
                     remove(departmentId, subscription);
-                    subscription.emitter().complete();
+                    quietlyComplete(subscription.emitter());
                 }
             }
         });
@@ -243,7 +242,14 @@ public class InterviewSseService {
             );
         } catch (Exception exception) {
             remove(departmentId, subscription);
-            subscription.emitter().completeWithError(exception);
+            quietlyComplete(subscription.emitter());
+        }
+    }
+
+    private static void quietlyComplete(SseEmitter emitter) {
+        try {
+            emitter.complete();
+        } catch (Exception ignored) {
         }
     }
 

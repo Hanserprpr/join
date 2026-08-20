@@ -57,10 +57,15 @@ public interface DepartmentApplicationMapper {
                    CASE WHEN i.ended_at IS NOT NULL
                      THEN TRUE ELSE FALSE
                    END AS interviewed,
-                   i.score
+                   e.score
             FROM department_application a
             JOIN `user` u ON u.cas_id = a.cas_id
             LEFT JOIN department_interview i ON i.application_id = a.id
+            LEFT JOIN (
+              SELECT interview_id, ROUND(AVG(score)) AS score
+              FROM department_interview_evaluation
+              GROUP BY interview_id
+            ) e ON e.interview_id = i.id
             WHERE a.department_id = #{departmentId}
             <if test="keyword != null and keyword != ''">
               AND (u.name LIKE CONCAT('%', #{keyword}, '%')
@@ -82,10 +87,10 @@ public interface DepartmentApplicationMapper {
             </if>
             <choose>
               <when test="sortBy == 'score' and sortOrder == 'asc'">
-                ORDER BY i.score IS NULL ASC, i.score ASC, a.id DESC
+                ORDER BY e.score IS NULL ASC, e.score ASC, a.id DESC
               </when>
               <when test="sortBy == 'score' and sortOrder == 'desc'">
-                ORDER BY i.score IS NULL ASC, i.score DESC, a.id DESC
+                ORDER BY e.score IS NULL ASC, e.score DESC, a.id DESC
               </when>
               <otherwise>
                 ORDER BY a.submitted_at DESC, a.id DESC
@@ -116,10 +121,15 @@ public interface DepartmentApplicationMapper {
                    CASE WHEN i.ended_at IS NOT NULL
                      THEN TRUE ELSE FALSE
                    END AS interviewed,
-                   i.score
+                   e.score
             FROM department_application a
             JOIN `user` u ON u.cas_id = a.cas_id
             LEFT JOIN department_interview i ON i.application_id = a.id
+            LEFT JOIN (
+              SELECT interview_id, ROUND(AVG(score)) AS score
+              FROM department_interview_evaluation
+              GROUP BY interview_id
+            ) e ON e.interview_id = i.id
             WHERE a.department_id = #{departmentId}
               AND a.id = #{applicationId}
             """)
