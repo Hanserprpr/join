@@ -306,6 +306,45 @@ class DepartmentApplicationServiceTest {
         assertEquals(ApplicationStatus.SUBMITTED, result.data().status());
     }
 
+    @Test
+    void listsAllApplicationsOfCurrentUser() {
+        DepartmentApplication first = new DepartmentApplication();
+        first.setId(100L);
+        first.setDepartmentId(12L);
+        first.setDepartmentName("技术部");
+        first.setWorkstationId(3L);
+        first.setWorkstationName("软件工作站");
+        first.setBoardId(1L);
+        first.setBoardName("技术板块");
+        first.setStatus(ApplicationStatus.ADMITTED);
+        DepartmentApplication second = new DepartmentApplication();
+        second.setId(101L);
+        second.setDepartmentId(13L);
+        second.setStatus(ApplicationStatus.ADMISSION_DRAFT);
+        when(applicationMapper.selectByUser("20240001"))
+                .thenReturn(List.of(first, second));
+
+        var result = service.findMyApplications("20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(2, result.data().size());
+        assertEquals("技术部", result.data().get(0).departmentName());
+        assertEquals("软件工作站", result.data().get(0).workstationName());
+        assertEquals("技术板块", result.data().get(0).boardName());
+        assertEquals(ApplicationStatus.ADMITTED, result.data().get(0).status());
+        assertEquals(ApplicationStatus.SUBMITTED, result.data().get(1).status());
+    }
+
+    @Test
+    void returnsEmptyListWhenUserHasNoApplication() {
+        when(applicationMapper.selectByUser("20240001")).thenReturn(List.of());
+
+        var result = service.findMyApplications("20240001");
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.data().isEmpty());
+    }
+
     private void prepareEligibleUser() {
         when(organizationMapper.selectDepartmentById(12L))
                 .thenReturn(new Department());

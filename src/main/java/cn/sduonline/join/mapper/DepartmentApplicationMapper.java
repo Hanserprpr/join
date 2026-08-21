@@ -180,6 +180,22 @@ public interface DepartmentApplicationMapper {
     );
 
     @Select("""
+            SELECT a.id, a.department_id, a.cas_id, a.status, a.submitted_at,
+                   d.name AS department_name,
+                   w.id AS workstation_id, w.name AS workstation_name,
+                   b.id AS board_id, b.name AS board_name
+            FROM department_application a
+            JOIN department d ON d.id = a.department_id
+            JOIN workstation w ON w.id = d.workstation_id
+            JOIN board b ON b.id = w.board_id
+            WHERE a.cas_id = #{casId}
+            ORDER BY a.submitted_at DESC, a.id DESC
+            """)
+    java.util.List<DepartmentApplication> selectByUser(
+            @Param("casId") String casId
+    );
+
+    @Select("""
             SELECT id, department_id, cas_id, status, submitted_at
             FROM department_application
             WHERE department_id = #{departmentId} AND id = #{applicationId}
