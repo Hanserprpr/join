@@ -13,7 +13,7 @@ public record DepartmentQuestionRequest(
         @Size(max = 1000) String description,
         @NotNull QuestionType type,
         @NotNull Boolean required,
-        @Valid @Size(max = 50) List<QuestionOptionRequest> options
+        @Size(max = 50) List<@Valid QuestionOptionRequest> options
 ) {
     @AssertTrue(message = "选择题至少需要两个选项，文本题不能设置选项")
     public boolean isOptionsValid() {

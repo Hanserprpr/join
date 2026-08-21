@@ -67,7 +67,8 @@ public interface AdminOrganizationMapper {
     Workstation selectEnabledWorkstationById(@Param("id") Long id);
 
     @Select("""
-            SELECT id, workstation_id, name, campus, sort_order, enabled
+            SELECT id, workstation_id, name, campus, asset_id,
+                   sort_order, enabled
             FROM department
             WHERE workstation_id = #{workstationId}
               AND enabled = 1

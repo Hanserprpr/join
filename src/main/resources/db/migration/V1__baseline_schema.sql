@@ -1,11 +1,6 @@
--- 最新完整初始化脚本，仅用于新建数据库。
--- 执行后即可得到当前版本所需的全部表、索引、外键、角色和权限。
-
-CREATE DATABASE IF NOT EXISTS `join`
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE `join`;
+-- 基线：引入 Flyway 之前 docs/schema.sql 所描述的完整结构。
+-- 全新数据库会执行本脚本；已有数据库通过 baseline-on-migrate 直接标记为已应用。
+-- 注意：建库语句（CREATE DATABASE / USE）不在迁移内，需先建好 join 库。
 
 CREATE TABLE `user` (
   `cas_id`             VARCHAR(32)  NOT NULL COMMENT '统一认证账号（学号/工号）',
@@ -61,7 +56,6 @@ CREATE TABLE `department` (
     'SOFTWARE_PARK', 'CENTRAL', 'QIANFOSHAN',
     'XINGLONGSHAN', 'HONGJIALOU', 'BAOTUQUAN'
   ) NULL COMMENT '部门所在校区',
-  `asset_id` BIGINT NULL COMMENT '部门素材 ID',
   `introduction` TEXT NULL COMMENT '组织介绍',
   `recruitment_requirements` TEXT NULL COMMENT '纳新要求',
   `contact` VARCHAR(1000) NULL COMMENT '联系方式',

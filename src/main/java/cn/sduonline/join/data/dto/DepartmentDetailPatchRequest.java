@@ -18,13 +18,11 @@ public class DepartmentDetailPatchRequest {
     @Size(max = 10000)
     private String introduction;
 
-    @Valid
     @Size(max = 20)
-    private List<DepartmentPosterRequest> posters;
+    private List<@Valid DepartmentPosterRequest> posters;
 
-    @Valid
     @Size(max = 50)
-    private List<DepartmentAchievementRequest> achievements;
+    private List<@Valid DepartmentAchievementRequest> achievements;
 
     @Size(max = 10000)
     private String recruitmentRequirements;

@@ -10,6 +10,7 @@ public class Department {
     private Long workstationId;
     private String name;
     private Campus campus;
+    private Long assetId;
     private String introduction;
     private String recruitmentRequirements;
     private String contact;

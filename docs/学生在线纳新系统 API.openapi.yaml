@@ -2889,6 +2889,9 @@ components:
           - XINGLONGSHAN
           - HONGJIALOU
           - BAOTUQUAN
+        assetId:
+          type: integer
+          format: int64
     ResultWorkstationDetailVO:
       type: object
       properties:
