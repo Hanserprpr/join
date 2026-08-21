@@ -34,8 +34,10 @@ public class AuthController {
      * 返回 OIDC 登录地址，由前端执行页面跳转
      */
     @GetMapping("/login")
-    public Result<Map<String, String>> login() {
-        return Result.ok(Map.of("loginUrl", "/oauth2/authorization/sdu"));
+    public Result<Map<String, String>> login(HttpServletRequest request) {
+        // 应用被反代挂在子路径下时，contextPath 由 X-Forwarded-Prefix 还原，前端据此跳转
+        return Result.ok(Map.of(
+                "loginUrl", request.getContextPath() + "/api/oauth2/authorization/sdu"));
     }
 
     /**

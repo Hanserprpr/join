@@ -43,7 +43,7 @@ spring:
             client-secret: ${OIDC_CLIENT_SECRET}
             client-name: SDU OIDC
             authorization-grant-type: authorization_code
-            redirect-uri: ${OIDC_REDIRECT_URI:https://join.sduonline.cn/login/oauth2/code/sdu}
+            redirect-uri: ${OIDC_REDIRECT_URI:https://join.sduonline.cn/api/login/oauth2/code/sdu}
             # IdP scopes_supported: openid, profile
             scope:
               - openid
