@@ -73,10 +73,15 @@
             <version>3.0.3</version>
         </dependency>
 
-        <!-- 数据库版本管理：启动时按 db/migration 下的脚本自动迁移 -->
+        <!--
+            数据库版本管理：启动时按 db/migration 下的脚本自动迁移。
+            必须用 starter：Spring Boot 4 把各技术的自动配置拆成了独立模块，
+            裸的 flyway-core 不带 FlywayAutoConfiguration，迁移会静默不执行
+            （既不报错也不打日志，表建不出来）。
+        -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <!-- Flyway 10 起 MySQL 支持独立成模块，缺少它会报 “no database support” -->
         <dependency>
