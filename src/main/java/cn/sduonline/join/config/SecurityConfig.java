@@ -65,6 +65,11 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .oauth2Login(oauth2 -> oauth2
+                        // 反代只把 /recruit/api/ 转发到后端，OAuth2 端点也必须落在 /api 前缀下
+                        .authorizationEndpoint(endpoint ->
+                                endpoint.baseUri("/api/oauth2/authorization"))
+                        .redirectionEndpoint(endpoint ->
+                                endpoint.baseUri("/api/login/oauth2/code/*"))
                         .successHandler(oidcLoginSuccessHandler)
                 )
                 .logout(logout -> logout
