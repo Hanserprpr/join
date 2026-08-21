@@ -7,6 +7,7 @@ import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationSummaryVO;
+import cn.sduonline.join.data.dto.MyApplicationVO;
 import cn.sduonline.join.data.dto.PageVO;
 import cn.sduonline.join.data.dto.ApplicationAnswerVO;
 import cn.sduonline.join.data.dto.ApplicationAnswerOptionVO;
@@ -198,6 +199,25 @@ public class DepartmentApplicationService {
             application.setStatus(ApplicationStatus.SUBMITTED);
         }
         return ServiceResult.success(DepartmentApplicationVO.from(application));
+    }
+
+    /**
+     * 查询当前用户在所有部门的报名记录，按报名时间倒序。
+     *
+     * @param casId 当前登录用户的学号
+     * @return 报名记录列表，没有报名时返回空列表
+     */
+    public ServiceResult<List<MyApplicationVO>> findMyApplications(String casId) {
+        List<MyApplicationVO> applications = applicationMapper.selectByUser(casId)
+                .stream()
+                .map(application -> {
+                    if (application.getStatus() == ApplicationStatus.ADMISSION_DRAFT) {
+                        application.setStatus(ApplicationStatus.SUBMITTED);
+                    }
+                    return MyApplicationVO.from(application);
+                })
+                .toList();
+        return ServiceResult.success(applications);
     }
 
     public ServiceResult<List<DepartmentApplicationDetailVO>> findForExport(

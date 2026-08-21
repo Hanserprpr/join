@@ -8,6 +8,11 @@ import lombok.Data;
 public class DepartmentApplication {
     private Long id;
     private Long departmentId;
+    private String departmentName;
+    private Long workstationId;
+    private String workstationName;
+    private Long boardId;
+    private String boardName;
     private String casId;
     private String applicantName;
     private String college;
