@@ -2,6 +2,15 @@
 
 完整建表及初始化 SQL 见 `docs/schema.sql`。
 
+数据库变更由 Flyway 管理，脚本放在 `src/main/resources/db/migration/`，
+应用启动时自动执行：
+
+- `V1__baseline_schema.sql` 是引入 Flyway 时的完整结构，只对全新库执行；
+  已有库启动时会被 `baseline-on-migrate` 标记为已应用，只补跑 V1 之后的脚本。
+- 之后每次改表新增一个 `V{n}__{描述}.sql`，脚本一旦提交就不要再修改内容
+  （Flyway 会校验校验和）。
+- `docs/migrations/` 下是引入 Flyway 之前的历史脚本，仅作存档，不再新增。
+
 ## `user`
 
 | 字段 | 类型 | 约束 | 说明 |
@@ -58,6 +67,7 @@
 | `workstation_id` | BIGINT | FK，非空 | 所属工作站 |
 | `name` | VARCHAR(64) | 非空 | 部门名称 |
 | `campus` | ENUM | 可空 | 部门所在校区 |
+| `asset_id` | BIGINT | 可空 | 部门素材 ID，指向外部素材系统 |
 | `introduction` | TEXT | 可空 | 组织介绍 |
 | `recruitment_requirements` | TEXT | 可空 | 纳新要求 |
 | `contact` | VARCHAR(1000) | 可空 | 联系方式 |

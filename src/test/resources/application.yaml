@@ -4,6 +4,9 @@ spring:
     username: sa
     password:
     driver-class-name: org.h2.Driver
+  flyway:
+    # 测试跑 H2，建表交给下面的 schema.sql，不执行 MySQL 方言的迁移脚本
+    enabled: false
   sql:
     init:
       mode: always

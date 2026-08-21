@@ -42,6 +42,7 @@ class WorkstationServiceTest {
         department.setId(12L);
         department.setName("后端部门");
         department.setCampus(Campus.SOFTWARE_PARK);
+        department.setAssetId(88L);
         when(organizationMapper.selectEnabledWorkstationById(5L))
                 .thenReturn(workstation);
         when(organizationMapper.selectEnabledDepartmentsByWorkstation(5L))
@@ -56,6 +57,7 @@ class WorkstationServiceTest {
                 Campus.SOFTWARE_PARK,
                 result.data().departments().getFirst().campus()
         );
+        assertEquals(88L, result.data().departments().getFirst().assetId());
     }
 
     @Test

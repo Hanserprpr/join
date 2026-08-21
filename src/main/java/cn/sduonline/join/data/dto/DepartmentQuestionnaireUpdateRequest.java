@@ -6,6 +6,6 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record DepartmentQuestionnaireUpdateRequest(
-        @NotNull @Valid @Size(max = 100) List<DepartmentQuestionRequest> questions
+        @NotNull @Size(max = 100) List<@Valid DepartmentQuestionRequest> questions
 ) {
 }

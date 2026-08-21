@@ -73,6 +73,17 @@
             <version>3.0.3</version>
         </dependency>
 
+        <!-- 数据库版本管理：启动时按 db/migration 下的脚本自动迁移 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <!-- Flyway 10 起 MySQL 支持独立成模块，缺少它会报 “no database support” -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>

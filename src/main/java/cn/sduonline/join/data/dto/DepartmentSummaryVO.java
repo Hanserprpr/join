@@ -9,11 +9,13 @@ import cn.sduonline.join.data.po.Department;
  * @param id 部门 ID
  * @param name 部门名称
  * @param campus 所在校区
+ * @param assetId 部门素材 ID
  */
 public record DepartmentSummaryVO(
         Long id,
         String name,
-        Campus campus
+        Campus campus,
+        Long assetId
 ) {
     /**
      * 将部门实体转换为摘要信息
@@ -25,7 +27,8 @@ public record DepartmentSummaryVO(
         return new DepartmentSummaryVO(
                 department.getId(),
                 department.getName(),
-                department.getCampus()
+                department.getCampus(),
+                department.getAssetId()
         );
     }
 }

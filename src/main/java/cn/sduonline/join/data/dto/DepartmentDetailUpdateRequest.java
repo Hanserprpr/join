@@ -22,13 +22,11 @@ public record DepartmentDetailUpdateRequest(
         @Size(max = 10000)
         String introduction,
 
-        @Valid
         @Size(max = 20)
-        List<DepartmentPosterRequest> posters,
+        List<@Valid DepartmentPosterRequest> posters,
 
-        @Valid
         @Size(max = 50)
-        List<DepartmentAchievementRequest> achievements,
+        List<@Valid DepartmentAchievementRequest> achievements,
 
         @Size(max = 10000)
         String recruitmentRequirements,
