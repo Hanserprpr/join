@@ -33,6 +33,8 @@ public class DepartmentDetailPatchRequest {
     @Size(max = 1000)
     private String recruitmentGroup;
 
+    private Boolean qrCheckInEnabled;
+
     @JsonIgnore
     private boolean campusPresent;
     @JsonIgnore
@@ -47,6 +49,8 @@ public class DepartmentDetailPatchRequest {
     private boolean contactPresent;
     @JsonIgnore
     private boolean recruitmentGroupPresent;
+    @JsonIgnore
+    private boolean qrCheckInEnabledPresent;
 
     @JsonSetter
     public void setCampus(Campus campus) {
@@ -90,6 +94,12 @@ public class DepartmentDetailPatchRequest {
         this.recruitmentGroup = recruitmentGroup;
     }
 
+    @JsonSetter
+    public void setQrCheckInEnabled(Boolean qrCheckInEnabled) {
+        this.qrCheckInEnabledPresent = true;
+        this.qrCheckInEnabled = qrCheckInEnabled;
+    }
+
     public Campus getCampus() {
         return campus;
     }
@@ -116,6 +126,10 @@ public class DepartmentDetailPatchRequest {
 
     public String getRecruitmentGroup() {
         return recruitmentGroup;
+    }
+
+    public Boolean getQrCheckInEnabled() {
+        return qrCheckInEnabled;
     }
 
     @JsonIgnore
@@ -151,5 +165,10 @@ public class DepartmentDetailPatchRequest {
     @JsonIgnore
     public boolean isRecruitmentGroupPresent() {
         return recruitmentGroupPresent;
+    }
+
+    @JsonIgnore
+    public boolean isQrCheckInEnabledPresent() {
+        return qrCheckInEnabledPresent;
     }
 }

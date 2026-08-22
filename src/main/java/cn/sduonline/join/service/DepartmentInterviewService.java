@@ -13,6 +13,7 @@ import cn.sduonline.join.data.dto.InterviewEvaluationVO;
 import cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO;
 import cn.sduonline.join.data.dto.InterviewRoomStateVO;
 import cn.sduonline.join.data.enums.InterviewQueueStatus;
+import cn.sduonline.join.data.enums.InterviewPassMode;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.DepartmentInterview;
 import cn.sduonline.join.data.po.DepartmentInterviewRoom;
@@ -518,15 +519,20 @@ public class DepartmentInterviewService {
             Long departmentId,
             InterviewQueueConfigRequest request
     ) {
+        InterviewPassMode passMode = request.passMode() == null
+                ? InterviewPassMode.DELAY
+                : request.passMode();
         if (interviewMapper.updateQueueConfig(
                 departmentId,
                 request.passDelayCount(),
-                request.maxPassCount()
+                request.maxPassCount(),
+                passMode
         ) == 0) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         return ServiceResult.success(new InterviewQueueConfigVO(
-                request.passDelayCount(), request.maxPassCount()
+                request.passDelayCount(), request.maxPassCount(),
+                passMode
         ));
     }
 
@@ -535,7 +541,8 @@ public class DepartmentInterviewService {
             InterviewQueueConfigPatchRequest request
     ) {
         if (request.passDelayCount() == null
-                && request.maxPassCount() == null) {
+                && request.maxPassCount() == null
+                && request.passMode() == null) {
             return ServiceResult.failure(BizCode.PARAM_INVALID);
         }
         InterviewQueueConfigVO current =
@@ -549,11 +556,14 @@ public class DepartmentInterviewService {
         int maxPassCount = request.maxPassCount() == null
                 ? current.maxPassCount()
                 : request.maxPassCount();
+        InterviewPassMode passMode = request.passMode() == null
+                ? current.passMode()
+                : request.passMode();
         interviewMapper.updateQueueConfig(
-                departmentId, passDelayCount, maxPassCount
+                departmentId, passDelayCount, maxPassCount, passMode
         );
         return ServiceResult.success(new InterviewQueueConfigVO(
-                passDelayCount, maxPassCount
+                passDelayCount, maxPassCount, passMode
         ));
     }
 
@@ -632,6 +642,17 @@ public class DepartmentInterviewService {
 
         interviewMapper.deleteActive(active.getId());
         interviewMapper.deleteInterview(active.getId());
+        if (config.passMode() == InterviewPassMode.RECHECK_IN) {
+            target.setPassCount(target.getPassCount() + 1);
+            target.setPriority(false);
+            target.setRequiresRecheckIn(true);
+            interviewMapper.requireCheckInAgain(target);
+            return ServiceResult.success(
+                    interviewMapper.selectCandidateQueueItem(
+                            departmentId, target.getCasId()
+                    )
+            );
+        }
         List<DepartmentCheckIn> queue =
                 new java.util.ArrayList<>(
                         interviewMapper.selectReorderableQueueForUpdate(

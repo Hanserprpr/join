@@ -39,7 +39,7 @@ public class OpenApiConfig {
             Map.entry("DepartmentApplicationController.exportApplications", "导出部门报名信息"),
             Map.entry("DepartmentApplicationController.submit", "提交部门报名"),
             Map.entry("DepartmentCheckInController.createQrCode", "生成部门签到二维码"),
-            Map.entry("DepartmentCheckInController.checkIn", "扫码签到"),
+            Map.entry("DepartmentCheckInController.checkIn", "签到"),
             Map.entry("DepartmentController.getDepartment", "获取部门详情"),
             Map.entry("DepartmentController.updateDepartment", "完整更新部门详情"),
             Map.entry("DepartmentController.patchDepartment", "部分更新部门详情"),

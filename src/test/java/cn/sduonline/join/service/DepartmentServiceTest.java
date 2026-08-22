@@ -168,7 +168,7 @@ class DepartmentServiceTest {
                         new DepartmentAchievementRequest(" 获奖 ", " 国一 "),
                         new DepartmentAchievementRequest("立项", null)
                 ),
-                " 要求 ", " QQ：123 ", " 456群 "
+                " 要求 ", " QQ：123 ", " 456群 ", true
         );
         when(organizationMapper.selectDepartmentAchievements(12L))
                 .thenReturn(java.util.List.of(
@@ -181,6 +181,7 @@ class DepartmentServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(Campus.CENTRAL, result.data().campus());
         assertEquals("介绍", result.data().introduction());
+        assertTrue(result.data().qrCheckInEnabled());
         assertEquals(2, result.data().posters().size());
         assertEquals(
                 "https://example.com/poster-1.jpg",
@@ -277,7 +278,7 @@ class DepartmentServiceTest {
                 12L,
                 "20240001",
                 new DepartmentDetailUpdateRequest(
-                        null, null, null, null, null, " ", null
+                        null, null, null, null, null, " ", null, null
                 )
         );
 
@@ -293,7 +294,7 @@ class DepartmentServiceTest {
                 99L,
                 "20240001",
                 new DepartmentDetailUpdateRequest(
-                        null, null, null, null, null, null, null
+                        null, null, null, null, null, null, null, null
                 )
         );
 
@@ -322,6 +323,20 @@ class DepartmentServiceTest {
         assertEquals("原联系方式", result.data().contact());
         assertEquals(1, result.data().posters().size());
         verify(organizationMapper, never()).deleteDepartmentPosters(12L);
+    }
+
+    @Test
+    void patchDetailUpdatesQrCheckInSetting() {
+        Department department = department();
+        department.setQrCheckInEnabled(false);
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setQrCheckInEnabled(true);
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.data().qrCheckInEnabled());
     }
 
     @Test

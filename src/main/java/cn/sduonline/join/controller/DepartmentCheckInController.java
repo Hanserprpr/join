@@ -49,7 +49,8 @@ public class DepartmentCheckInController {
     }
 
     /**
-     * 使用动态二维码令牌完成签到并获取叫号序号
+     * 完成签到并获取叫号序号。启用二维码的部门需要提供动态令牌；
+     * 未启用时提供部门 ID 即可直接签到。
      *
      * @param request 签到令牌
      * @return 签到记录和叫号序号
@@ -59,7 +60,7 @@ public class DepartmentCheckInController {
             @Valid @RequestBody CheckInRequest request
     ) {
         ServiceResult<CheckInVO> result = checkInService.checkIn(
-                request.token(), StpUtil.getLoginIdAsString()
+                request.departmentId(), request.token(), StpUtil.getLoginIdAsString()
         );
         return result.isSuccess()
                 ? Result.ok(result.data())

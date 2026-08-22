@@ -57,6 +57,7 @@ public class AdminOrganizationService {
         department.setName(request.name().trim());
         department.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
         department.setEnabled(request.enabled() == null || request.enabled());
+        department.setQrCheckInEnabled(false);
 
         organizationMapper.insertDepartment(department);
         return ServiceResult.success(DepartmentVO.from(department));

@@ -74,6 +74,8 @@
 | `recruitment_group` | VARCHAR(1000) | 可空 | 纳新群信息或链接 |
 | `pass_delay_count` | INT | 非空，默认 3 | 过号后顺延位数 |
 | `max_pass_count` | INT | 非空，默认 2 | 单人在本部门最大过号次数 |
+| `pass_mode` | VARCHAR(16) | 非空，默认 `DELAY` | 过号处理方式：顺延或重新签到 |
+| `qr_check_in_enabled` | TINYINT(1) | 非空，默认 0 | 是否要求通过动态二维码签到 |
 | `sort_order` | INT | 非空，默认 0 | 展示顺序 |
 | `enabled` | TINYINT(1) | 非空，默认 1 | 是否启用 |
 
@@ -288,6 +290,7 @@
 | `queue_order` | BIGINT | 非空 | 当前队列排序位置 |
 | `pass_count` | INT | 非空，默认 0 | 在本部门累计过号次数 |
 | `priority` | TINYINT(1) | 非空，默认 0 | 是否为顺延优先签到 |
+| `requires_recheck_in` | TINYINT(1) | 非空，默认 0 | 是否因过号等待重新签到 |
 
 索引与外键：
 
@@ -366,8 +369,9 @@
 
 ## `department_interview_carryover`
 
-场次结束时为未叫到的用户生成顺延资格，下一场次发布时绑定，签到时使用并将
-`department_check_in.priority` 置为 1
+场次结束时为未叫到的用户生成顺延资格，下一场次发布时绑定。仅当部门启用
+二维码签到且用户扫码签到时使用该资格，并将 `department_check_in.priority`
+置为 1；普通签到模式不使用顺延优先资格，按本场签到顺序排队。
 
 | 字段 | 类型 | 约束 | 说明 |
 |---|---|---|---|

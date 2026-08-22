@@ -3,6 +3,7 @@ package cn.sduonline.join.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,6 +12,7 @@ import cn.sduonline.join.config.AppProperties;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
+import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentApplicationMapper;
 import cn.sduonline.join.mapper.DepartmentCheckInMapper;
@@ -38,7 +40,9 @@ class DepartmentCheckInServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        // 非二维码签到路径不碰 Redis，宽松处理避免严格模式判为多余桩
+        lenient().when(redisTemplate.opsForValue())
+                .thenReturn(valueOperations);
         service = new DepartmentCheckInService(
                 organizationMapper, applicationMapper, checkInMapper,
                 sessionMapper,
@@ -150,9 +154,12 @@ class DepartmentCheckInServiceTest {
     }
 
     @Test
-    void marksCarryoverCandidateAsPriorityOnlyAfterCheckIn() {
+    void qrCheckInMarksCarryoverCandidateAsPriority() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
+        Department department = new Department();
+        department.setQrCheckInEnabled(true);
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
@@ -169,6 +176,72 @@ class DepartmentCheckInServiceTest {
         assertTrue(result.isSuccess());
         assertTrue(result.data().priority());
         verify(sessionMapper).useCarryover(900L, 30L);
+    }
+
+    @Test
+    void allowsDirectCheckInWhenDepartmentDoesNotRequireQrCode() {
+        Department department = new Department();
+        department.setId(12L);
+        department.setQrCheckInEnabled(false);
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(1);
+
+        var result = service.checkIn(12L, null, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(12L, result.data().departmentId());
+        verify(sessionMapper, never()).selectPendingCarryoverForUpdate(
+                any(), any(), any()
+        );
+    }
+
+    @Test
+    void requiresQrTokenWhenDepartmentEnablesQrCheckIn() {
+        Department department = new Department();
+        department.setQrCheckInEnabled(true);
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+
+        var result = service.checkIn(12L, null, "20240001");
+
+        assertEquals(BizCode.CHECK_IN_TOKEN_INVALID, result.error());
+        verify(applicationMapper, never())
+                .selectByDepartmentAndUser(any(), any());
+    }
+
+    @Test
+    void checkingInAgainRejoinsQueueAtTheEnd() {
+        Department department = new Department();
+        department.setQrCheckInEnabled(false);
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        DepartmentCheckIn existing = new DepartmentCheckIn();
+        existing.setId(200L);
+        existing.setDepartmentId(12L);
+        existing.setSessionId(30L);
+        existing.setApplicationId(100L);
+        existing.setRequiresRecheckIn(true);
+        when(checkInMapper.selectBySessionAndApplication(30L, 100L))
+                .thenReturn(existing);
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(9);
+
+        var result = service.checkIn(12L, null, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(9, result.data().queueNumber());
+        verify(checkInMapper).reactivateAfterCheckIn(existing);
     }
 
     private static DepartmentInterviewSession openSession() {
