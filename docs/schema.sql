@@ -68,6 +68,10 @@ CREATE TABLE `department` (
   `recruitment_group` VARCHAR(1000) NULL COMMENT '纳新群信息或链接',
   `pass_delay_count` INT NOT NULL DEFAULT 3 COMMENT '过号后顺延位数',
   `max_pass_count` INT NOT NULL DEFAULT 2 COMMENT '单人在本部门最大过号次数',
+  `pass_mode` VARCHAR(16) NOT NULL DEFAULT 'DELAY'
+    COMMENT '过号处理方式：DELAY/RECHECK_IN',
+  `qr_check_in_enabled` TINYINT(1) NOT NULL DEFAULT 0
+    COMMENT '是否要求通过动态二维码签到',
   `sort_order` INT NOT NULL DEFAULT 0,
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
@@ -239,6 +243,8 @@ CREATE TABLE `department_check_in` (
   `queue_order` BIGINT NOT NULL COMMENT '当前队列排序位置',
   `pass_count` INT NOT NULL DEFAULT 0 COMMENT '在本部门累计过号次数',
   `priority` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否为顺延优先签到',
+  `requires_recheck_in` TINYINT(1) NOT NULL DEFAULT 0
+    COMMENT '过号后是否需要重新签到',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_department_check_in_session_application`
     (`session_id`, `application_id`),

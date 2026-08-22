@@ -208,7 +208,7 @@
 | GET | `/api/wechat/binding/status` | 查询微信绑定状态 |
 | DELETE | `/api/wechat/binding` | 解除微信绑定 |
 | POST | `/api/departments/{departmentId}/applications` | 提交报名(需资料完整) |
-| POST | `/api/check-ins` | 扫码签到 |
+| POST | `/api/check-ins` | 签到（部门启用二维码时扫码；否则传部门 ID 直接签到） |
 | GET | `/api/departments/{departmentId}/interviews/sessions/current` | 查询当前已发布场次 |
 | GET | `/api/departments/{departmentId}/interviews/my-queue-status` | 我的排队状态 |
 | GET | `/api/departments/{departmentId}/interviews/my-events` | SSE 订阅我的排队状态 |

@@ -283,7 +283,8 @@ paths:
     get:
       tags:
       - 面试
-      summary: 查询过号配置
+      summary: 查询部门全局过号配置
+      description: 该配置作用于部门下的所有面试场次。
       operationId: findQueueConfig
       parameters:
       - name: departmentId
@@ -305,7 +306,8 @@ paths:
     put:
       tags:
       - 面试
-      summary: 完整更新过号配置
+      summary: 完整更新部门全局过号配置
+      description: 完整更新部门下所有面试场次共用的过号处理方式、顺延人数和最大过号次数。
       operationId: updateQueueConfig
       parameters:
       - name: departmentId
@@ -333,7 +335,8 @@ paths:
     patch:
       tags:
       - 面试
-      summary: 部分更新过号配置
+      summary: 部分更新部门全局过号配置
+      description: 仅更新请求中提供的字段；配置作用于部门下的所有面试场次。
       operationId: patchQueueConfig
       parameters:
       - name: departmentId
@@ -1018,7 +1021,7 @@ paths:
     post:
       tags:
       - 签到
-      summary: 扫码签到
+      summary: 签到（按部门设置决定是否需要扫码）
       operationId: checkIn
       requestBody:
         content:
@@ -1919,6 +1922,9 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        qrCheckInEnabled:
+          type: boolean
+          description: 是否启用动态二维码签到。true 时必须扫码签到；false 时可按部门直接签到。
     DepartmentPosterRequest:
       type: object
       properties:
@@ -1999,6 +2005,9 @@ components:
           type: string
         recruitmentGroup:
           type: string
+        qrCheckInEnabled:
+          type: boolean
+          description: 是否启用动态二维码签到。true 时必须扫码签到；false 时可按部门直接签到。
         hasQuestionnaire:
           type: boolean
         canManage:
@@ -2248,26 +2257,47 @@ components:
           format: int64
     InterviewQueueConfigRequest:
       type: object
+      description: 部门全局过号配置，作用于该部门下的所有面试场次。
       properties:
         passDelayCount:
           type: integer
           format: int32
           maximum: 100
           minimum: 1
+          description: 过号后向队列后方顺延的人数；仅当 passMode 为 DELAY 时生效。
+          example: 3
         maxPassCount:
           type: integer
           format: int32
           maximum: 20
           minimum: 0
+          description: 单人在该部门允许的最大过号次数；设置为 0 表示不允许过号。
+          example: 2
+        passMode:
+          type: string
+          description: 过号处理方式。DELAY 表示向后顺延 passDelayCount 位；RECHECK_IN 表示移出等待队列，用户重新签到后排到队尾。
+          enum:
+          - DELAY
+          - RECHECK_IN
+          example: DELAY
     InterviewQueueConfigVO:
       type: object
+      description: 当前部门全局生效的过号配置。
       properties:
         passDelayCount:
           type: integer
           format: int32
+          description: 过号后顺延人数，仅在 passMode 为 DELAY 时生效。
         maxPassCount:
           type: integer
           format: int32
+          description: 单人在该部门允许的最大过号次数；0 表示不允许过号。
+        passMode:
+          type: string
+          description: DELAY 为顺延指定人数；RECHECK_IN 为移出队列并要求重新签到。
+          enum:
+          - DELAY
+          - RECHECK_IN
     ResultInterviewQueueConfigVO:
       type: object
       properties:
@@ -2525,6 +2555,7 @@ components:
           - WAITING
           - INTERVIEWING
           - INTERVIEWING_ELSEWHERE
+          - RECHECK_IN_REQUIRED
           - COMPLETED
         interviewerCasId:
           type: string
@@ -2613,12 +2644,14 @@ components:
     CheckInRequest:
       type: object
       properties:
+        departmentId:
+          type: integer
+          format: int64
+          minimum: 1
         token:
           type: string
           maxLength: 128
           minLength: 0
-      required:
-      - token
     CheckInVO:
       type: object
       properties:
@@ -2859,19 +2892,31 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        qrCheckInEnabled:
+          type: boolean
+          description: 是否启用动态二维码签到。true 时必须扫码签到；false 时可按部门直接签到。
     InterviewQueueConfigPatchRequest:
       type: object
+      description: 部门全局过号配置的部分更新；未提供的字段保持不变。
       properties:
         passDelayCount:
           type: integer
           format: int32
           maximum: 100
           minimum: 1
+          description: 过号后向队列后方顺延的人数；仅当 passMode 为 DELAY 时生效。
         maxPassCount:
           type: integer
           format: int32
           maximum: 20
           minimum: 0
+          description: 单人在该部门允许的最大过号次数；设置为 0 表示不允许过号。
+        passMode:
+          type: string
+          description: DELAY 表示顺延指定人数；RECHECK_IN 表示移出等待队列并要求重新签到。
+          enum:
+          - DELAY
+          - RECHECK_IN
     DepartmentSummaryVO:
       type: object
       properties:
@@ -3718,6 +3763,7 @@ components:
           - WAITING
           - INTERVIEWING
           - INTERVIEWING_ELSEWHERE
+          - RECHECK_IN_REQUIRED
           - COMPLETED
         peopleAhead:
           type: integer

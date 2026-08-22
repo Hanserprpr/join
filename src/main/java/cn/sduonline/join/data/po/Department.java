@@ -15,6 +15,7 @@ public class Department {
     private String recruitmentRequirements;
     private String contact;
     private String recruitmentGroup;
+    private Boolean qrCheckInEnabled;
     private Integer sortOrder;
     private Boolean enabled;
 }

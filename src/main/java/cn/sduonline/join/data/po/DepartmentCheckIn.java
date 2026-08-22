@@ -15,4 +15,5 @@ public class DepartmentCheckIn {
     private Long queueOrder;
     private Integer passCount;
     private Boolean priority;
+    private Boolean requiresRecheckIn;
 }

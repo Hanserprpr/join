@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.InterviewQueueStatus;
+import cn.sduonline.join.data.enums.InterviewPassMode;
 import cn.sduonline.join.data.dto.InterviewQueueItemVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
@@ -259,6 +260,31 @@ class DepartmentInterviewServiceTest {
     }
 
     @Test
+    void recheckInModeRemovesPassedCandidateUntilTheyCheckInAgain() {
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(openRoom());
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(active);
+        when(interviewMapper.selectQueueConfig(12L)).thenReturn(
+                new InterviewQueueConfigVO(
+                        3, 2, InterviewPassMode.RECHECK_IN
+                )
+        );
+        DepartmentCheckIn target = checkIn(200L, 1L, 0);
+        when(interviewMapper.selectCheckInForUpdate(200L)).thenReturn(target);
+
+        var result = service.passCurrentInRoom(12L, 9L, "admin01");
+
+        assertTrue(result.isSuccess());
+        assertTrue(target.getRequiresRecheckIn());
+        assertEquals(1, target.getPassCount());
+        verify(interviewMapper).requireCheckInAgain(target);
+        verify(interviewMapper, never()).selectReorderableQueueForUpdate(any());
+    }
+
+    @Test
     void rejectsPassAfterDepartmentLimitIsReached() {
         DepartmentInterview active = waitingCandidate();
         active.setId(300L);
@@ -332,7 +358,9 @@ class DepartmentInterviewServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(3, result.data().passDelayCount());
         assertEquals(5, result.data().maxPassCount());
-        verify(interviewMapper).updateQueueConfig(12L, 3, 5);
+        verify(interviewMapper).updateQueueConfig(
+                12L, 3, 5, InterviewPassMode.DELAY
+        );
     }
 
     @Test
@@ -343,7 +371,7 @@ class DepartmentInterviewServiceTest {
 
         assertEquals(BizCode.PARAM_INVALID, result.error());
         verify(interviewMapper, never()).updateQueueConfig(
-                any(), any(Integer.class), any(Integer.class)
+                any(), any(Integer.class), any(Integer.class), any()
         );
     }
 

@@ -72,6 +72,7 @@ public class DepartmentService {
         );
         department.setContact(trimToNull(request.contact()));
         department.setRecruitmentGroup(trimToNull(request.recruitmentGroup()));
+        department.setQrCheckInEnabled(Boolean.TRUE.equals(request.qrCheckInEnabled()));
         organizationMapper.updateDepartmentDetail(department);
         replacePosters(departmentId, request.posters());
         replaceAchievements(departmentId, request.achievements());
@@ -114,6 +115,11 @@ public class DepartmentService {
         if (request.isRecruitmentGroupPresent()) {
             department.setRecruitmentGroup(
                     trimToNull(request.getRecruitmentGroup())
+            );
+        }
+        if (request.isQrCheckInEnabledPresent()) {
+            department.setQrCheckInEnabled(
+                    Boolean.TRUE.equals(request.getQrCheckInEnabled())
             );
         }
         organizationMapper.updateDepartmentDetail(department);

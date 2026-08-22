@@ -147,6 +147,7 @@ public interface DepartmentInterviewSessionMapper {
             LEFT JOIN department_interview i ON i.check_in_id = c.id
             WHERE c.session_id = #{sessionId}
               AND i.id IS NULL
+              AND c.requires_recheck_in = FALSE
             """)
     int createCarryovers(@Param("sessionId") Long sessionId);
 

@@ -20,6 +20,8 @@ public interface DepartmentInterviewMapper {
                    c.queue_number, c.queue_order, c.pass_count, c.checked_in_at,
                    c.priority,
                    CASE
+                     WHEN c.requires_recheck_in = TRUE
+                       THEN 'RECHECK_IN_REQUIRED'
                      WHEN own_interview.ended_at IS NOT NULL THEN 'COMPLETED'
                      WHEN own_active.interview_id IS NOT NULL THEN 'INTERVIEWING'
                      WHEN other_active.interview_id IS NOT NULL
@@ -62,6 +64,8 @@ public interface DepartmentInterviewMapper {
                    c.queue_number, c.queue_order, c.pass_count, c.checked_in_at,
                    c.priority,
                    CASE
+                     WHEN c.requires_recheck_in = TRUE
+                       THEN 'RECHECK_IN_REQUIRED'
                      WHEN own_interview.ended_at IS NOT NULL THEN 'COMPLETED'
                      WHEN own_active.interview_id IS NOT NULL THEN 'INTERVIEWING'
                      WHEN other_active.interview_id IS NOT NULL
@@ -100,6 +104,7 @@ public interface DepartmentInterviewMapper {
                   AND other_active.interview_id
                       <> COALESCE(own_interview.id, -1)
             WHERE ahead.department_id = #{departmentId}
+              AND ahead.requires_recheck_in = FALSE
               AND (
                 (#{priority} = TRUE
                   AND ahead.priority = TRUE
@@ -189,6 +194,7 @@ public interface DepartmentInterviewMapper {
               AND c.session_id = #{sessionId}
               AND i.id IS NULL
               AND a.interview_id IS NULL
+              AND c.requires_recheck_in = FALSE
             ORDER BY c.priority DESC, c.queue_order ASC
             LIMIT 1
             FOR UPDATE SKIP LOCKED
@@ -199,7 +205,7 @@ public interface DepartmentInterviewMapper {
     );
 
     @Select("""
-            SELECT pass_delay_count, max_pass_count
+            SELECT pass_delay_count, max_pass_count, pass_mode
             FROM department
             WHERE id = #{departmentId}
             """)
@@ -210,19 +216,21 @@ public interface DepartmentInterviewMapper {
     @Update("""
             UPDATE department
             SET pass_delay_count = #{passDelayCount},
-                max_pass_count = #{maxPassCount}
+                max_pass_count = #{maxPassCount},
+                pass_mode = #{passMode}
             WHERE id = #{departmentId}
             """)
     int updateQueueConfig(
             @Param("departmentId") Long departmentId,
             @Param("passDelayCount") int passDelayCount,
-            @Param("maxPassCount") int maxPassCount
+            @Param("maxPassCount") int maxPassCount,
+            @Param("passMode") cn.sduonline.join.data.enums.InterviewPassMode passMode
     );
 
     @Select("""
             SELECT id, department_id, session_id, application_id, cas_id,
                    checked_in_at, queue_number, queue_order, pass_count,
-                   priority
+                   priority, requires_recheck_in
             FROM department_check_in
             WHERE id = #{checkInId}
             FOR UPDATE
@@ -241,6 +249,7 @@ public interface DepartmentInterviewMapper {
             LEFT JOIN department_interview i ON i.check_in_id = c.id
             WHERE c.department_id = #{departmentId}
               AND i.id IS NULL
+              AND c.requires_recheck_in = FALSE
             ORDER BY c.priority DESC, c.queue_order ASC
             FOR UPDATE
             """)
@@ -256,6 +265,16 @@ public interface DepartmentInterviewMapper {
             WHERE id = #{id}
             """)
     int updateCheckInQueue(
+            cn.sduonline.join.data.po.DepartmentCheckIn checkIn
+    );
+
+    @Update("""
+            UPDATE department_check_in
+            SET pass_count = #{passCount}, priority = 0,
+                requires_recheck_in = 1
+            WHERE id = #{id}
+            """)
+    int requireCheckInAgain(
             cn.sduonline.join.data.po.DepartmentCheckIn checkIn
     );
 
