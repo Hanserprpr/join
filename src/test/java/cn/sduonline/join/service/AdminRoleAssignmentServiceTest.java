@@ -3,6 +3,7 @@ package cn.sduonline.join.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,7 @@ class AdminRoleAssignmentServiceTest {
     @BeforeEach
     void setUp() {
         service = new AdminRoleAssignmentService(assignmentMapper);
+        when(assignmentMapper.countAdminRole(anyString())).thenReturn(1L);
     }
 
     @Test
@@ -107,6 +109,20 @@ class AdminRoleAssignmentServiceTest {
         );
 
         assertEquals(BizCode.ROLE_ASSIGNMENT_FORBIDDEN, result.error());
+        verify(assignmentMapper, never()).insertAssignment(any());
+    }
+
+    @Test
+    void assignRejectsNonAdministratorBeforeCheckingTargetUser() {
+        when(assignmentMapper.countAdminRole("operator-01")).thenReturn(0L);
+
+        ServiceResult<RoleAssignmentVO> result = service.assign(
+                "operator-01",
+                request("DEPARTMENT_ASSISTANT", OrgType.DEPARTMENT, 12L)
+        );
+
+        assertEquals(BizCode.ROLE_ASSIGNMENT_FORBIDDEN, result.error());
+        verify(assignmentMapper, never()).countUser(anyString());
         verify(assignmentMapper, never()).insertAssignment(any());
     }
 
@@ -191,6 +207,22 @@ class AdminRoleAssignmentServiceTest {
         ServiceResult<Void> result = service.revoke("operator-01", request);
 
         assertEquals(BizCode.ROLE_ASSIGNMENT_FORBIDDEN, result.error());
+        verify(assignmentMapper, never()).deleteAssignment(
+                any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void revokeRejectsNonAdministratorBeforeCheckingAssignment() {
+        when(assignmentMapper.countAdminRole("operator-01")).thenReturn(0L);
+
+        ServiceResult<Void> result = service.revoke(
+                "operator-01",
+                request("DEPARTMENT_ADMIN", OrgType.DEPARTMENT, 12L)
+        );
+
+        assertEquals(BizCode.ROLE_ASSIGNMENT_FORBIDDEN, result.error());
+        verify(assignmentMapper, never()).selectRoleId(anyString());
         verify(assignmentMapper, never()).deleteAssignment(
                 any(), any(), any(), any()
         );

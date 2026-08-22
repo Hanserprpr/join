@@ -34,6 +34,27 @@ class MapperSqlContractTest {
     }
 
     @Test
+    void queueItemQueriesMatchTheRecordConstructor()
+            throws NoSuchMethodException {
+        Method queue = DepartmentInterviewMapper.class.getMethod(
+                "selectQueue", Long.class
+        );
+        Method candidate = DepartmentInterviewMapper.class.getMethod(
+                "selectCandidateQueueItem", Long.class, String.class
+        );
+
+        for (Method method : List.of(queue, candidate)) {
+            String sql = sql(method.getAnnotation(Select.class).value());
+            assertTrue(sql.contains("AS status,"));
+            assertTrue(sql.contains("AS interviewer_cas_id,"));
+            assertTrue(sql.contains("AS interviewer_name,"));
+            assertTrue(sql.replaceAll("\\s+", " ")
+                    .contains("own_interview.ended_at, c.priority"));
+            assertTrue(sql.contains("LEFT JOIN `user` interviewer"));
+        }
+    }
+
+    @Test
     void admissionPublishingLocksAndUpdatesTheSameIdentifiers()
             throws NoSuchMethodException {
         Method mutate = DepartmentApplicationMapper.class.getMethod(

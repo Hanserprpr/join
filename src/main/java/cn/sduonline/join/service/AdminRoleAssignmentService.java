@@ -30,6 +30,9 @@ public class AdminRoleAssignmentService {
             String operatorCasId,
             RoleAssignmentRequest request
     ) {
+        if (assignmentMapper.countAdminRole(operatorCasId) == 0) {
+            return ServiceResult.failure(BizCode.ROLE_ASSIGNMENT_FORBIDDEN);
+        }
         if (assignmentMapper.countUser(request.casId()) == 0) {
             return ServiceResult.failure(BizCode.USER_NOT_FOUND);
         }
@@ -90,6 +93,9 @@ public class AdminRoleAssignmentService {
             String operatorCasId,
             RoleAssignmentRequest request
     ) {
+        if (assignmentMapper.countAdminRole(operatorCasId) == 0) {
+            return ServiceResult.failure(BizCode.ROLE_ASSIGNMENT_FORBIDDEN);
+        }
         String roleCode = request.roleCode().trim().toUpperCase();
         RoleRule roleRule = ASSIGNABLE_ROLES.get(roleCode);
         if (roleRule == null) {
