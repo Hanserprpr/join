@@ -11,6 +11,25 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface AdminRoleAssignmentMapper {
 
+    /**
+     * 判断用户是否持有任一管理员角色。角色分配仅向管理员开放；具体可操作的
+     * 角色等级和组织范围仍由 {@link #countGrantAuthority} 校验。
+     */
+    @Select("""
+            SELECT COUNT(1)
+            FROM user_role_scope s
+            JOIN `role` r ON r.id = s.role_id
+            WHERE s.cas_id = #{casId}
+              AND r.code IN (
+                    'SYSTEM_ADMIN',
+                    'BOARD_ADMIN',
+                    'WORKSTATION_ADMIN',
+                    'DEPARTMENT_ADMIN',
+                    'DEPARTMENT_ASSISTANT'
+              )
+            """)
+    long countAdminRole(@Param("casId") String casId);
+
     @Select("SELECT COUNT(1) FROM `user` WHERE cas_id = #{casId}")
     long countUser(@Param("casId") String casId);
 

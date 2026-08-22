@@ -18,7 +18,6 @@ public interface DepartmentInterviewMapper {
                    c.cas_id AS candidate_cas_id,
                    candidate.name AS candidate_name,
                    c.queue_number, c.queue_order, c.pass_count, c.checked_in_at,
-                   c.priority,
                    CASE
                      WHEN c.requires_recheck_in = TRUE
                        THEN 'RECHECK_IN_REQUIRED'
@@ -36,7 +35,8 @@ public interface DepartmentInterviewMapper {
                      THEN interviewer.name
                      ELSE NULL
                    END AS interviewer_name,
-                   own_interview.started_at, own_interview.ended_at
+                   own_interview.started_at, own_interview.ended_at,
+                   c.priority
             FROM department_check_in c
             JOIN department_interview_session s
               ON s.id = c.session_id AND s.status = 'PUBLISHED'
@@ -62,7 +62,6 @@ public interface DepartmentInterviewMapper {
                    c.cas_id AS candidate_cas_id,
                    candidate.name AS candidate_name,
                    c.queue_number, c.queue_order, c.pass_count, c.checked_in_at,
-                   c.priority,
                    CASE
                      WHEN c.requires_recheck_in = TRUE
                        THEN 'RECHECK_IN_REQUIRED'
@@ -72,7 +71,16 @@ public interface DepartmentInterviewMapper {
                        THEN 'INTERVIEWING_ELSEWHERE'
                      ELSE 'WAITING'
                    END AS status,
-                   own_interview.started_at, own_interview.ended_at
+                   CASE WHEN own_active.interview_id IS NOT NULL
+                     THEN own_interview.interviewer_cas_id
+                     ELSE NULL
+                   END AS interviewer_cas_id,
+                   CASE WHEN own_active.interview_id IS NOT NULL
+                     THEN interviewer.name
+                     ELSE NULL
+                   END AS interviewer_name,
+                   own_interview.started_at, own_interview.ended_at,
+                   c.priority
             FROM department_check_in c
             JOIN department_interview_session s
               ON s.id = c.session_id AND s.status = 'PUBLISHED'
@@ -84,6 +92,8 @@ public interface DepartmentInterviewMapper {
             LEFT JOIN department_interview_active other_active
                    ON other_active.candidate_cas_id = c.cas_id
                   AND other_active.interview_id <> COALESCE(own_interview.id, -1)
+            LEFT JOIN `user` interviewer
+                   ON interviewer.cas_id = own_interview.interviewer_cas_id
             WHERE c.department_id = #{departmentId}
               AND c.cas_id = #{casId}
             """)
