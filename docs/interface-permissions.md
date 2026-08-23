@@ -53,6 +53,13 @@
 > 从 `DEPARTMENT_ADMIN` 的 `role_permission` 里删掉,他照样能任命辅助管理员。
 > 这是刻意的设计——"能任命比自己低级的、且部门对得上"就是完整规则。
 
+## 公开组织树接口
+
+`GET /api/organizations` 无需登录，返回全部启用的板块 → 工作站 → 部门三级组织树。
+板块、工作站包含 `id`、`name`；部门仅包含卡片展示所需的 `id`、`name`、
+`campus`、`assetId`、`introduction`。该接口不按角色或管理员作用域过滤，也不会返回
+联系方式、纳新群、纳新要求、签到配置或成员身份信息。
+
 ## 角色授权页面读取接口
 
 以下接口服务于“授予成员权限”页面，可由 `SYSTEM_ADMIN`、`BOARD_ADMIN`、
@@ -61,7 +68,6 @@
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/api/admin/organizations` | 返回当前操作者可授权范围内、启用的板块 → 工作站 → 部门组织树（`id`、`name`） |
 | GET | `/api/admin/role-assignments?scopeType=BOARD|WORKSTATION|DEPARTMENT&scopeId={id}` | 查询与目标节点有关的有效成员授权；需要操作者作用域覆盖该节点 |
 | GET | `/api/admin/users?casId={keyword}` | 按学号模糊匹配本地用户，至少输入 6 位，最多 20 条；过短或空输入返回空数组 |
 

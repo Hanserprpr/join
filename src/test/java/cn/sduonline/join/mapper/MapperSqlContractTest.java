@@ -1,5 +1,6 @@
 package cn.sduonline.join.mapper;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
@@ -120,8 +121,8 @@ class MapperSqlContractTest {
         Method search = AdminRoleAssignmentMapper.class.getMethod(
                 "selectUsersByCasIdKeyword", String.class
         );
-        Method tree = AdminRoleAssignmentMapper.class.getMethod(
-                "selectEnabledOrganizationTree", String.class
+        Method tree = AdminOrganizationMapper.class.getMethod(
+                "selectEnabledOrganizationTree"
         );
         String memberSql = sql(members.getAnnotation(Select.class).value());
         String searchSql = sql(search.getAnnotation(Select.class).value());
@@ -130,7 +131,14 @@ class MapperSqlContractTest {
         assertTrue(memberSql.contains("s.scope_type = 'ALL'"));
         assertTrue(memberSql.contains("#{targetScopeType} = 'DEPARTMENT'"));
         assertTrue(memberSql.contains("JOIN workstation w ON w.id = d.workstation_id"));
-        assertTrue(treeSql.contains("s.cas_id = #{casId}"));
+        assertTrue(treeSql.contains("WHERE b.enabled = 1"));
+        assertFalse(treeSql.contains("user_role_scope"));
+        assertTrue(treeSql.contains("d.campus AS department_campus"));
+        assertTrue(treeSql.contains("d.asset_id AS department_asset_id"));
+        assertTrue(treeSql.contains("d.introduction AS department_introduction"));
+        assertFalse(treeSql.contains("d.contact"));
+        assertFalse(treeSql.contains("d.recruitment_group"));
+        assertFalse(treeSql.contains("d.recruitment_requirements"));
         assertTrue(searchSql.contains("ESCAPE '!'"));
         assertTrue(searchSql.contains("CONCAT('%', #{casIdKeyword}, '%')"));
         assertTrue(searchSql.contains("LIMIT 20"));

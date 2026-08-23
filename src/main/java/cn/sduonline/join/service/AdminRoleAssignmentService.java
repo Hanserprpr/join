@@ -2,17 +2,12 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.dto.RoleAssignmentRequest;
 import cn.sduonline.join.data.dto.RoleAssignmentVO;
-import cn.sduonline.join.data.dto.OrganizationDepartmentVO;
-import cn.sduonline.join.data.dto.OrganizationTreeRow;
-import cn.sduonline.join.data.dto.OrganizationTreeVO;
-import cn.sduonline.join.data.dto.OrganizationWorkstationVO;
 import cn.sduonline.join.data.dto.RoleAssignmentMemberVO;
 import cn.sduonline.join.data.dto.UserSearchVO;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.UserRoleScope;
 import cn.sduonline.join.mapper.AdminRoleAssignmentMapper;
 import cn.sduonline.join.security.scope.OrgType;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -34,68 +29,6 @@ public class AdminRoleAssignmentService {
     );
 
     private final AdminRoleAssignmentMapper assignmentMapper;
-
-    /**
-     * 查询角色授权页面所需、且当前操作人可授权范围内的启用组织树。
-     *
-     * @param operatorCasId 当前操作人学号
-     * @return 板块、工作站、部门三级组织树
-     */
-    @Transactional(readOnly = true)
-    public ServiceResult<List<OrganizationTreeVO>> findOrganizationTree(
-            String operatorCasId
-    ) {
-        if (!canManageRoleAssignments(operatorCasId)) {
-            return ServiceResult.failure(BizCode.NO_PERMISSION);
-        }
-
-        LinkedHashMap<Long, BoardAccumulator> boards = new LinkedHashMap<>();
-        for (OrganizationTreeRow row : assignmentMapper
-                .selectEnabledOrganizationTree(operatorCasId)) {
-            BoardAccumulator board = boards.computeIfAbsent(
-                    row.boardId(),
-                    id -> new BoardAccumulator(
-                            row.boardName(), new LinkedHashMap<>()
-                    )
-            );
-            if (row.workstationId() == null) {
-                continue;
-            }
-            WorkstationAccumulator workstation = board.workstations()
-                    .computeIfAbsent(
-                            row.workstationId(),
-                            id -> new WorkstationAccumulator(
-                                    row.workstationName(), new LinkedHashMap<>()
-                            )
-                    );
-            if (row.departmentId() != null) {
-                workstation.departments().putIfAbsent(
-                        row.departmentId(),
-                        new OrganizationDepartmentVO(
-                                row.departmentId(), row.departmentName()
-                        )
-                );
-            }
-        }
-
-        List<OrganizationTreeVO> tree = boards.entrySet().stream()
-                .map(board -> new OrganizationTreeVO(
-                        board.getKey(),
-                        board.getValue().name(),
-                        board.getValue().workstations().entrySet().stream()
-                                .map(workstation -> new OrganizationWorkstationVO(
-                                        workstation.getKey(),
-                                        workstation.getValue().name(),
-                                        List.copyOf(
-                                                workstation.getValue()
-                                                        .departments().values()
-                                        )
-                                ))
-                                .toList()
-                ))
-                .toList();
-        return ServiceResult.success(tree);
-    }
 
     /**
      * 查询与目标组织有关的角色授权成员。
@@ -285,18 +218,6 @@ public class AdminRoleAssignmentService {
         return value.replace("!", "!!")
                 .replace("%", "!%")
                 .replace("_", "!_");
-    }
-
-    private record BoardAccumulator(
-            String name,
-            LinkedHashMap<Long, WorkstationAccumulator> workstations
-    ) {
-    }
-
-    private record WorkstationAccumulator(
-            String name,
-            LinkedHashMap<Long, OrganizationDepartmentVO> departments
-    ) {
     }
 
     private record RoleRule(OrgType scopeType, int level) {

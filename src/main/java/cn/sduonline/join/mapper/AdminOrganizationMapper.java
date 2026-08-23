@@ -1,18 +1,19 @@
 package cn.sduonline.join.mapper;
 
+import cn.sduonline.join.data.dto.OrganizationTreeRow;
 import cn.sduonline.join.data.po.Board;
 import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentAchievement;
 import cn.sduonline.join.data.po.DepartmentPoster;
 import cn.sduonline.join.data.po.Workstation;
+import java.util.List;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
-import org.apache.ibatis.annotations.Delete;
-import java.util.List;
 
 @Mapper
 public interface AdminOrganizationMapper {
@@ -57,6 +58,33 @@ public interface AdminOrganizationMapper {
     List<Workstation> selectEnabledWorkstationsByBoard(
             @Param("boardId") Long boardId
     );
+
+    /**
+     * 一次性取回全部启用组织树，服务层会按 ID 聚合成嵌套响应。
+     */
+    @Select("""
+            SELECT b.id AS board_id,
+                   b.name AS board_name,
+                   w.id AS workstation_id,
+                   w.name AS workstation_name,
+                   d.id AS department_id,
+                   d.name AS department_name,
+                   d.campus AS department_campus,
+                   d.asset_id AS department_asset_id,
+                   d.introduction AS department_introduction
+            FROM board b
+            LEFT JOIN workstation w
+              ON w.board_id = b.id
+             AND w.enabled = 1
+            LEFT JOIN department d
+              ON d.workstation_id = w.id
+             AND d.enabled = 1
+            WHERE b.enabled = 1
+            ORDER BY b.sort_order ASC, b.id ASC,
+                     w.sort_order ASC, w.id ASC,
+                     d.sort_order ASC, d.id ASC
+            """)
+    List<OrganizationTreeRow> selectEnabledOrganizationTree();
 
     @Select("""
             SELECT id, board_id, name, sort_order, enabled

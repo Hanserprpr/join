@@ -7,7 +7,6 @@ import cn.sduonline.join.data.dto.BoardCreateRequest;
 import cn.sduonline.join.data.dto.BoardVO;
 import cn.sduonline.join.data.dto.DepartmentCreateRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
-import cn.sduonline.join.data.dto.OrganizationTreeVO;
 import cn.sduonline.join.data.dto.RoleAssignmentRequest;
 import cn.sduonline.join.data.dto.RoleAssignmentMemberVO;
 import cn.sduonline.join.data.dto.RoleAssignmentVO;
@@ -107,19 +106,6 @@ public class AdminController {
     public Result<Void> deleteDepartment(@PathVariable Long departmentId) {
         ServiceResult<Void> result = organizationService.deleteDepartment(departmentId);
         return result.isSuccess() ? Result.ok() : Result.fail(result.error());
-    }
-
-    /**
-     * 获取当前操作人可授权范围内的板块、工作站、部门三级组织树。
-     */
-    @GetMapping("/organizations")
-    @SaCheckLogin
-    public Result<List<OrganizationTreeVO>> getOrganizations() {
-        ServiceResult<List<OrganizationTreeVO>> result =
-                roleAssignmentService.findOrganizationTree(
-                        StpUtil.getLoginIdAsString()
-                );
-        return result.isSuccess() ? Result.ok(result.data()) : Result.fail(result.error());
     }
 
     /**
