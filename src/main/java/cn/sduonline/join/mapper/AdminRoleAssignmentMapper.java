@@ -1,7 +1,6 @@
 package cn.sduonline.join.mapper;
 
 import cn.sduonline.join.data.po.UserRoleScope;
-import cn.sduonline.join.data.dto.OrganizationTreeRow;
 import cn.sduonline.join.data.dto.RoleAssignmentMemberVO;
 import cn.sduonline.join.data.dto.UserSearchVO;
 import java.util.List;
@@ -135,50 +134,6 @@ public interface AdminRoleAssignmentMapper {
             @Param("casId") String casId,
             @Param("targetScopeType") String targetScopeType,
             @Param("targetScopeId") Long targetScopeId
-    );
-
-    /**
-     * 一次性取回当前操作人可授权范围内的启用组织树，服务层会按 ID 聚合成嵌套响应。
-     */
-    @Select("""
-            SELECT b.id AS board_id,
-                   b.name AS board_name,
-                   w.id AS workstation_id,
-                   w.name AS workstation_name,
-                   d.id AS department_id,
-                   d.name AS department_name
-            FROM board b
-            LEFT JOIN workstation w
-              ON w.board_id = b.id
-             AND w.enabled = 1
-            LEFT JOIN department d
-              ON d.workstation_id = w.id
-             AND d.enabled = 1
-            WHERE b.enabled = 1
-              AND EXISTS (
-                    SELECT 1
-                    FROM user_role_scope s
-                    JOIN `role` r ON r.id = s.role_id
-                    WHERE s.cas_id = #{casId}
-                      AND r.code IN (
-                            'SYSTEM_ADMIN',
-                            'BOARD_ADMIN',
-                            'WORKSTATION_ADMIN',
-                            'DEPARTMENT_ADMIN'
-                      )
-                      AND (
-                            s.scope_type = 'ALL'
-                            OR (s.scope_type = 'BOARD' AND s.scope_id = b.id)
-                            OR (s.scope_type = 'WORKSTATION' AND s.scope_id = w.id)
-                            OR (s.scope_type = 'DEPARTMENT' AND s.scope_id = d.id)
-                      )
-              )
-            ORDER BY b.sort_order ASC, b.id ASC,
-                     w.sort_order ASC, w.id ASC,
-                     d.sort_order ASC, d.id ASC
-            """)
-    List<OrganizationTreeRow> selectEnabledOrganizationTree(
-            @Param("casId") String casId
     );
 
     /**

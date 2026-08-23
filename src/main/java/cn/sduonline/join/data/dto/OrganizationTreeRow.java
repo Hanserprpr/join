@@ -1,5 +1,7 @@
 package cn.sduonline.join.data.dto;
 
+import cn.sduonline.join.data.enums.Campus;
+
 /**
  * 组织树查询的扁平行，由服务层按板块、工作站、部门聚合。
  *
@@ -9,6 +11,9 @@ package cn.sduonline.join.data.dto;
  * @param workstationName 工作站名称；板块没有工作站时为空
  * @param departmentId 部门 ID；工作站没有部门时为空
  * @param departmentName 部门名称；工作站没有部门时为空
+ * @param departmentCampus 部门所在校区
+ * @param departmentAssetId 部门公开素材 ID
+ * @param departmentIntroduction 部门公开简介
  */
 public record OrganizationTreeRow(
         Long boardId,
@@ -16,6 +21,9 @@ public record OrganizationTreeRow(
         Long workstationId,
         String workstationName,
         Long departmentId,
-        String departmentName
+        String departmentName,
+        Campus departmentCampus,
+        Long departmentAssetId,
+        String departmentIntroduction
 ) {
 }

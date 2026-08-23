@@ -1131,11 +1131,12 @@ paths:
                 $ref: "#/components/schemas/ResultVoid"
       security:
       - sessionCookie: []
-  /api/admin/organizations:
+  /api/organizations:
     get:
       tags:
-      - 系统管理
-      summary: 获取可授权组织树
+      - 组织
+      summary: 获取公开组织树
+      description: 无需登录，返回全部启用的板块、工作站、部门三级组织树。部门仅包含 id、name、campus、assetId、introduction，不返回联系方式、纳新群、纳新要求或成员信息。
       operationId: getOrganizations
       responses:
         "200":
@@ -1144,8 +1145,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ResultListOrganizationTreeVO"
-      security:
-      - sessionCookie: []
   /api/admin/users:
     get:
       tags:
@@ -2946,6 +2945,20 @@ components:
           type: integer
           format: int64
         name:
+          type: string
+        campus:
+          type: string
+          enum:
+          - SOFTWARE_PARK
+          - CENTRAL
+          - QIANFOSHAN
+          - XINGLONGSHAN
+          - HONGJIALOU
+          - BAOTUQUAN
+        assetId:
+          type: integer
+          format: int64
+        introduction:
           type: string
     ResultListOrganizationTreeVO:
       type: object

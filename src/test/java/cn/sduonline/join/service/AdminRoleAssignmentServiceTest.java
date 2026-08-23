@@ -9,8 +9,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cn.sduonline.join.data.dto.OrganizationTreeRow;
-import cn.sduonline.join.data.dto.OrganizationTreeVO;
 import cn.sduonline.join.data.dto.RoleAssignmentRequest;
 import cn.sduonline.join.data.dto.RoleAssignmentMemberVO;
 import cn.sduonline.join.data.dto.RoleAssignmentVO;
@@ -38,48 +36,6 @@ class AdminRoleAssignmentServiceTest {
     void setUp() {
         service = new AdminRoleAssignmentService(assignmentMapper);
         lenient().when(assignmentMapper.countAdminRole(anyString())).thenReturn(1L);
-    }
-
-    @Test
-    void organizationTreeContainsDepartmentsBelowEachWorkstation() {
-        when(assignmentMapper.countRoleAssignmentManager("operator-01"))
-                .thenReturn(1L);
-        when(assignmentMapper.selectEnabledOrganizationTree("operator-01")).thenReturn(List.of(
-                new OrganizationTreeRow(
-                        1L, "技术板块", 5L, "开发工作站", 12L, "后端部门"
-                ),
-                new OrganizationTreeRow(
-                        1L, "技术板块", 5L, "开发工作站", 13L, "前端部门"
-                ),
-                new OrganizationTreeRow(
-                        2L, "运营板块", null, null, null, null
-                )
-        ));
-
-        ServiceResult<List<OrganizationTreeVO>> result =
-                service.findOrganizationTree("operator-01");
-
-        assertTrue(result.isSuccess());
-        assertEquals(2, result.data().size());
-        assertEquals("技术板块", result.data().getFirst().name());
-        assertEquals(1, result.data().getFirst().workstations().size());
-        assertEquals(2, result.data().getFirst().workstations()
-                .getFirst().departments().size());
-        assertEquals("后端部门", result.data().getFirst().workstations()
-                .getFirst().departments().getFirst().name());
-        assertTrue(result.data().get(1).workstations().isEmpty());
-    }
-
-    @Test
-    void organizationTreeRejectsAssistantOnlyOperator() {
-        when(assignmentMapper.countRoleAssignmentManager("operator-01"))
-                .thenReturn(0L);
-
-        ServiceResult<List<OrganizationTreeVO>> result =
-                service.findOrganizationTree("operator-01");
-
-        assertEquals(BizCode.NO_PERMISSION, result.error());
-        verify(assignmentMapper, never()).selectEnabledOrganizationTree(anyString());
     }
 
     @Test
