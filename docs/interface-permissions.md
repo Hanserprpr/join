@@ -53,6 +53,23 @@
 > 从 `DEPARTMENT_ADMIN` 的 `role_permission` 里删掉,他照样能任命辅助管理员。
 > 这是刻意的设计——"能任命比自己低级的、且部门对得上"就是完整规则。
 
+## 角色授权页面读取接口
+
+以下接口服务于“授予成员权限”页面，可由 `SYSTEM_ADMIN`、`BOARD_ADMIN`、
+`WORKSTATION_ADMIN`、`DEPARTMENT_ADMIN` 使用；`DEPARTMENT_ASSISTANT` 没有可授予的
+更低级身份，不能调用这些读取接口，以免借此枚举成员或用户信息。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/organizations` | 返回当前操作者可授权范围内、启用的板块 → 工作站 → 部门组织树（`id`、`name`） |
+| GET | `/api/admin/role-assignments?scopeType=BOARD|WORKSTATION|DEPARTMENT&scopeId={id}` | 查询与目标节点有关的有效成员授权；需要操作者作用域覆盖该节点 |
+| GET | `/api/admin/users?casId={keyword}` | 按学号模糊匹配本地用户，至少输入 6 位，最多 20 条；过短或空输入返回空数组 |
+
+成员接口每一行对应一条原始 `user_role_scope` 授权，包含 `id`、`casId`、`name`、
+`roleCode`、`roleName`、`scopeType`、`scopeId`、`scopeName` 以及板块/工作站/部门路径。
+它会同时返回目标节点及其下级的直接授权、覆盖该节点的上级授权，以及 `ALL` 平台全局授权；
+前端应根据返回的原始 `scopeType` 区分继承身份和直接身份。
+
 ---
 
 ## `BOARD_ADMIN` 板块管理员 / `WORKSTATION_ADMIN` 站长管理员

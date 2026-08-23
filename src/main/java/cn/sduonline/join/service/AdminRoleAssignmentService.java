@@ -2,10 +2,18 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.dto.RoleAssignmentRequest;
 import cn.sduonline.join.data.dto.RoleAssignmentVO;
+import cn.sduonline.join.data.dto.OrganizationDepartmentVO;
+import cn.sduonline.join.data.dto.OrganizationTreeRow;
+import cn.sduonline.join.data.dto.OrganizationTreeVO;
+import cn.sduonline.join.data.dto.OrganizationWorkstationVO;
+import cn.sduonline.join.data.dto.RoleAssignmentMemberVO;
+import cn.sduonline.join.data.dto.UserSearchVO;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.UserRoleScope;
 import cn.sduonline.join.mapper.AdminRoleAssignmentMapper;
 import cn.sduonline.join.security.scope.OrgType;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
@@ -16,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminRoleAssignmentService {
 
+    private static final int USER_SEARCH_MIN_KEYWORD_LENGTH = 6;
+
     private static final Map<String, RoleRule> ASSIGNABLE_ROLES = Map.of(
             "BOARD_ADMIN", new RoleRule(OrgType.BOARD, 40),
             "WORKSTATION_ADMIN", new RoleRule(OrgType.WORKSTATION, 30),
@@ -24,6 +34,130 @@ public class AdminRoleAssignmentService {
     );
 
     private final AdminRoleAssignmentMapper assignmentMapper;
+
+    /**
+     * 查询角色授权页面所需、且当前操作人可授权范围内的启用组织树。
+     *
+     * @param operatorCasId 当前操作人学号
+     * @return 板块、工作站、部门三级组织树
+     */
+    @Transactional(readOnly = true)
+    public ServiceResult<List<OrganizationTreeVO>> findOrganizationTree(
+            String operatorCasId
+    ) {
+        if (!canManageRoleAssignments(operatorCasId)) {
+            return ServiceResult.failure(BizCode.NO_PERMISSION);
+        }
+
+        LinkedHashMap<Long, BoardAccumulator> boards = new LinkedHashMap<>();
+        for (OrganizationTreeRow row : assignmentMapper
+                .selectEnabledOrganizationTree(operatorCasId)) {
+            BoardAccumulator board = boards.computeIfAbsent(
+                    row.boardId(),
+                    id -> new BoardAccumulator(
+                            row.boardName(), new LinkedHashMap<>()
+                    )
+            );
+            if (row.workstationId() == null) {
+                continue;
+            }
+            WorkstationAccumulator workstation = board.workstations()
+                    .computeIfAbsent(
+                            row.workstationId(),
+                            id -> new WorkstationAccumulator(
+                                    row.workstationName(), new LinkedHashMap<>()
+                            )
+                    );
+            if (row.departmentId() != null) {
+                workstation.departments().putIfAbsent(
+                        row.departmentId(),
+                        new OrganizationDepartmentVO(
+                                row.departmentId(), row.departmentName()
+                        )
+                );
+            }
+        }
+
+        List<OrganizationTreeVO> tree = boards.entrySet().stream()
+                .map(board -> new OrganizationTreeVO(
+                        board.getKey(),
+                        board.getValue().name(),
+                        board.getValue().workstations().entrySet().stream()
+                                .map(workstation -> new OrganizationWorkstationVO(
+                                        workstation.getKey(),
+                                        workstation.getValue().name(),
+                                        List.copyOf(
+                                                workstation.getValue()
+                                                        .departments().values()
+                                        )
+                                ))
+                                .toList()
+                ))
+                .toList();
+        return ServiceResult.success(tree);
+    }
+
+    /**
+     * 查询与目标组织有关的角色授权成员。
+     * <p>
+     * 返回的每一条数据保留原始身份作用域；成员既可能是该节点或下级的直接授权，
+     * 也可能是覆盖该节点的上级或 ALL 授权。
+     *
+     * @param operatorCasId 当前操作人学号
+     * @param scopeType 要查看的组织类型
+     * @param scopeId 要查看的组织 ID
+     * @return 角色授权成员列表
+     */
+    @Transactional(readOnly = true)
+    public ServiceResult<List<RoleAssignmentMemberVO>> findMembers(
+            String operatorCasId,
+            OrgType scopeType,
+            Long scopeId
+    ) {
+        if (!canManageRoleAssignments(operatorCasId)) {
+            return ServiceResult.failure(BizCode.NO_PERMISSION);
+        }
+        if (!scopeExists(scopeType, scopeId)) {
+            return ServiceResult.failure(BizCode.ORG_SCOPE_NOT_FOUND);
+        }
+        if (assignmentMapper.countScopeCoverage(
+                operatorCasId, scopeType.name(), scopeId
+        ) == 0) {
+            return ServiceResult.failure(BizCode.NO_PERMISSION);
+        }
+        return ServiceResult.success(assignmentMapper.selectMembersByScope(
+                scopeType.name(), scopeId
+        ));
+    }
+
+    /**
+     * 角色授权页面按学号模糊联想本地已存在的用户。
+     * 少于六位或空输入不查库，避免将用户表作为全量列表返回。
+     *
+     * @param operatorCasId 当前操作人学号
+     * @param casIdKeyword 学号关键字
+     * @return 最多 20 条候选用户
+     */
+    @Transactional(readOnly = true)
+    public ServiceResult<List<UserSearchVO>> searchUsers(
+            String operatorCasId,
+            String casIdKeyword
+    ) {
+        if (!canManageRoleAssignments(operatorCasId)) {
+            return ServiceResult.failure(BizCode.NO_PERMISSION);
+        }
+        if (casIdKeyword == null || casIdKeyword.isBlank()) {
+            return ServiceResult.success(List.of());
+        }
+        String keyword = casIdKeyword.strip();
+        if (keyword.length() < USER_SEARCH_MIN_KEYWORD_LENGTH) {
+            return ServiceResult.success(List.of());
+        }
+        String escapedKeyword = escapeLikeKeyword(keyword);
+        return ServiceResult.success(
+                assignmentMapper.selectUsersByCasIdKeyword(escapedKeyword)
+        );
+    }
 
     @Transactional
     public ServiceResult<RoleAssignmentVO> assign(
@@ -138,6 +272,31 @@ public class AdminRoleAssignmentService {
             case WORKSTATION -> assignmentMapper.countEnabledWorkstation(scopeId) > 0;
             case DEPARTMENT -> assignmentMapper.countEnabledDepartment(scopeId) > 0;
         };
+    }
+
+    private boolean canManageRoleAssignments(String casId) {
+        return assignmentMapper.countRoleAssignmentManager(casId) > 0;
+    }
+
+    /**
+     * 使用 ! 作为 LIKE 转义字符，避免学号中的下划线被当作单字符通配符。
+     */
+    private static String escapeLikeKeyword(String value) {
+        return value.replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
+    }
+
+    private record BoardAccumulator(
+            String name,
+            LinkedHashMap<Long, WorkstationAccumulator> workstations
+    ) {
+    }
+
+    private record WorkstationAccumulator(
+            String name,
+            LinkedHashMap<Long, OrganizationDepartmentVO> departments
+    ) {
     }
 
     private record RoleRule(OrgType scopeType, int level) {

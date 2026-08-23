@@ -111,6 +111,31 @@ class MapperSqlContractTest {
                 .contains("dt.id = #{departmentId} AND dt.enabled = 1"));
     }
 
+    @Test
+    void roleAssignmentMemberLookupKeepsInheritedAndGlobalAssignments()
+            throws NoSuchMethodException {
+        Method members = AdminRoleAssignmentMapper.class.getMethod(
+                "selectMembersByScope", String.class, Long.class
+        );
+        Method search = AdminRoleAssignmentMapper.class.getMethod(
+                "selectUsersByCasIdKeyword", String.class
+        );
+        Method tree = AdminRoleAssignmentMapper.class.getMethod(
+                "selectEnabledOrganizationTree", String.class
+        );
+        String memberSql = sql(members.getAnnotation(Select.class).value());
+        String searchSql = sql(search.getAnnotation(Select.class).value());
+        String treeSql = sql(tree.getAnnotation(Select.class).value());
+
+        assertTrue(memberSql.contains("s.scope_type = 'ALL'"));
+        assertTrue(memberSql.contains("#{targetScopeType} = 'DEPARTMENT'"));
+        assertTrue(memberSql.contains("JOIN workstation w ON w.id = d.workstation_id"));
+        assertTrue(treeSql.contains("s.cas_id = #{casId}"));
+        assertTrue(searchSql.contains("ESCAPE '!'"));
+        assertTrue(searchSql.contains("CONCAT('%', #{casIdKeyword}, '%')"));
+        assertTrue(searchSql.contains("LIMIT 20"));
+    }
+
     private static String sql(String[] fragments) {
         return String.join("\n", fragments);
     }
