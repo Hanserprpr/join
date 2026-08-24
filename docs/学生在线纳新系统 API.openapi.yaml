@@ -1430,6 +1430,27 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/RedirectView"
+  /api/wechat/js-sdk/config:
+    get:
+      tags:
+      - 微信订阅通知
+      summary: 获取微信 JS-SDK 签名和订阅通知模板
+      operationId: weChatJsSdkConfig
+      parameters:
+      - name: url
+        in: query
+        description: 当前前端完整 URL，不应包含 hash 片段
+        required: true
+        schema:
+          type: string
+          format: uri
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultWeChatJsSdkConfigVO"
   /api/user/permissions:
     get:
       tags:
@@ -3303,6 +3324,35 @@ components:
       properties:
         bound:
           type: boolean
+    ResultWeChatJsSdkConfigVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/WeChatJsSdkConfigVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    WeChatJsSdkConfigVO:
+      type: object
+      properties:
+        appId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        nonceStr:
+          type: string
+        signature:
+          type: string
+        templateIds:
+          type: array
+          items:
+            type: string
     ApplicationContext:
       type: object
       properties:

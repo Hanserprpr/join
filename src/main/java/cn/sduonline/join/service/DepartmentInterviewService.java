@@ -43,7 +43,7 @@ public class DepartmentInterviewService {
     private final TransactionTemplate transactionTemplate;
     private final InterviewSseService interviewSseService;
     private final UserMapper userMapper;
-    private final WeChatTemplateMessageService templateMessageService;
+    private final WeChatSubscribeMessageService subscribeMessageService;
     private final WeChatProperties weChatProperties;
     private final AuthorizationService authorizationService;
 
@@ -420,7 +420,7 @@ public class DepartmentInterviewService {
             }
             String window = resolveInterviewRoomName(interview);
             String departmentName = resolveDepartmentName(interview);
-            templateMessageService.send(
+            subscribeMessageService.send(
                     candidate.getWechatOpenid(),
                     weChatProperties.getInterviewCallTemplateId(),
                     Map.of(

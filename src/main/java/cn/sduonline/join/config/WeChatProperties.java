@@ -1,5 +1,7 @@
 package cn.sduonline.join.config;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -22,6 +24,11 @@ public class WeChatProperties {
             "";
     private String interviewCallTemplateId =
             "";
+    /** 前端一次发起订阅时展示的订阅通知模板 ID。 */
+    private List<String> subscribeTemplateIds = new ArrayList<>();
+    /** 允许生成 JS-SDK 签名的前端 Origin。 */
+    private List<String> jsSdkAllowedOrigins = new ArrayList<>();
+    private long ticketRefreshAheadSeconds = 300;
     private String systemName = "学生在线纳新系统";
     private long tokenRefreshAheadSeconds = 300;
     private Proxy proxy = new Proxy();
@@ -51,6 +58,14 @@ public class WeChatProperties {
             throw new IllegalStateException(
                     "微信绑定配置缺失，请设置 WECHAT_OAUTH_CALLBACK_URL 和 "
                             + "WECHAT_BINDING_RESULT_URL");
+        }
+    }
+
+    public void validateJsSdk() {
+        validate();
+        if (jsSdkAllowedOrigins == null || jsSdkAllowedOrigins.isEmpty()) {
+            throw new IllegalStateException(
+                    "微信 JS-SDK 允许域名未配置，请设置 WECHAT_JS_SDK_ALLOWED_ORIGINS");
         }
     }
 

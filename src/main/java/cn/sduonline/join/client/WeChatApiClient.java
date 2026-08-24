@@ -55,6 +55,34 @@ public class WeChatApiClient {
         return readJson(responseBody, TemplateSendResponse.class, "发送模板消息");
     }
 
+    public JsApiTicketResponse getJsApiTicket(String accessToken) {
+        String responseBody = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/cgi-bin/ticket/getticket")
+                        .queryParam("access_token", accessToken)
+                        .queryParam("type", "jsapi")
+                        .build())
+                .retrieve()
+                .body(String.class);
+        return readJson(responseBody, JsApiTicketResponse.class, "获取 jsapi_ticket");
+    }
+
+    public TemplateSendResponse sendSubscribeMessage(
+            String accessToken, SubscribeMessageRequest request) {
+        String json = writeJson(request);
+        String responseBody = restClient.post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/cgi-bin/message/subscribe/bizsend")
+                        .queryParam("access_token", accessToken)
+                        .build())
+                .contentType(MediaType.APPLICATION_JSON)
+                .contentLength(json.getBytes(StandardCharsets.UTF_8).length)
+                .body(json)
+                .retrieve()
+                .body(String.class);
+        return readJson(responseBody, TemplateSendResponse.class, "发送订阅通知");
+    }
+
     public OAuthTokenResponse exchangeOAuthCode(
             String appId, String appSecret, String code) {
         String responseBody = restClient.get()
@@ -103,7 +131,22 @@ public class WeChatApiClient {
             String errmsg) {
     }
 
+    public record JsApiTicketResponse(
+            String ticket,
+            @JsonProperty("expires_in") Long expiresIn,
+            Integer errcode,
+            String errmsg) {
+    }
+
     public record TemplateMessageRequest(
+            @JsonProperty("touser") String toUser,
+            @JsonProperty("template_id") String templateId,
+            String url,
+            @JsonProperty("miniprogram") MiniProgram miniProgram,
+            Map<String, TemplateData> data) {
+    }
+
+    public record SubscribeMessageRequest(
             @JsonProperty("touser") String toUser,
             @JsonProperty("template_id") String templateId,
             String url,
