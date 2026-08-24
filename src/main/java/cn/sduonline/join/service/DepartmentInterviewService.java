@@ -424,13 +424,11 @@ public class DepartmentInterviewService {
                     candidate.getWechatOpenid(),
                     weChatProperties.getInterviewCallTemplateId(),
                     Map.of(
-                            "thing2",
-                            new TemplateData(interview.candidateName()),
-                            "character_string14",
+                            "character_string1",
                             new TemplateData(String.valueOf(
                                     interview.queueNumber())),
-                            "thing23", new TemplateData(window),
-                            "thing31", new TemplateData(departmentName)
+                            "thing2", new TemplateData(window),
+                            "thing3", new TemplateData(departmentName)
                     )
             );
         } catch (RuntimeException exception) {

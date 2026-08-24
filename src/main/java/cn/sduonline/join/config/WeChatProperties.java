@@ -23,7 +23,7 @@ public class WeChatProperties {
     private String bindingTemplateId =
             "";
     private String interviewCallTemplateId =
-            "";
+            "79icrV3YXPf6_FRxqDLgzGsyW1QNU-X-1IFk1j48LKw";
     /** 前端一次发起订阅时展示的订阅通知模板 ID。 */
     private List<String> subscribeTemplateIds = new ArrayList<>();
     /** 允许生成 JS-SDK 签名的前端 Origin。 */

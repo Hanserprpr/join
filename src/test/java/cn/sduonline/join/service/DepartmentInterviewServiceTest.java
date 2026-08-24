@@ -96,19 +96,15 @@ class DepartmentInterviewServiceTest {
                         weChatProperties.getInterviewCallTemplateId()
                 ),
                 org.mockito.ArgumentMatchers.eq(java.util.Map.of(
-                        "thing2",
-                        new cn.sduonline.join.client.WeChatApiClient.TemplateData(
-                                "张三"
-                        ),
-                        "character_string14",
+                        "character_string1",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "7"
                         ),
-                        "thing23",
+                        "thing2",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "第一面试室"
                         ),
-                        "thing31",
+                        "thing3",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "技术部"
                         )
