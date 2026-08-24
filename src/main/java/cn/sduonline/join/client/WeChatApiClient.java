@@ -3,6 +3,7 @@ package cn.sduonline.join.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -15,7 +16,10 @@ public class WeChatApiClient {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
-    public WeChatApiClient(RestClient.Builder builder, ObjectMapper objectMapper) {
+    public WeChatApiClient(
+            @Qualifier("wechatRestClientBuilder") RestClient.Builder builder,
+            ObjectMapper objectMapper
+    ) {
         this.restClient = builder.baseUrl("https://api.weixin.qq.com").build();
         this.objectMapper = objectMapper;
     }
