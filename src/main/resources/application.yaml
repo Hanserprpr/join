@@ -145,9 +145,9 @@ app:
     binding-result-url: ${WECHAT_BINDING_RESULT_URL:http://localhost:5173/wechat-binding}
     binding-state-ttl-seconds: ${WECHAT_BINDING_STATE_TTL_SECONDS:600}
     binding-template-id: ${WECHAT_BINDING_TEMPLATE_ID:Tw8ThFuRhgMOkrTirVHRnTPbxFdxyaFo2PIJdFqkxQw}
-    interview-call-template-id: ${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:gmRpMS8vWvQuR02-tcVMpyuOC3sLafkpErxPfAFE1DQ}
+    interview-call-template-id: ${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:79icrV3YXPf6_FRxqDLgzGsyW1QNU-X-1IFk1j48LKw}
     # 服务号后台选用的订阅通知模板 ID，多个用逗号分隔
-    subscribe-template-ids: ${WECHAT_SUBSCRIBE_TEMPLATE_IDS:${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:}}
+    subscribe-template-ids: ${WECHAT_SUBSCRIBE_TEMPLATE_IDS:${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:79icrV3YXPf6_FRxqDLgzGsyW1QNU-X-1IFk1j48LKw}}
     # 仅为这些前端 Origin 生成 JS-SDK 签名，多个用逗号分隔
     js-sdk-allowed-origins: ${WECHAT_JS_SDK_ALLOWED_ORIGINS:${FRONTEND_URL:http://localhost:5173}}
     ticket-refresh-ahead-seconds: ${WECHAT_TICKET_REFRESH_AHEAD_SECONDS:300}
