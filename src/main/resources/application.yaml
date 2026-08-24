@@ -149,6 +149,12 @@ app:
     system-name: ${WECHAT_SYSTEM_NAME:学生在线纳新系统}
     # access_token 默认有效 7200 秒，提前刷新以避免临界时间请求失败
     token-refresh-ahead-seconds: ${WECHAT_TOKEN_REFRESH_AHEAD_SECONDS:300}
+    proxy:
+      enabled: ${WECHAT_PROXY_ENABLED:false}
+      host: ${WECHAT_PROXY_HOST:127.0.0.1}
+      port: ${WECHAT_PROXY_PORT:8080}
+      connect-timeout-ms: ${WECHAT_PROXY_CONNECT_TIMEOUT_MS:5000}
+      read-timeout-ms: ${WECHAT_PROXY_READ_TIMEOUT_MS:10000}
 
 springdoc:
   api-docs:
