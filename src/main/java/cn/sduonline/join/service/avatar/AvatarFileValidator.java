@@ -19,10 +19,15 @@ public class AvatarFileValidator {
     private final AppProperties appProperties;
 
     public AvatarFileType validate(MultipartFile file) throws IOException {
+        return validate(file, appProperties.getAvatar().getMaxSizeBytes());
+    }
+
+    /** 按调用方给定的大小限制校验图片。 */
+    public AvatarFileType validate(MultipartFile file, long maxSizeBytes) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new AvatarValidationException(BizCode.AVATAR_INVALID);
         }
-        if (file.getSize() > appProperties.getAvatar().getMaxSizeBytes()) {
+        if (file.getSize() > maxSizeBytes) {
             throw new AvatarValidationException(BizCode.AVATAR_TOO_LARGE);
         }
 

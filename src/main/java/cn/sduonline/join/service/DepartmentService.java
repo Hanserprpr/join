@@ -15,6 +15,7 @@ import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
+import cn.sduonline.join.service.poster.PosterUrlPolicy;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class DepartmentService {
     private final AdminOrganizationMapper organizationMapper;
     private final DepartmentQuestionnaireMapper questionnaireMapper;
     private final AuthorizationService authorizationService;
+    private final PosterUrlPolicy posterUrlPolicy;
 
     /**
      * 查询部门详情和海报
@@ -64,6 +66,7 @@ public class DepartmentService {
         if (department == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
+        posterUrlPolicy.validateAll(request.posters());
 
         department.setCampus(request.campus());
         department.setIntroduction(trimToNull(request.introduction()));
@@ -96,6 +99,9 @@ public class DepartmentService {
         Department department = organizationMapper.selectDepartmentById(departmentId);
         if (department == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        if (request.isPostersPresent()) {
+            posterUrlPolicy.validateAll(request.getPosters());
         }
 
         if (request.isCampusPresent()) {

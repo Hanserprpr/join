@@ -22,6 +22,7 @@ import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
+import cn.sduonline.join.service.poster.PosterUrlPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,13 +39,16 @@ class DepartmentServiceTest {
     private DepartmentQuestionnaireMapper questionnaireMapper;
     @Mock
     private AuthorizationService authorizationService;
+    @Mock
+    private PosterUrlPolicy posterUrlPolicy;
 
     private DepartmentService service;
 
     @BeforeEach
     void setUp() {
         service = new DepartmentService(
-                organizationMapper, questionnaireMapper, authorizationService
+                organizationMapper, questionnaireMapper, authorizationService,
+                posterUrlPolicy
         );
     }
 
@@ -213,6 +217,7 @@ class DepartmentServiceTest {
         assertEquals(0, first.getSortOrder());
         assertEquals(1, achievementCaptor.getAllValues().get(1).getSortOrder());
         assertNull(achievementCaptor.getAllValues().get(1).getContent());
+        verify(posterUrlPolicy).validateAll(request.posters());
     }
 
     @Test
@@ -352,6 +357,7 @@ class DepartmentServiceTest {
 
         assertTrue(result.isSuccess());
         assertNull(result.data().contact());
+        verify(posterUrlPolicy).validateAll(null);
         verify(organizationMapper).deleteDepartmentPosters(12L);
     }
 
