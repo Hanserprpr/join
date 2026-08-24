@@ -93,6 +93,13 @@ public class AppProperties {
         private long tokenTtlSeconds = 8;
         /** 前端刷新动态二维码的建议间隔。 */
         private long qrRefreshSeconds = 8;
+        /** 微信扫码时先进入的后端公网地址。 */
+        private String entryUrl =
+                "http://localhost:8080/api/wechat/check-in/entry";
+        /** 签到或微信登录完成后的前端结果页。 */
+        private String resultUrl = "http://localhost:5173/check-in";
+        /** 扫码后允许完成微信 OAuth 的最长时间。 */
+        private long oauthStateTtlSeconds = 120;
     }
 
     @Data

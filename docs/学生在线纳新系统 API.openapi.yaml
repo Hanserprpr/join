@@ -1454,6 +1454,62 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/RedirectView"
+  /api/wechat/login/url:
+    get:
+      tags:
+      - 微信登录
+      summary: 获取微信内登录授权地址
+      operationId: weChatLoginAuthorizationUrl
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultMapStringString"
+  /api/wechat/check-in/entry:
+    get:
+      tags:
+      - 微信签到
+      summary: 微信扫码登录并签到
+      operationId: weChatCheckInEntry
+      parameters:
+      - name: token
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RedirectView"
+  /api/wechat/login/callback:
+    get:
+      tags:
+      - 微信登录
+      summary: 处理已绑定微信登录回调
+      operationId: weChatLoginCallback
+      parameters:
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RedirectView"
   /api/wechat/js-sdk/config:
     get:
       tags:

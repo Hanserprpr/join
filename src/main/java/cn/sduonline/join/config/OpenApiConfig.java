@@ -82,6 +82,9 @@ public class OpenApiConfig {
             Map.entry("WeChatBindingController.callback", "处理微信授权回调"),
             Map.entry("WeChatBindingController.status", "查询微信绑定状态"),
             Map.entry("WeChatBindingController.unbind", "解除微信绑定"),
+            Map.entry("WeChatCheckInController.entry", "微信扫码登录并签到"),
+            Map.entry("WeChatLoginController.authorizationUrl", "获取微信内登录授权地址"),
+            Map.entry("WeChatLoginController.callback", "处理已绑定微信登录回调"),
             Map.entry("WorkstationController.getWorkstation", "获取工作站详情")
     );
 
@@ -99,6 +102,8 @@ public class OpenApiConfig {
             Map.entry("UserApplicationController", "部门报名"),
             Map.entry("UserProfileController", "个人资料"),
             Map.entry("WeChatBindingController", "微信绑定"),
+            Map.entry("WeChatCheckInController", "微信签到"),
+            Map.entry("WeChatLoginController", "微信登录"),
             Map.entry("WorkstationController", "工作站")
     );
 

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -78,9 +79,39 @@ class DepartmentCheckInServiceTest {
         var result = service.createQrCode(12L);
 
         assertTrue(result.isSuccess());
+        assertTrue(result.data().content().startsWith(
+                "http://localhost:8080/api/wechat/check-in/entry?token="));
         verify(valueOperations).set(
                 any(), eq("12:30"), eq(Duration.ofSeconds(90))
         );
+    }
+
+    @Test
+    void capturedGrantRemainsUsableAfterShortLivedQrTokenExpires() {
+        when(valueOperations.get("join:check-in:token:valid"))
+                .thenReturn("12:30");
+
+        var captured = service.captureQrGrant("valid");
+
+        assertTrue(captured.isSuccess());
+        assertEquals(12L, captured.data().departmentId());
+        assertEquals(30L, captured.data().sessionId());
+
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(3);
+
+        var result = service.checkInCaptured(
+                captured.data(), "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(3, result.data().queueNumber());
+        verify(valueOperations, times(1))
+                .get("join:check-in:token:valid");
     }
 
     @Test

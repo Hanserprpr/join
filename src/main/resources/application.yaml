@@ -135,6 +135,9 @@ app:
   check-in:
     token-ttl-seconds: ${CHECK_IN_TOKEN_TTL_SECONDS:8}
     qr-refresh-seconds: ${CHECK_IN_QR_REFRESH_SECONDS:8}
+    entry-url: ${CHECK_IN_ENTRY_URL:http://localhost:8080/api/wechat/check-in/entry}
+    result-url: ${CHECK_IN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}/check-in}
+    oauth-state-ttl-seconds: ${CHECK_IN_OAUTH_STATE_TTL_SECONDS:120}
   external-identity:
     base-url: ${EXTERNAL_IDENTITY_BASE_URL:https://i.sdu.edu.cn}
     cache-ttl-seconds: ${EXTERNAL_IDENTITY_CACHE_TTL_SECONDS:60}
@@ -144,6 +147,9 @@ app:
     oauth-callback-url: ${WECHAT_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/binding/callback}
     binding-result-url: ${WECHAT_BINDING_RESULT_URL:http://localhost:5173/wechat-binding}
     binding-state-ttl-seconds: ${WECHAT_BINDING_STATE_TTL_SECONDS:600}
+    login-oauth-callback-url: ${WECHAT_LOGIN_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/login/callback}
+    login-result-url: ${WECHAT_LOGIN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}}
+    login-state-ttl-seconds: ${WECHAT_LOGIN_STATE_TTL_SECONDS:300}
     binding-template-id: ${WECHAT_BINDING_TEMPLATE_ID:}
     interview-call-template-id: ${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:79icrV3YXPf6_FRxqDLgzGsyW1QNU-X-1IFk1j48LKw}
     # 服务号后台选用的订阅通知模板 ID，多个用逗号分隔
