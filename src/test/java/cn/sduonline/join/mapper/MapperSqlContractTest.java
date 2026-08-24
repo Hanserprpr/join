@@ -144,6 +144,15 @@ class MapperSqlContractTest {
         assertTrue(searchSql.contains("LIMIT 20"));
     }
 
+    @Test
+    void wechatUnbindExplicitlyWritesNull() throws NoSuchMethodException {
+        Method method = UserMapper.class.getMethod("clearWechatOpenid", String.class);
+        String updateSql = sql(method.getAnnotation(Update.class).value());
+
+        assertTrue(updateSql.contains("wechat_openid = NULL"));
+        assertTrue(updateSql.contains("WHERE cas_id = #{casId}"));
+    }
+
     private static String sql(String[] fragments) {
         return String.join("\n", fragments);
     }

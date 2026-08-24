@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.client.WeChatApiClient;
@@ -103,6 +104,17 @@ class WeChatBindingServiceTest {
         assertThatThrownBy(() -> service.completeBinding("code-1", "expired"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("无效或已过期");
+    }
+
+    @Test
+    void unbindExplicitlyClearsWechatOpenId() {
+        User user = user("20240001", "openid-1");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+
+        service.unbind("20240001");
+
+        verify(userMapper).clearWechatOpenid("20240001");
+        verify(userMapper, never()).updateById(any(User.class));
     }
 
     private User user(String casId, String openId) {

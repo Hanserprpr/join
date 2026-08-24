@@ -115,8 +115,7 @@ public class WeChatBindingService {
         if (user == null) {
             throw new IllegalArgumentException("用户不存在");
         }
-        user.setWechatOpenid(null);
-        userMapper.updateById(user);
+        userMapper.clearWechatOpenid(casId);
     }
 
     public String bindingResultUrl(boolean success) {
