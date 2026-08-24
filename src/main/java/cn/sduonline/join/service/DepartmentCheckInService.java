@@ -45,6 +45,9 @@ public class DepartmentCheckInService {
         if (session == null) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
         }
+        if (hasCheckInEnded(session)) {
+            return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
+        }
         if (!Boolean.TRUE.equals(session.getQrCheckInEnabled())) {
             return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
         }
@@ -166,6 +169,10 @@ public class DepartmentCheckInService {
                 );
         if (existing != null) {
             if (Boolean.TRUE.equals(existing.getRequiresRecheckIn())) {
+                if (hasCheckInEnded(session)) {
+                    return ServiceResult.failure(
+                            BizCode.INTERVIEW_SESSION_NOT_OPEN);
+                }
                 checkInMapper.initializeSequence(sessionId);
                 Integer queueNumber =
                         checkInMapper.selectNextNumberForUpdate(sessionId);
@@ -178,6 +185,9 @@ public class DepartmentCheckInService {
                 interviewSseService.publishQueueAfterCommit(departmentId);
             }
             return ServiceResult.success(CheckInVO.from(existing));
+        }
+        if (hasCheckInEnded(session)) {
+            return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
         }
         if (sessionMapper.countCheckIns(sessionId)
                 >= session.getCheckInLimit()) {
@@ -218,6 +228,11 @@ public class DepartmentCheckInService {
         }
         interviewSseService.publishQueueAfterCommit(departmentId);
         return ServiceResult.success(CheckInVO.from(checkIn));
+    }
+
+    private boolean hasCheckInEnded(DepartmentInterviewSession session) {
+        LocalDateTime endsAt = session.getEndsAt();
+        return endsAt != null && !LocalDateTime.now().isBefore(endsAt);
     }
 
     private CheckInQrGrant resolveQrGrant(String token) {

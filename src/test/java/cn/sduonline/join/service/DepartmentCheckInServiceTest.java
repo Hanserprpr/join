@@ -22,6 +22,7 @@ import cn.sduonline.join.mapper.DepartmentCheckInMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import cn.sduonline.join.data.po.DepartmentInterviewSession;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -84,6 +85,21 @@ class DepartmentCheckInServiceTest {
         verify(valueOperations).set(
                 any(), eq("12:30"), eq(Duration.ofSeconds(90))
         );
+    }
+
+    @Test
+    void stopsCreatingQrCodesAfterSessionEndTime() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentInterviewSession session = openSession();
+        session.setQrCheckInEnabled(true);
+        session.setEndsAt(LocalDateTime.now().minusMinutes(1));
+        when(sessionMapper.selectPublished(12L)).thenReturn(session);
+
+        var result = service.createQrCode(12L);
+
+        assertEquals(BizCode.INTERVIEW_SESSION_NOT_OPEN, result.error());
+        verify(valueOperations, never()).set(any(), any(), any(Duration.class));
     }
 
     @Test
@@ -161,11 +177,58 @@ class DepartmentCheckInServiceTest {
     }
 
     @Test
+    void rejectsNewCheckInAfterSessionEndTime() {
+        when(valueOperations.get("join:check-in:token:valid"))
+                .thenReturn("12:30");
+        DepartmentInterviewSession session = openSession();
+        session.setEndsAt(LocalDateTime.now().minusMinutes(1));
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session);
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+
+        var result = service.checkIn("valid", "20240001");
+
+        assertEquals(BizCode.INTERVIEW_SESSION_NOT_OPEN, result.error());
+        verify(checkInMapper, never()).insert(any());
+        verify(checkInMapper, never()).initializeSequence(any());
+    }
+
+    @Test
     void repeatedScanReturnsExistingCheckIn() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
                 .thenReturn(openSession());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        DepartmentCheckIn existing = new DepartmentCheckIn();
+        existing.setId(200L);
+        existing.setDepartmentId(12L);
+        existing.setSessionId(30L);
+        existing.setApplicationId(100L);
+        when(checkInMapper.selectBySessionAndApplication(30L, 100L))
+                .thenReturn(existing);
+
+        var result = service.checkIn("valid", "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(200L, result.data().id());
+        verify(checkInMapper, never()).insert(any());
+    }
+
+    @Test
+    void repeatedScanReturnsExistingCheckInAfterSessionEndTime() {
+        when(valueOperations.get("join:check-in:token:valid"))
+                .thenReturn("12:30");
+        DepartmentInterviewSession session = openSession();
+        session.setEndsAt(LocalDateTime.now().minusMinutes(1));
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
         when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
@@ -293,6 +356,35 @@ class DepartmentCheckInServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(9, result.data().queueNumber());
         verify(checkInMapper).reactivateAfterCheckIn(existing);
+    }
+
+    @Test
+    void rejectsRecheckInAfterSessionEndTime() {
+        Department department = new Department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
+        DepartmentInterviewSession session = openSession();
+        session.setEndsAt(LocalDateTime.now().minusMinutes(1));
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session);
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        DepartmentCheckIn existing = new DepartmentCheckIn();
+        existing.setId(200L);
+        existing.setDepartmentId(12L);
+        existing.setSessionId(30L);
+        existing.setApplicationId(100L);
+        existing.setRequiresRecheckIn(true);
+        when(checkInMapper.selectBySessionAndApplication(30L, 100L))
+                .thenReturn(existing);
+
+        var result = service.checkIn(12L, null, "20240001");
+
+        assertEquals(BizCode.INTERVIEW_SESSION_NOT_OPEN, result.error());
+        verify(checkInMapper, never()).reactivateAfterCheckIn(any());
+        verify(checkInMapper, never()).initializeSequence(any());
     }
 
     @Test
