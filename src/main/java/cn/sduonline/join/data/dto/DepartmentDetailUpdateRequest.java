@@ -15,7 +15,6 @@ import java.util.List;
  * @param recruitmentRequirements 纳新要求
  * @param contact 联系方式
  * @param recruitmentGroup 纳新群信息
- * @param qrCheckInEnabled 是否要求动态二维码签到
  */
 public record DepartmentDetailUpdateRequest(
         Campus campus,
@@ -36,8 +35,6 @@ public record DepartmentDetailUpdateRequest(
         String contact,
 
         @Size(max = 1000)
-        String recruitmentGroup,
-
-        Boolean qrCheckInEnabled
+        String recruitmentGroup
 ) {
 }

@@ -14,17 +14,21 @@ public interface DepartmentInterviewSessionMapper {
     @Insert("""
             INSERT INTO department_interview_session
                 (department_id, starts_at, ends_at, location,
-                 check_in_limit, status)
+                 check_in_limit, qr_check_in_enabled,
+                 qr_code_ttl_seconds, status)
             VALUES
                 (#{departmentId}, #{startsAt}, #{endsAt}, #{location},
-                 #{checkInLimit}, #{status})
+                 #{checkInLimit}, #{qrCheckInEnabled},
+                 #{qrCodeTtlSeconds}, #{status})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(DepartmentInterviewSession session);
 
     @Select("""
             SELECT id, department_id, starts_at, ends_at, location,
-                   check_in_limit, status, published_at, ended_at
+                   check_in_limit, qr_check_in_enabled,
+                   qr_code_ttl_seconds, status,
+                   published_at, ended_at
             FROM department_interview_session
             WHERE id = #{sessionId} AND department_id = #{departmentId}
             """)
@@ -35,7 +39,9 @@ public interface DepartmentInterviewSessionMapper {
 
     @Select("""
             SELECT id, department_id, starts_at, ends_at, location,
-                   check_in_limit, status, published_at, ended_at
+                   check_in_limit, qr_check_in_enabled,
+                   qr_code_ttl_seconds, status,
+                   published_at, ended_at
             FROM department_interview_session
             WHERE department_id = #{departmentId}
               AND status = 'PUBLISHED'
@@ -48,7 +54,9 @@ public interface DepartmentInterviewSessionMapper {
 
     @Select("""
             SELECT id, department_id, starts_at, ends_at, location,
-                   check_in_limit, status, published_at, ended_at
+                   check_in_limit, qr_check_in_enabled,
+                   qr_code_ttl_seconds, status,
+                   published_at, ended_at
             FROM department_interview_session
             WHERE id = #{sessionId} AND department_id = #{departmentId}
               AND status = 'PUBLISHED'
@@ -61,7 +69,9 @@ public interface DepartmentInterviewSessionMapper {
 
     @Select("""
             SELECT id, department_id, starts_at, ends_at, location,
-                   check_in_limit, status, published_at, ended_at
+                   check_in_limit, qr_check_in_enabled,
+                   qr_code_ttl_seconds, status,
+                   published_at, ended_at
             FROM department_interview_session
             WHERE department_id = #{departmentId}
             ORDER BY starts_at DESC, id DESC
@@ -73,7 +83,9 @@ public interface DepartmentInterviewSessionMapper {
     @Update("""
             UPDATE department_interview_session
             SET starts_at = #{startsAt}, ends_at = #{endsAt},
-                location = #{location}, check_in_limit = #{checkInLimit}
+                location = #{location}, check_in_limit = #{checkInLimit},
+                qr_check_in_enabled = #{qrCheckInEnabled},
+                qr_code_ttl_seconds = #{qrCodeTtlSeconds}
             WHERE id = #{id} AND department_id = #{departmentId}
               AND status <> 'ENDED'
             """)

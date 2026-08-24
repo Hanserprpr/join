@@ -1115,6 +1115,30 @@ paths:
                 $ref: "#/components/schemas/ResultCheckInVO"
       security:
       - sessionCookie: []
+  /api/departments/{departmentId}/check-ins/me:
+    delete:
+      tags:
+      - 签到
+      summary: 取消当前用户的签到
+      description: 仅取消当前已发布面试场次中尚未开始面试的本人签到，取消后可重新签到；主动取消不会恢复已使用的顺延优先资格。
+      operationId: cancelCheckIn
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultVoid"
+      security:
+      - sessionCookie: []
   /api/admin/workstations:
     post:
       tags:
@@ -2137,9 +2161,6 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
-        qrCheckInEnabled:
-          type: boolean
-          description: 是否启用动态二维码签到。true 时必须扫码签到；false 时可按部门直接签到。
     DepartmentPosterRequest:
       type: object
       properties:
@@ -2220,9 +2241,6 @@ components:
           type: string
         recruitmentGroup:
           type: string
-        qrCheckInEnabled:
-          type: boolean
-          description: 是否启用动态二维码签到。true 时必须扫码签到；false 时可按部门直接签到。
         hasQuestionnaire:
           type: boolean
         canManage:
@@ -2420,6 +2438,17 @@ components:
         checkInLimit:
           type: integer
           format: int32
+        qrCheckInEnabled:
+          type: boolean
+          default: false
+          description: 本场次是否启用动态二维码签到。true 时必须扫码签到；false 时可按部门直接签到。
+        qrCodeTtlSeconds:
+          type: integer
+          format: int32
+          minimum: 5
+          maximum: 86400
+          default: 8
+          description: 签到二维码有效秒数；不传时默认为 8 秒。
       required:
       - checkInLimit
       - endsAt
@@ -2445,6 +2474,15 @@ components:
         checkInLimit:
           type: integer
           format: int32
+        qrCheckInEnabled:
+          type: boolean
+          default: false
+          description: 本场次是否启用动态二维码签到。
+        qrCodeTtlSeconds:
+          type: integer
+          format: int32
+          default: 8
+          description: 签到二维码有效秒数。
         status:
           type: string
           enum:
@@ -3242,9 +3280,6 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
-        qrCheckInEnabled:
-          type: boolean
-          description: 是否启用动态二维码签到。true 时必须扫码签到；false 时可按部门直接签到。
     InterviewQueueConfigPatchRequest:
       type: object
       description: 部门全局过号配置的部分更新；未提供的字段保持不变。

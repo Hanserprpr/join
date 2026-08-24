@@ -144,6 +144,30 @@ class UserServiceTest {
     }
 
     @Test
+    void updateContactCompletesProfileWithoutEmail() {
+        User user = new User();
+        user.setCasId("20240001");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+        ContactUpdateRequest request = new ContactUpdateRequest(
+                null,
+                "13900000000",
+                "软件学院",
+                "软件工程",
+                2024,
+                null
+        );
+
+        ServiceResult<User> outcome = userService.updateContact(
+                "20240001", request
+        );
+
+        assertTrue(outcome.isSuccess());
+        assertEquals(null, outcome.data().getEmail());
+        assertEquals(true, outcome.data().getProfileCompleted());
+        verify(userMapper).updateById(user);
+    }
+
+    @Test
     void updateContactAcceptsOptionalQqForCompletedProfile() {
         User user = new User();
         user.setCasId("20240001");

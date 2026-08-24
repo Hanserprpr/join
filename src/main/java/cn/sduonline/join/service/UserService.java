@@ -201,8 +201,7 @@ public class UserService {
      * @return 必填资料是否完整
      */
     private static boolean isProfileComplete(User user) {
-        return StringUtils.hasText(user.getEmail())
-                && StringUtils.hasText(user.getPhone())
+        return StringUtils.hasText(user.getPhone())
                 && StringUtils.hasText(user.getCollege())
                 && StringUtils.hasText(user.getMajor())
                 && user.getGrade() != null;

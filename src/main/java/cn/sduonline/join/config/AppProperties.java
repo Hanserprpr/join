@@ -90,7 +90,7 @@ public class AppProperties {
     @Data
     public static class CheckIn {
         /** 动态签到二维码的有效时间。 */
-        private long tokenTtlSeconds = 30;
+        private long tokenTtlSeconds = 8;
         /** 前端刷新动态二维码的建议间隔。 */
         private long qrRefreshSeconds = 8;
     }

@@ -56,7 +56,7 @@ public class DepartmentInterviewController {
      * 创建面试场次草稿
      *
      * @param departmentId 部门 ID
-     * @param request 面试时间、地点和取号上限
+     * @param request 面试时间、地点、取号上限和动态二维码配置
      * @return 创建后的面试场次
      */
     @PostMapping("/sessions")
@@ -73,7 +73,7 @@ public class DepartmentInterviewController {
      *
      * @param departmentId 部门 ID
      * @param sessionId 面试场次 ID
-     * @param request 面试时间、地点和取号上限
+     * @param request 面试时间、地点、取号上限和动态二维码配置
      * @return 修改后的面试场次
      */
     @PutMapping("/sessions/{sessionId}")

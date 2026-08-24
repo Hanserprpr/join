@@ -1,6 +1,7 @@
 package cn.sduonline.join.mapper;
 
 import cn.sduonline.join.data.po.DepartmentCheckIn;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -31,6 +32,41 @@ public interface DepartmentCheckInMapper {
     DepartmentCheckIn selectBySessionAndApplication(
             @Param("sessionId") Long sessionId,
             @Param("applicationId") Long applicationId
+    );
+
+    @Select("""
+            SELECT c.id, c.department_id, c.application_id, c.cas_id,
+                   c.session_id, c.checked_in_at, c.queue_number, c.queue_order,
+                   c.pass_count, c.priority, c.requires_recheck_in
+            FROM department_check_in c
+            JOIN department_interview_session s
+              ON s.id = c.session_id AND s.status = 'PUBLISHED'
+            WHERE c.department_id = #{departmentId}
+              AND c.cas_id = #{casId}
+            FOR UPDATE
+            """)
+    DepartmentCheckIn selectCurrentByDepartmentAndUserForUpdate(
+            @Param("departmentId") Long departmentId,
+            @Param("casId") String casId
+    );
+
+    @Select("""
+            SELECT COUNT(1)
+            FROM department_interview
+            WHERE check_in_id = #{checkInId}
+            """)
+    int countInterviewsByCheckIn(@Param("checkInId") Long checkInId);
+
+    @Delete("""
+            DELETE FROM department_check_in
+            WHERE id = #{checkInId}
+              AND department_id = #{departmentId}
+              AND cas_id = #{casId}
+            """)
+    int deleteOwnedCheckIn(
+            @Param("checkInId") Long checkInId,
+            @Param("departmentId") Long departmentId,
+            @Param("casId") String casId
     );
 
     @Insert("""

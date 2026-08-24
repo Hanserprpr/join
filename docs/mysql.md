@@ -21,7 +21,7 @@
 | `email` | VARCHAR(128) | UK，可空 | 邮箱 |
 | `phone` | VARCHAR(20) | 可空 | 手机号 |
 | `wechat_openid` | VARCHAR(64) | UK，可空 | 微信公众号 OpenID |
-| `profile_completed` | TINYINT(1) | 非空，默认 0 | 必填资料是否完整 |
+| `profile_completed` | TINYINT(1) | 非空，默认 0 | 手机号、学院、专业和年级是否完整（邮箱选填） |
 | `qq` | VARCHAR(20) | 可空 | QQ 号，选填 |
 | `college` | VARCHAR(64) | 可空 | 学院 |
 | `major` | VARCHAR(64) | 可空 | 专业 |
@@ -75,7 +75,6 @@
 | `pass_delay_count` | INT | 非空，默认 3 | 过号后顺延位数 |
 | `max_pass_count` | INT | 非空，默认 2 | 单人在本部门最大过号次数 |
 | `pass_mode` | VARCHAR(16) | 非空，默认 `DELAY` | 过号处理方式：顺延或重新签到 |
-| `qr_check_in_enabled` | TINYINT(1) | 非空，默认 0 | 是否要求通过动态二维码签到 |
 | `sort_order` | INT | 非空，默认 0 | 展示顺序 |
 | `enabled` | TINYINT(1) | 非空，默认 1 | 是否启用 |
 
@@ -260,6 +259,8 @@
 | `ends_at` | DATETIME | 非空 | 结束时间 |
 | `location` | VARCHAR(255) | 非空 | 面试地点 |
 | `check_in_limit` | INT | 非空 | 本场次取号上限 |
+| `qr_check_in_enabled` | TINYINT(1) | 非空，默认 `0` | 本场次是否要求通过动态二维码签到 |
+| `qr_code_ttl_seconds` | INT | 非空，默认 `8` | 签到二维码有效秒数 |
 | `status` | VARCHAR(16) | 非空，默认 `DRAFT` | 场次状态 |
 | `published_at` | DATETIME | 可空 | 发布时间 |
 | `ended_at` | DATETIME | 可空 | 结束时间 |
@@ -271,6 +272,7 @@
 - 联合索引：`(department_id, status, starts_at)`
 - 外键：`department_id → department.id`
 - 检查约束：`check_in_limit > 0`
+- 检查约束：`qr_code_ttl_seconds` 在 `5` 到 `86400` 之间
 - 检查约束：`ends_at > starts_at`
 
 ## `department_check_in`
@@ -369,7 +371,7 @@
 
 ## `department_interview_carryover`
 
-场次结束时为未叫到的用户生成顺延资格，下一场次发布时绑定。仅当部门启用
+场次结束时为未叫到的用户生成顺延资格，下一场次发布时绑定。仅当当前场次启用
 二维码签到且用户扫码签到时使用该资格，并将 `department_check_in.priority`
 置为 1；普通签到模式不使用顺延优先资格，按本场签到顺序排队。
 

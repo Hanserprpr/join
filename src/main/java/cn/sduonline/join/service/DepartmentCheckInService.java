@@ -6,7 +6,6 @@ import cn.sduonline.join.data.dto.CheckInVO;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
-import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentApplicationMapper;
 import cn.sduonline.join.mapper.DepartmentCheckInMapper;
@@ -37,21 +36,21 @@ public class DepartmentCheckInService {
     private final InterviewSseService interviewSseService;
 
     public ServiceResult<CheckInQrCodeVO> createQrCode(Long departmentId) {
-        Department department = organizationMapper.selectDepartmentById(departmentId);
-        if (department == null) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
-        }
-        if (!Boolean.TRUE.equals(department.getQrCheckInEnabled())) {
-            return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
         }
         DepartmentInterviewSession session =
                 sessionMapper.selectPublished(departmentId);
         if (session == null) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
         }
-        long ttlSeconds = Math.max(
-                5, appProperties.getCheckIn().getTokenTtlSeconds()
-        );
+        if (!Boolean.TRUE.equals(session.getQrCheckInEnabled())) {
+            return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
+        }
+        long ttlSeconds = session.getQrCodeTtlSeconds() == null
+                ? appProperties.getCheckIn().getTokenTtlSeconds()
+                : session.getQrCodeTtlSeconds();
+        ttlSeconds = Math.max(5, ttlSeconds);
         String token = UUID.randomUUID().toString();
         redisTemplate.opsForValue().set(
                 TOKEN_KEY_PREFIX + token,
@@ -78,9 +77,8 @@ public class DepartmentCheckInService {
     ) {
         Long departmentId;
         Long sessionId;
-        Department department;
-        boolean priorityEligible = false;
-        if (token != null && !token.isBlank()) {
+        boolean scannedWithQr = token != null && !token.isBlank();
+        if (scannedWithQr) {
             String departmentValue = redisTemplate.opsForValue().get(
                     TOKEN_KEY_PREFIX + token
             );
@@ -98,9 +96,6 @@ public class DepartmentCheckInService {
                     && !requestedDepartmentId.equals(departmentId)) {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
-            department = organizationMapper.selectDepartmentById(departmentId);
-            priorityEligible = department != null
-                    && Boolean.TRUE.equals(department.getQrCheckInEnabled());
             // 令牌本身已绑定部门和场次，因此切换开关期间已展示的二维码
             // 仍可完成签到；仅开启二维码模式时才享有跨场次优先资格。
         } else {
@@ -108,16 +103,15 @@ public class DepartmentCheckInService {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
             departmentId = requestedDepartmentId;
-            department = organizationMapper.selectDepartmentById(departmentId);
-            if (department == null) {
+            if (organizationMapper.selectDepartmentById(departmentId) == null) {
                 return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
-            }
-            if (Boolean.TRUE.equals(department.getQrCheckInEnabled())) {
-                return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
             DepartmentInterviewSession published = sessionMapper.selectPublished(departmentId);
             if (published == null) {
                 return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
+            }
+            if (Boolean.TRUE.equals(published.getQrCheckInEnabled())) {
+                return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
             sessionId = published.getId();
         }
@@ -128,6 +122,8 @@ public class DepartmentCheckInService {
         if (session == null) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
         }
+        boolean priorityEligible = scannedWithQr
+                && Boolean.TRUE.equals(session.getQrCheckInEnabled());
         DepartmentApplication application =
                 applicationMapper.selectByDepartmentAndUser(departmentId, casId);
         if (application == null) {
@@ -200,6 +196,36 @@ public class DepartmentCheckInService {
     /** 兼容原有仅携带二维码令牌的调用。 */
     public ServiceResult<CheckInVO> checkIn(String token, String casId) {
         return checkIn(null, token, casId);
+    }
+
+    /**
+     * 取消当前用户在部门当前已发布场次的签到。
+     * 主动取消不会恢复已经使用的顺延优先资格。
+     */
+    @Transactional
+    public ServiceResult<Void> cancelCheckIn(Long departmentId, String casId) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        DepartmentCheckIn checkIn = checkInMapper
+                .selectCurrentByDepartmentAndUserForUpdate(
+                        departmentId, casId
+                );
+        if (checkIn == null) {
+            return ServiceResult.failure(BizCode.CHECK_IN_NOT_FOUND);
+        }
+        if (checkInMapper.countInterviewsByCheckIn(checkIn.getId()) > 0) {
+            return ServiceResult.failure(BizCode.CHECK_IN_CANNOT_CANCEL);
+        }
+
+        int deleted = checkInMapper.deleteOwnedCheckIn(
+                checkIn.getId(), departmentId, casId
+        );
+        if (deleted != 1) {
+            throw new IllegalStateException("Check-in changed while cancelling");
+        }
+        interviewSseService.publishQueueAfterCommit(departmentId);
+        return ServiceResult.success(null);
     }
 
 }

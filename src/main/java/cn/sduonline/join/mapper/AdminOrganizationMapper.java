@@ -125,7 +125,7 @@ public interface AdminOrganizationMapper {
     @Select("""
             SELECT id, workstation_id, name, campus, introduction,
                    recruitment_requirements, contact,
-                   recruitment_group, qr_check_in_enabled, sort_order, enabled
+                   recruitment_group, sort_order, enabled
             FROM department
             WHERE id = #{id}
               AND enabled = 1
@@ -138,8 +138,7 @@ public interface AdminOrganizationMapper {
                 introduction = #{introduction},
                 recruitment_requirements = #{recruitmentRequirements},
                 contact = #{contact},
-                recruitment_group = #{recruitmentGroup},
-                qr_check_in_enabled = #{qrCheckInEnabled}
+                recruitment_group = #{recruitmentGroup}
             WHERE id = #{id}
             """)
     int updateDepartmentDetail(Department department);

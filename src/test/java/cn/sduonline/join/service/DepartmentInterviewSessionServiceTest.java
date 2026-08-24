@@ -45,10 +45,29 @@ class DepartmentInterviewSessionServiceTest {
         assertTrue(result.isSuccess());
         assertEquals("中心校区 101", result.data().location());
         assertEquals(50, result.data().checkInLimit());
+        assertTrue(result.data().qrCheckInEnabled());
+        assertEquals(90, result.data().qrCodeTtlSeconds());
         assertEquals(InterviewSessionStatus.DRAFT, result.data().status());
         verify(sessionMapper).insert(
                 org.mockito.ArgumentMatchers.any()
         );
+    }
+
+    @Test
+    void defaultsQrCodeTtlToEightSeconds() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        InterviewSessionRequest configured = request();
+        InterviewSessionRequest withoutTtl = new InterviewSessionRequest(
+                configured.startsAt(), configured.endsAt(),
+                configured.location(), configured.checkInLimit(),
+                configured.qrCheckInEnabled(), null
+        );
+
+        var result = service.create(12L, withoutTtl);
+
+        assertTrue(result.isSuccess());
+        assertEquals(8, result.data().qrCodeTtlSeconds());
     }
 
     @Test
@@ -134,7 +153,8 @@ class DepartmentInterviewSessionServiceTest {
     private static InterviewSessionRequest request() {
         LocalDateTime startsAt = LocalDateTime.of(2026, 8, 1, 9, 0);
         return new InterviewSessionRequest(
-                startsAt, startsAt.plusHours(3), " 中心校区 101 ", 50
+                startsAt, startsAt.plusHours(3), " 中心校区 101 ",
+                50, true, 90
         );
     }
 
@@ -147,6 +167,8 @@ class DepartmentInterviewSessionServiceTest {
         session.setEndsAt(LocalDateTime.of(2026, 8, 1, 12, 0));
         session.setLocation("中心校区 101");
         session.setCheckInLimit(50);
+        session.setQrCheckInEnabled(true);
+        session.setQrCodeTtlSeconds(90);
         session.setStatus(InterviewSessionStatus.PUBLISHED);
         return session;
     }

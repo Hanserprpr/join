@@ -3,13 +3,33 @@ package cn.sduonline.join.mapper;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import cn.sduonline.join.data.po.DepartmentInterviewSession;
 import java.lang.reflect.Method;
 import java.util.List;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.junit.jupiter.api.Test;
 
 class MapperSqlContractTest {
+
+    @Test
+    void interviewSessionPersistsAndLoadsQrConfiguration()
+            throws NoSuchMethodException {
+        Method insert = DepartmentInterviewSessionMapper.class.getMethod(
+                "insert", DepartmentInterviewSession.class
+        );
+        Method select = DepartmentInterviewSessionMapper.class.getMethod(
+                "selectPublished", Long.class
+        );
+
+        String insertSql = sql(insert.getAnnotation(Insert.class).value());
+        String selectSql = sql(select.getAnnotation(Select.class).value());
+        assertTrue(insertSql.contains("qr_check_in_enabled"));
+        assertTrue(insertSql.contains("qr_code_ttl_seconds"));
+        assertTrue(selectSql.contains("qr_check_in_enabled"));
+        assertTrue(selectSql.contains("qr_code_ttl_seconds"));
+    }
 
     @Test
     void interviewLookupMapsRoomIdUsedByAuthorizationChecks()
@@ -69,6 +89,26 @@ class MapperSqlContractTest {
                 .contains("AND own_interview.ended_at IS NULL"));
         assertFalse(sql(candidate.getAnnotation(Select.class).value())
                 .contains("AND own_interview.ended_at IS NULL"));
+    }
+
+    @Test
+    void cancellingCheckInLocksAndDeletesOnlyOwnedCurrentRecord()
+            throws NoSuchMethodException {
+        Method select = DepartmentCheckInMapper.class.getMethod(
+                "selectCurrentByDepartmentAndUserForUpdate",
+                Long.class, String.class
+        );
+        Method delete = DepartmentCheckInMapper.class.getMethod(
+                "deleteOwnedCheckIn", Long.class, Long.class, String.class
+        );
+        String selectSql = sql(select.getAnnotation(Select.class).value());
+        String deleteSql = sql(delete.getAnnotation(
+                org.apache.ibatis.annotations.Delete.class).value());
+
+        assertTrue(selectSql.contains("s.status = 'PUBLISHED'"));
+        assertTrue(selectSql.contains("FOR UPDATE"));
+        assertTrue(deleteSql.contains("cas_id = #{casId}"));
+        assertTrue(deleteSql.contains("department_id = #{departmentId}"));
     }
 
     @Test

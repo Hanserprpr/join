@@ -133,7 +133,7 @@ app:
   # 允许的跨域来源，多个用逗号分隔
   cors-allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
   check-in:
-    token-ttl-seconds: ${CHECK_IN_TOKEN_TTL_SECONDS:30}
+    token-ttl-seconds: ${CHECK_IN_TOKEN_TTL_SECONDS:8}
     qr-refresh-seconds: ${CHECK_IN_QR_REFRESH_SECONDS:8}
   external-identity:
     base-url: ${EXTERNAL_IDENTITY_BASE_URL:https://i.sdu.edu.cn}
