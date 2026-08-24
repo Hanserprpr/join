@@ -55,6 +55,35 @@ class MapperSqlContractTest {
     }
 
     @Test
+    void queueReorderingPersistsPriorityChanges()
+            throws NoSuchMethodException {
+        Method method = DepartmentInterviewMapper.class.getMethod(
+                "updateCheckInQueue",
+                cn.sduonline.join.data.po.DepartmentCheckIn.class
+        );
+
+        assertTrue(sql(method.getAnnotation(Update.class).value())
+                .contains("priority = #{priority}"));
+    }
+
+    @Test
+    void applicantQueriesExposeCompletedInterviews()
+            throws NoSuchMethodException {
+        Method one = DepartmentApplicationMapper.class.getMethod(
+                "selectByDepartmentAndUser", Long.class, String.class
+        );
+        Method all = DepartmentApplicationMapper.class.getMethod(
+                "selectByUser", String.class
+        );
+
+        for (Method method : List.of(one, all)) {
+            String sql = sql(method.getAnnotation(Select.class).value());
+            assertTrue(sql.contains("i.ended_at IS NOT NULL"));
+            assertTrue(sql.contains("AS interviewed"));
+        }
+    }
+
+    @Test
     void queueItemQueriesMatchTheRecordConstructor()
             throws NoSuchMethodException {
         Method queue = DepartmentInterviewMapper.class.getMethod(

@@ -640,9 +640,9 @@ public class DepartmentInterviewService {
 
         interviewMapper.deleteActive(active.getId());
         interviewMapper.deleteInterview(active.getId());
+        target.setPriority(false);
         if (config.passMode() == InterviewPassMode.RECHECK_IN) {
             target.setPassCount(target.getPassCount() + 1);
-            target.setPriority(false);
             target.setRequiresRecheckIn(true);
             interviewMapper.requireCheckInAgain(target);
             return ServiceResult.success(

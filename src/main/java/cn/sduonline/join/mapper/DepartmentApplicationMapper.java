@@ -171,9 +171,15 @@ public interface DepartmentApplicationMapper {
     );
 
     @Select("""
-            SELECT id, department_id, cas_id, status, submitted_at
-            FROM department_application
-            WHERE department_id = #{departmentId} AND cas_id = #{casId}
+            SELECT a.id, a.department_id, a.cas_id, a.status, a.submitted_at,
+                   EXISTS (
+                     SELECT 1
+                     FROM department_interview i
+                     WHERE i.application_id = a.id
+                       AND i.ended_at IS NOT NULL
+                   ) AS interviewed
+            FROM department_application a
+            WHERE a.department_id = #{departmentId} AND a.cas_id = #{casId}
             """)
     DepartmentApplication selectByDepartmentAndUser(
             @Param("departmentId") Long departmentId,
@@ -217,7 +223,13 @@ public interface DepartmentApplicationMapper {
             SELECT a.id, a.department_id, a.cas_id, a.status, a.submitted_at,
                    d.name AS department_name,
                    w.id AS workstation_id, w.name AS workstation_name,
-                   b.id AS board_id, b.name AS board_name
+                   b.id AS board_id, b.name AS board_name,
+                   EXISTS (
+                     SELECT 1
+                     FROM department_interview i
+                     WHERE i.application_id = a.id
+                       AND i.ended_at IS NOT NULL
+                   ) AS interviewed
             FROM department_application a
             JOIN department d ON d.id = a.department_id
             JOIN workstation w ON w.id = d.workstation_id

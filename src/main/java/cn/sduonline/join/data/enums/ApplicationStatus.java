@@ -5,6 +5,7 @@ package cn.sduonline.join.data.enums;
  */
 public enum ApplicationStatus {
     SUBMITTED,
+    INTERVIEW_COMPLETED,
     ADMISSION_DRAFT,
     ADMITTED
 }

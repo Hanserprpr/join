@@ -272,7 +272,8 @@ public interface DepartmentInterviewMapper {
     @Update("""
             UPDATE department_check_in
             SET queue_order = #{queueOrder},
-                pass_count = #{passCount}
+                pass_count = #{passCount},
+                priority = #{priority}
             WHERE id = #{id}
             """)
     int updateCheckInQueue(

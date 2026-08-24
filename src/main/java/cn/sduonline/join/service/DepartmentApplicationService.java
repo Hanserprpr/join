@@ -195,9 +195,7 @@ public class DepartmentApplicationService {
         if (application == null) {
             return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
         }
-        if (application.getStatus() == ApplicationStatus.ADMISSION_DRAFT) {
-            application.setStatus(ApplicationStatus.SUBMITTED);
-        }
+        exposeApplicantStatus(application);
         return ServiceResult.success(DepartmentApplicationVO.from(application));
     }
 
@@ -243,13 +241,25 @@ public class DepartmentApplicationService {
         List<MyApplicationVO> applications = applicationMapper.selectByUser(casId)
                 .stream()
                 .map(application -> {
-                    if (application.getStatus() == ApplicationStatus.ADMISSION_DRAFT) {
-                        application.setStatus(ApplicationStatus.SUBMITTED);
-                    }
+                    exposeApplicantStatus(application);
                     return MyApplicationVO.from(application);
                 })
                 .toList();
         return ServiceResult.success(applications);
+    }
+
+    private static void exposeApplicantStatus(
+            DepartmentApplication application
+    ) {
+        if (application.getStatus() == ApplicationStatus.ADMITTED) {
+            return;
+        }
+        if (Boolean.TRUE.equals(application.getInterviewed())) {
+            application.setStatus(ApplicationStatus.INTERVIEW_COMPLETED);
+        } else if (application.getStatus()
+                == ApplicationStatus.ADMISSION_DRAFT) {
+            application.setStatus(ApplicationStatus.SUBMITTED);
+        }
     }
 
     public ServiceResult<List<DepartmentApplicationDetailVO>> findForExport(

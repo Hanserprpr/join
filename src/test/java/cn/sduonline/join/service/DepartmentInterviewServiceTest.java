@@ -1,6 +1,7 @@
 package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -219,7 +220,7 @@ class DepartmentInterviewServiceTest {
     }
 
     @Test
-    void passingCurrentCandidateMovesThemBackThreePlaces() {
+    void passingPriorityCandidateRemovesPriorityAndMovesThemBackThreePlaces() {
         DepartmentInterview active = waitingCandidate();
         active.setId(300L);
         active.setRoomId(9L);
@@ -229,6 +230,7 @@ class DepartmentInterviewServiceTest {
         when(interviewMapper.selectQueueConfig(12L))
                 .thenReturn(new InterviewQueueConfigVO(3, 2));
         DepartmentCheckIn target = checkIn(200L, 1L, 0);
+        target.setPriority(true);
         when(interviewMapper.selectCheckInForUpdate(200L))
                 .thenReturn(target);
         DepartmentCheckIn second = checkIn(201L, 2L, 0);
@@ -248,6 +250,7 @@ class DepartmentInterviewServiceTest {
 
         assertTrue(result.isSuccess());
         assertEquals(1, result.data().passCount());
+        assertFalse(target.getPriority());
         assertEquals(4L, target.getQueueOrder());
         verify(interviewMapper).deleteActive(300L);
         verify(interviewMapper).deleteInterview(300L);
