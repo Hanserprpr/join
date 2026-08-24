@@ -374,6 +374,27 @@ class DepartmentApplicationServiceTest {
     }
 
     @Test
+    void exposesCompletedInterviewToApplicant() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setDepartmentId(12L);
+        application.setStatus(ApplicationStatus.SUBMITTED);
+        application.setInterviewed(true);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+
+        var result = service.findMyApplication(12L, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(
+                ApplicationStatus.INTERVIEW_COMPLETED,
+                result.data().status()
+        );
+    }
+
+    @Test
     void listsAllApplicationsOfCurrentUser() {
         DepartmentApplication first = new DepartmentApplication();
         first.setId(100L);
@@ -388,6 +409,7 @@ class DepartmentApplicationServiceTest {
         second.setId(101L);
         second.setDepartmentId(13L);
         second.setStatus(ApplicationStatus.ADMISSION_DRAFT);
+        second.setInterviewed(true);
         when(applicationMapper.selectByUser("20240001"))
                 .thenReturn(List.of(first, second));
 
@@ -399,7 +421,10 @@ class DepartmentApplicationServiceTest {
         assertEquals("软件工作站", result.data().get(0).workstationName());
         assertEquals("技术板块", result.data().get(0).boardName());
         assertEquals(ApplicationStatus.ADMITTED, result.data().get(0).status());
-        assertEquals(ApplicationStatus.SUBMITTED, result.data().get(1).status());
+        assertEquals(
+                ApplicationStatus.INTERVIEW_COMPLETED,
+                result.data().get(1).status()
+        );
     }
 
     @Test

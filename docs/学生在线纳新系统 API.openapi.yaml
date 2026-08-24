@@ -2577,6 +2577,7 @@ components:
           type: string
           enum:
           - SUBMITTED
+          - INTERVIEW_COMPLETED
           - ADMISSION_DRAFT
           - ADMITTED
         submittedAt:
@@ -2607,6 +2608,7 @@ components:
           type: string
           enum:
           - SUBMITTED
+          - INTERVIEW_COMPLETED
           - ADMISSION_DRAFT
           - ADMITTED
         submittedAt:
@@ -4355,6 +4357,7 @@ components:
           type: string
           enum:
           - SUBMITTED
+          - INTERVIEW_COMPLETED
           - ADMISSION_DRAFT
           - ADMITTED
         submittedAt:
@@ -4459,6 +4462,7 @@ components:
           type: string
           enum:
           - SUBMITTED
+          - INTERVIEW_COMPLETED
           - ADMISSION_DRAFT
           - ADMITTED
         submittedAt:
