@@ -56,6 +56,22 @@ class MapperSqlContractTest {
     }
 
     @Test
+    void publicQueueExcludesCompletedButPersonalStatusKeepsIt()
+            throws NoSuchMethodException {
+        Method queue = DepartmentInterviewMapper.class.getMethod(
+                "selectQueue", Long.class
+        );
+        Method candidate = DepartmentInterviewMapper.class.getMethod(
+                "selectCandidateQueueItem", Long.class, String.class
+        );
+
+        assertTrue(sql(queue.getAnnotation(Select.class).value())
+                .contains("AND own_interview.ended_at IS NULL"));
+        assertFalse(sql(candidate.getAnnotation(Select.class).value())
+                .contains("AND own_interview.ended_at IS NULL"));
+    }
+
+    @Test
     void admissionPublishingLocksAndUpdatesTheSameIdentifiers()
             throws NoSuchMethodException {
         Method mutate = DepartmentApplicationMapper.class.getMethod(

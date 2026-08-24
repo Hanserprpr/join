@@ -125,6 +125,73 @@ class DepartmentApplicationServiceTest {
     }
 
     @Test
+    void cancelsOwnSubmittedApplicationBeforeCheckIn() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setDepartmentId(12L);
+        application.setCasId("20240001");
+        application.setStatus(ApplicationStatus.SUBMITTED);
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(
+                12L, "20240001"
+        )).thenReturn(application);
+        when(applicationMapper.countCheckInsByApplicationId(100L))
+                .thenReturn(0L);
+        when(applicationMapper.deleteSubmittedApplication(
+                100L, 12L, "20240001"
+        )).thenReturn(1);
+
+        var result = service.cancelMyApplication(12L, "20240001");
+
+        assertTrue(result.isSuccess());
+        verify(applicationMapper).deleteSubmittedApplication(
+                100L, 12L, "20240001"
+        );
+    }
+
+    @Test
+    void rejectsCancellationAfterCheckIn() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setStatus(ApplicationStatus.SUBMITTED);
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(
+                12L, "20240001"
+        )).thenReturn(application);
+        when(applicationMapper.countCheckInsByApplicationId(100L))
+                .thenReturn(1L);
+
+        var result = service.cancelMyApplication(12L, "20240001");
+
+        assertEquals(BizCode.APPLICATION_CANNOT_CANCEL, result.error());
+        verify(applicationMapper, never()).deleteSubmittedApplication(
+                any(), any(), any()
+        );
+    }
+
+    @Test
+    void rejectsCancellationAfterAdmissionWorkflowStarts() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setStatus(ApplicationStatus.ADMISSION_DRAFT);
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(
+                12L, "20240001"
+        )).thenReturn(application);
+
+        var result = service.cancelMyApplication(12L, "20240001");
+
+        assertEquals(BizCode.APPLICATION_CANNOT_CANCEL, result.error());
+        verify(applicationMapper, never()).deleteSubmittedApplication(
+                any(), any(), any()
+        );
+        verify(applicationMapper, never()).countCheckInsByApplicationId(any());
+    }
+
+    @Test
     void paginatesAndFiltersApplicationsByCollegeAndGrade() {
         when(organizationMapper.selectDepartmentById(12L))
                 .thenReturn(new Department());

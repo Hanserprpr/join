@@ -51,6 +51,7 @@ public interface DepartmentInterviewMapper {
             LEFT JOIN `user` interviewer
                    ON interviewer.cas_id = own_interview.interviewer_cas_id
             WHERE c.department_id = #{departmentId}
+              AND own_interview.ended_at IS NULL
             ORDER BY c.priority DESC, c.queue_order ASC
             """)
     java.util.List<InterviewQueueItemVO> selectQueue(

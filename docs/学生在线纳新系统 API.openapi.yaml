@@ -1522,7 +1522,8 @@ paths:
     get:
       tags:
       - 面试
-      summary: 查询面试队列
+      summary: 查询未完成的面试队列
+      description: 返回等待、面试中、在其他部门面试中和需要重新签到的人员，不包含已完成人员。
       operationId: findQueue
       parameters:
       - name: departmentId
@@ -1815,6 +1816,29 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ResultDepartmentApplicationVO"
+      security:
+      - sessionCookie: []
+    delete:
+      tags:
+      - 部门报名
+      summary: 取消当前用户的报名
+      description: 仅允许取消 SUBMITTED 且尚未签到、进入面试或录取流程的报名。
+      operationId: cancelMyApplication
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultVoid"
       security:
       - sessionCookie: []
   /api/departments/{departmentId}/applications/export:
