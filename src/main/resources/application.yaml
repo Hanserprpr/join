@@ -114,6 +114,7 @@ app:
       bucket: ${AVATAR_S3_BUCKET:}
       public-base-url: ${AVATAR_S3_PUBLIC_BASE_URL:}
       path-style-access: ${AVATAR_S3_PATH_STYLE_ACCESS:true}
+      presigned-url-ttl-seconds: ${AVATAR_S3_PRESIGNED_URL_TTL_SECONDS:3600}
   clamav:
     enabled: ${CLAMAV_ENABLED:false}
     host: ${CLAMAV_HOST:127.0.0.1}
