@@ -28,6 +28,7 @@ public class AppProperties {
     private CheckIn checkIn = new CheckIn();
     private Avatar avatar = new Avatar();
     private Clamav clamav = new Clamav();
+    private Poster poster = new Poster();
 
     @Data
     public static class Avatar {
@@ -65,6 +66,25 @@ public class AppProperties {
         private int port = 3310;
         private int connectTimeoutMs = 2000;
         private int readTimeoutMs = 5000;
+    }
+
+    @Data
+    public static class Poster {
+        /** 本地存储目录。 */
+        private String localDirectory = "./data/posters";
+        /** 本地存储时的公网基地址，为空时根据请求生成。 */
+        private String publicBaseUrl = "";
+        /** 单张海报最大字节数，默认 10 MiB。 */
+        private long maxSizeBytes = 10 * 1024 * 1024;
+        /** 额外允许保存的海报 URL 前缀，多个用英文逗号分隔。 */
+        private String allowedUrlPrefixes = "";
+
+        public List<String> getAllowedUrlPrefixList() {
+            return Arrays.stream(allowedUrlPrefixes.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+        }
     }
 
     @Data

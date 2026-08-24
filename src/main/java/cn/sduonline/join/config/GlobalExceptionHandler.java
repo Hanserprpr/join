@@ -10,6 +10,7 @@ import cn.sduonline.join.security.SaTokenAuthErrors;
 import cn.sduonline.join.service.avatar.AvatarValidationException;
 import cn.sduonline.join.service.avatar.ClamAvScanException;
 import cn.sduonline.join.service.avatar.AvatarStorageException;
+import cn.sduonline.join.service.poster.PosterUrlValidationException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -76,6 +77,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleAvatarStorage(AvatarStorageException exception) {
         log.error("Avatar object storage failed", exception);
         return response(HttpStatus.SERVICE_UNAVAILABLE, BizCode.THIRD_PARTY_UNAVAILABLE);
+    }
+
+    @ExceptionHandler(PosterUrlValidationException.class)
+    public ResponseEntity<Result<Void>> handlePosterUrlValidation(
+            PosterUrlValidationException exception
+    ) {
+        return response(HttpStatus.BAD_REQUEST, BizCode.POSTER_URL_NOT_ALLOWED);
     }
 
     @ExceptionHandler({NotPermissionException.class, NotRoleException.class})

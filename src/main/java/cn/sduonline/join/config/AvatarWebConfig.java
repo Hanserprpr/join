@@ -28,5 +28,16 @@ public class AvatarWebConfig implements WebMvcConfigurer {
         }
         registry.addResourceHandler("/uploads/avatars/**")
                 .addResourceLocations(location);
+
+        String posterLocation = Path.of(appProperties.getPoster().getLocalDirectory())
+                .toAbsolutePath()
+                .normalize()
+                .toUri()
+                .toString();
+        if (!posterLocation.endsWith("/")) {
+            posterLocation += "/";
+        }
+        registry.addResourceHandler("/uploads/posters/**")
+                .addResourceLocations(posterLocation);
     }
 }

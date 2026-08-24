@@ -57,9 +57,9 @@ public enum BizCode {
     /** 专业不存在或与学院不匹配。 */
     MAJOR_INVALID(130011, "专业不存在或与所选学院不匹配"),
     /** 头像文件为空、格式不支持或内容不是有效图片。 */
-    AVATAR_INVALID(130012, "头像文件无效，仅支持 JPEG、PNG、GIF 和 WebP"),
+    AVATAR_INVALID(130012, "图片文件无效，仅支持 JPEG、PNG、GIF 和 WebP"),
     /** 头像文件超过允许的大小。 */
-    AVATAR_TOO_LARGE(130013, "头像文件过大"),
+    AVATAR_TOO_LARGE(130013, "图片文件过大"),
     /** 头像文件被病毒扫描服务判定为恶意文件。 */
     AVATAR_MALWARE_DETECTED(130014, "头像文件未通过安全扫描"),
 
@@ -124,6 +124,8 @@ public enum BizCode {
     INTERVIEW_EVALUATIONS_PENDING(140030, "仍有管理员未提交评价"),
     /** 未找到该角色分配。 */
     ROLE_ASSIGNMENT_NOT_FOUND(140031, "未找到该角色分配"),
+    /** 海报 URL 不属于系统存储或配置的可信白名单。 */
+    POSTER_URL_NOT_ALLOWED(140032, "海报地址不在允许的白名单中"),
 
     // ---------- 15xxxx 外部依赖错误 ----------
     /** 第三方服务不可用。 */

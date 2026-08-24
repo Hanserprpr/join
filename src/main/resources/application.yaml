@@ -5,8 +5,8 @@ spring:
     name: join
   servlet:
     multipart:
-      max-file-size: ${AVATAR_MAX_FILE_SIZE:2MB}
-      max-request-size: ${AVATAR_MAX_REQUEST_SIZE:3MB}
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:10MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:11MB}
   datasource:
     url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/join?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
     username: ${DB_USERNAME:root}
@@ -120,6 +120,11 @@ app:
     port: ${CLAMAV_PORT:3310}
     connect-timeout-ms: ${CLAMAV_CONNECT_TIMEOUT_MS:2000}
     read-timeout-ms: ${CLAMAV_READ_TIMEOUT_MS:5000}
+  poster:
+    local-directory: ${POSTER_LOCAL_DIRECTORY:./data/posters}
+    public-base-url: ${POSTER_PUBLIC_BASE_URL:}
+    max-size-bytes: ${POSTER_MAX_SIZE_BYTES:10485760}
+    allowed-url-prefixes: ${POSTER_ALLOWED_URL_PREFIXES:}
   admission-email:
     enabled: ${ADMISSION_EMAIL_ENABLED:false}
     poll-delay-ms: ${ADMISSION_EMAIL_POLL_DELAY_MS:5000}

@@ -7,12 +7,15 @@ import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
 import cn.sduonline.join.data.dto.DepartmentQuestionnaireUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentQuestionnaireVO;
+import cn.sduonline.join.data.dto.PosterUploadVO;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.scope.DepartmentPermission;
 import cn.sduonline.join.security.scope.PermissionCode;
 import cn.sduonline.join.service.DepartmentService;
 import cn.sduonline.join.service.DepartmentQuestionnaireService;
 import cn.sduonline.join.service.ServiceResult;
+import cn.sduonline.join.service.DepartmentPosterUploadService;
+import java.io.IOException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,9 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,6 +43,25 @@ public class DepartmentController {
 
     private final DepartmentService departmentService;
     private final DepartmentQuestionnaireService questionnaireService;
+    private final DepartmentPosterUploadService posterUploadService;
+
+    /**
+     * 上传部门海报图片，返回可写入部门 posters 字段的可信 URL。
+     */
+    @PostMapping(value = "/{departmentId}/posters/upload",
+            consumes = "multipart/form-data")
+    @DepartmentPermission(PermissionCode.RECRUITMENT_MANAGE)
+    public Result<PosterUploadVO> uploadPoster(
+            @PathVariable @Positive Long departmentId,
+            @RequestPart("file") MultipartFile file
+    ) throws IOException {
+        ServiceResult<PosterUploadVO> result = posterUploadService.upload(
+                departmentId, file
+        );
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
 
     /**
      * 获取部门详情
