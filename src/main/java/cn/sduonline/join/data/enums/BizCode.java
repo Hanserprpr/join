@@ -126,6 +126,8 @@ public enum BizCode {
     ROLE_ASSIGNMENT_NOT_FOUND(140031, "未找到该角色分配"),
     /** 海报 URL 不属于系统存储或配置的可信白名单。 */
     POSTER_URL_NOT_ALLOWED(140032, "海报地址不在允许的白名单中"),
+    /** 报名已进入签到、面试或录取流程，不允许学生自行取消。 */
+    APPLICATION_CANNOT_CANCEL(140033, "当前报名已进入后续流程，无法取消"),
 
     // ---------- 15xxxx 外部依赖错误 ----------
     /** 第三方服务不可用。 */

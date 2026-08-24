@@ -170,6 +170,21 @@ public class DepartmentApplicationController {
     }
 
     /**
+     * 取消当前用户在指定部门的报名。
+     */
+    @DeleteMapping("/{departmentId}/applications/me")
+    public Result<Void> cancelMyApplication(
+            @PathVariable @Positive Long departmentId
+    ) {
+        ServiceResult<Void> result = applicationService.cancelMyApplication(
+                departmentId, StpUtil.getLoginIdAsString()
+        );
+        return result.isSuccess()
+                ? Result.ok()
+                : Result.fail(result.error());
+    }
+
+    /**
      * 按筛选条件导出部门报名信息 Excel
      *
      * @param departmentId 部门 ID

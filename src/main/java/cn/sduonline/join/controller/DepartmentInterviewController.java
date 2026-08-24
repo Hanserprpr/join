@@ -215,10 +215,10 @@ public class DepartmentInterviewController {
     }
 
     /**
-     * 查询部门完整面试队列
+     * 查询部门尚未完成的面试队列
      *
      * @param departmentId 部门 ID
-     * @return 按叫号序号排列的面试队列
+     * @return 按叫号序号排列的等待与面试中队列
      */
     @GetMapping("/queue")
     @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)

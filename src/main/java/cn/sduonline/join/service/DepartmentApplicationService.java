@@ -202,6 +202,38 @@ public class DepartmentApplicationService {
     }
 
     /**
+     * 删除当前用户尚未进入后续流程的报名。
+     * 问卷答案由数据库外键级联删除。
+     */
+    @Transactional
+    public ServiceResult<Void> cancelMyApplication(
+            Long departmentId,
+            String casId
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        DepartmentApplication application = applicationMapper
+                .selectByDepartmentAndUserForUpdate(departmentId, casId);
+        if (application == null) {
+            return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
+        }
+        if (application.getStatus() != ApplicationStatus.SUBMITTED
+                || applicationMapper.countCheckInsByApplicationId(
+                        application.getId()) > 0) {
+            return ServiceResult.failure(BizCode.APPLICATION_CANNOT_CANCEL);
+        }
+        int deleted = applicationMapper.deleteSubmittedApplication(
+                application.getId(), departmentId, casId);
+        if (deleted != 1) {
+            throw new IllegalStateException(
+                    "Application changed while cancelling"
+            );
+        }
+        return ServiceResult.success(null);
+    }
+
+    /**
      * 查询当前用户在所有部门的报名记录，按报名时间倒序。
      *
      * @param casId 当前登录用户的学号

@@ -4,6 +4,7 @@ import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswer;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswerOption;
 import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
@@ -175,6 +176,39 @@ public interface DepartmentApplicationMapper {
             WHERE department_id = #{departmentId} AND cas_id = #{casId}
             """)
     DepartmentApplication selectByDepartmentAndUser(
+            @Param("departmentId") Long departmentId,
+            @Param("casId") String casId
+    );
+
+    @Select("""
+            SELECT id, department_id, cas_id, status, submitted_at
+            FROM department_application
+            WHERE department_id = #{departmentId} AND cas_id = #{casId}
+            FOR UPDATE
+            """)
+    DepartmentApplication selectByDepartmentAndUserForUpdate(
+            @Param("departmentId") Long departmentId,
+            @Param("casId") String casId
+    );
+
+    @Select("""
+            SELECT COUNT(1)
+            FROM department_check_in
+            WHERE application_id = #{applicationId}
+            """)
+    long countCheckInsByApplicationId(
+            @Param("applicationId") Long applicationId
+    );
+
+    @Delete("""
+            DELETE FROM department_application
+            WHERE id = #{applicationId}
+              AND department_id = #{departmentId}
+              AND cas_id = #{casId}
+              AND status = 'SUBMITTED'
+            """)
+    int deleteSubmittedApplication(
+            @Param("applicationId") Long applicationId,
             @Param("departmentId") Long departmentId,
             @Param("casId") String casId
     );
