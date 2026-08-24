@@ -6,6 +6,7 @@ import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.service.UserService;
+import cn.sduonline.join.service.AvatarService;
 import cn.sduonline.join.security.ExternalStpLogic;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.annotation.SaCheckLogin;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final UserService userService;
+    private final AvatarService avatarService;
     private final ExternalStpLogic externalStpLogic;
 
     /**
@@ -81,7 +83,7 @@ public class AuthController {
             return Result.fail(BizCode.NOT_LOGIN, "登录用户不存在");
         }
 
-        return Result.ok(UserProfileVO.from(user));
+        return Result.ok(UserProfileVO.from(user, avatarService.publicUrl(user)));
     }
 
     /**

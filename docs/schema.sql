@@ -13,6 +13,7 @@ CREATE TABLE `user` (
   `name`               VARCHAR(64)  NOT NULL COMMENT '姓名',
   `email`              VARCHAR(128) NULL COMMENT '邮箱（暂不验证）',
   `phone`              VARCHAR(20)  NULL COMMENT '手机号（暂不验证）',
+  `avatar_key`         VARCHAR(255) NULL COMMENT '头像存储对象 key',
   `wechat_openid`      VARCHAR(64)  NULL COMMENT '微信公众号 OpenID',
   `profile_completed`  TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '必填资料是否完整',
   `qq`                 VARCHAR(20)  NULL COMMENT 'QQ号（选填）',

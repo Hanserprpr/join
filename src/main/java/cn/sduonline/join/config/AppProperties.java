@@ -26,6 +26,46 @@ public class AppProperties {
 
     private ExternalIdentity externalIdentity = new ExternalIdentity();
     private CheckIn checkIn = new CheckIn();
+    private Avatar avatar = new Avatar();
+    private Clamav clamav = new Clamav();
+
+    @Data
+    public static class Avatar {
+        /** 存储后端：local 或 s3。 */
+        private String storage = "local";
+        /** 本地存储目录；生产环境建议替换为对象存储实现。 */
+        private String localDirectory = "./data/avatars";
+        /** 头像公网基地址，为空时根据当前请求生成。 */
+        private String publicBaseUrl = "";
+        /** 单个头像最大字节数，默认 2 MiB。 */
+        private long maxSizeBytes = 2 * 1024 * 1024;
+        private S3 s3 = new S3();
+    }
+
+    @Data
+    public static class S3 {
+        /** S3 兼容服务地址，例如 http://minio:9000。 */
+        private String endpoint = "";
+        /** 签名区域；自建服务通常可使用 us-east-1。 */
+        private String region = "us-east-1";
+        private String accessKey = "";
+        private String secretKey = "";
+        private String bucket = "";
+        /** 对外访问对象的基地址，例如 https://cdn.example.com/bucket。 */
+        private String publicBaseUrl = "";
+        /** MinIO 等服务通常需要 path-style。 */
+        private boolean pathStyleAccess = true;
+    }
+
+    @Data
+    public static class Clamav {
+        /** 是否在头像落盘/入桶前执行病毒扫描。 */
+        private boolean enabled = false;
+        private String host = "127.0.0.1";
+        private int port = 3310;
+        private int connectTimeoutMs = 2000;
+        private int readTimeoutMs = 5000;
+    }
 
     @Data
     public static class CheckIn {

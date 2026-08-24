@@ -27,6 +27,9 @@ public class UserProfileVO {
     /** 手机号。 */
     private String phone;
 
+    /** 头像的可访问 URL；未上传时为 null。 */
+    private String avatarUrl;
+
     /** 是否已绑定微信公众号；不向前端暴露 OpenID。 */
     private boolean wechatBound;
 
@@ -55,6 +58,13 @@ public class UserProfileVO {
      * 由实体转换为视图对象。
      */
     public static UserProfileVO from(User user) {
+        return from(user, null);
+    }
+
+    /**
+     * 由实体及解析后的头像 URL 转换为视图对象。
+     */
+    public static UserProfileVO from(User user, String avatarUrl) {
         if (user == null) {
             return null;
         }
@@ -64,6 +74,7 @@ public class UserProfileVO {
                 .casId(user.getCasId())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .avatarUrl(avatarUrl)
                 .wechatBound(user.getWechatOpenid() != null
                         && !user.getWechatOpenid().isBlank())
                 .profileCompleted(Boolean.TRUE.equals(user.getProfileCompleted()))

@@ -7,6 +7,9 @@ import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.ProfileIncompleteException;
 import cn.sduonline.join.security.SaTokenAuthErrors;
+import cn.sduonline.join.service.avatar.AvatarValidationException;
+import cn.sduonline.join.service.avatar.ClamAvScanException;
+import cn.sduonline.join.service.avatar.AvatarStorageException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -22,6 +25,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * REST 接口统一异常出口。异常详情只记录在服务端日志，不返回堆栈给调用方。
@@ -40,6 +44,38 @@ public class GlobalExceptionHandler {
             ProfileIncompleteException exception
     ) {
         return response(HttpStatus.FORBIDDEN, BizCode.PROFILE_INCOMPLETE);
+    }
+
+    @ExceptionHandler(AvatarValidationException.class)
+    public ResponseEntity<Result<Void>> handleAvatarValidation(
+            AvatarValidationException exception
+    ) {
+        HttpStatus status = exception.getBizCode() == BizCode.AVATAR_TOO_LARGE
+                ? HttpStatus.PAYLOAD_TOO_LARGE : HttpStatus.BAD_REQUEST;
+        return response(status, exception.getBizCode());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Result<Void>> handleMaxUploadSize(
+            MaxUploadSizeExceededException exception
+    ) {
+        return response(HttpStatus.PAYLOAD_TOO_LARGE, BizCode.AVATAR_TOO_LARGE);
+    }
+
+    @ExceptionHandler(ClamAvScanException.class)
+    public ResponseEntity<Result<Void>> handleClamAvScan(ClamAvScanException exception) {
+        HttpStatus status = exception.getBizCode() == BizCode.AVATAR_MALWARE_DETECTED
+                ? HttpStatus.BAD_REQUEST : HttpStatus.SERVICE_UNAVAILABLE;
+        if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+            log.error("ClamAV scan failed", exception);
+        }
+        return response(status, exception.getBizCode());
+    }
+
+    @ExceptionHandler(AvatarStorageException.class)
+    public ResponseEntity<Result<Void>> handleAvatarStorage(AvatarStorageException exception) {
+        log.error("Avatar object storage failed", exception);
+        return response(HttpStatus.SERVICE_UNAVAILABLE, BizCode.THIRD_PARTY_UNAVAILABLE);
     }
 
     @ExceptionHandler({NotPermissionException.class, NotRoleException.class})
