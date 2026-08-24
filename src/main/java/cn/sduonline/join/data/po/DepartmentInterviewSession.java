@@ -12,6 +12,8 @@ public class DepartmentInterviewSession {
     private LocalDateTime endsAt;
     private String location;
     private Integer checkInLimit;
+    private Boolean qrCheckInEnabled;
+    private Integer qrCodeTtlSeconds;
     private InterviewSessionStatus status;
     private LocalDateTime publishedAt;
     private LocalDateTime endedAt;

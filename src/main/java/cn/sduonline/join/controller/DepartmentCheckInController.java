@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -64,6 +65,21 @@ public class DepartmentCheckInController {
         );
         return result.isSuccess()
                 ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    /**
+     * 取消当前用户在指定部门当前场次的签到。
+     */
+    @DeleteMapping("/departments/{departmentId}/check-ins/me")
+    public Result<Void> cancelCheckIn(
+            @PathVariable @Positive Long departmentId
+    ) {
+        ServiceResult<Void> result = checkInService.cancelCheckIn(
+                departmentId, StpUtil.getLoginIdAsString()
+        );
+        return result.isSuccess()
+                ? Result.ok()
                 : Result.fail(result.error());
     }
 }

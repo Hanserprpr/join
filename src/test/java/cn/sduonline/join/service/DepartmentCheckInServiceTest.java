@@ -3,9 +3,11 @@ package cn.sduonline.join.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.config.AppProperties;
@@ -18,6 +20,7 @@ import cn.sduonline.join.mapper.DepartmentApplicationMapper;
 import cn.sduonline.join.mapper.DepartmentCheckInMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import cn.sduonline.join.data.po.DepartmentInterviewSession;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +63,24 @@ class DepartmentCheckInServiceTest {
         assertEquals(BizCode.CHECK_IN_TOKEN_INVALID, result.error());
         verify(applicationMapper, never())
                 .selectByDepartmentAndUser(any(), any());
+    }
+
+    @Test
+    void createsQrCodeUsingSessionTtl() {
+        Department department = new Department();
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(department);
+        DepartmentInterviewSession session = openSession();
+        session.setQrCheckInEnabled(true);
+        session.setQrCodeTtlSeconds(90);
+        when(sessionMapper.selectPublished(12L)).thenReturn(session);
+
+        var result = service.createQrCode(12L);
+
+        assertTrue(result.isSuccess());
+        verify(valueOperations).set(
+                any(), eq("12:30"), eq(Duration.ofSeconds(90))
+        );
     }
 
     @Test
@@ -157,11 +178,10 @@ class DepartmentCheckInServiceTest {
     void qrCheckInMarksCarryoverCandidateAsPriority() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
-        Department department = new Department();
-        department.setQrCheckInEnabled(true);
-        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        DepartmentInterviewSession session = openSession();
+        session.setQrCheckInEnabled(true);
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
-                .thenReturn(openSession());
+                .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
         when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
@@ -179,10 +199,9 @@ class DepartmentCheckInServiceTest {
     }
 
     @Test
-    void allowsDirectCheckInWhenDepartmentDoesNotRequireQrCode() {
+    void allowsDirectCheckInWhenSessionDoesNotRequireQrCode() {
         Department department = new Department();
         department.setId(12L);
-        department.setQrCheckInEnabled(false);
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
@@ -203,10 +222,12 @@ class DepartmentCheckInServiceTest {
     }
 
     @Test
-    void requiresQrTokenWhenDepartmentEnablesQrCheckIn() {
+    void requiresQrTokenWhenSessionEnablesQrCheckIn() {
         Department department = new Department();
-        department.setQrCheckInEnabled(true);
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        DepartmentInterviewSession session = openSession();
+        session.setQrCheckInEnabled(true);
+        when(sessionMapper.selectPublished(12L)).thenReturn(session);
 
         var result = service.checkIn(12L, null, "20240001");
 
@@ -218,7 +239,6 @@ class DepartmentCheckInServiceTest {
     @Test
     void checkingInAgainRejoinsQueueAtTheEnd() {
         Department department = new Department();
-        department.setQrCheckInEnabled(false);
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
@@ -242,6 +262,75 @@ class DepartmentCheckInServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(9, result.data().queueNumber());
         verify(checkInMapper).reactivateAfterCheckIn(existing);
+    }
+
+    @Test
+    void cancelsOwnWaitingCheckInWithoutRestoringPriority() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentCheckIn checkIn = currentCheckIn();
+        checkIn.setPriority(true);
+        when(checkInMapper.selectCurrentByDepartmentAndUserForUpdate(
+                12L, "20240001"
+        )).thenReturn(checkIn);
+        when(checkInMapper.countInterviewsByCheckIn(200L)).thenReturn(0);
+        when(checkInMapper.deleteOwnedCheckIn(
+                200L, 12L, "20240001"
+        )).thenReturn(1);
+
+        var result = service.cancelCheckIn(12L, "20240001");
+
+        assertTrue(result.isSuccess());
+        verifyNoInteractions(sessionMapper);
+        verify(checkInMapper).deleteOwnedCheckIn(
+                200L, 12L, "20240001"
+        );
+        verify(interviewSseService).publishQueueAfterCommit(12L);
+    }
+
+    @Test
+    void rejectsCheckInCancellationAfterInterviewStarts() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentCheckIn checkIn = currentCheckIn();
+        when(checkInMapper.selectCurrentByDepartmentAndUserForUpdate(
+                12L, "20240001"
+        )).thenReturn(checkIn);
+        when(checkInMapper.countInterviewsByCheckIn(200L)).thenReturn(1);
+
+        var result = service.cancelCheckIn(12L, "20240001");
+
+        assertEquals(BizCode.CHECK_IN_CANNOT_CANCEL, result.error());
+        verify(checkInMapper, never()).deleteOwnedCheckIn(
+                any(), any(), any()
+        );
+        verify(interviewSseService, never()).publishQueueAfterCommit(any());
+    }
+
+    @Test
+    void rejectsCancellationWhenCurrentCheckInDoesNotExist() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        when(checkInMapper.selectCurrentByDepartmentAndUserForUpdate(
+                12L, "20240001"
+        )).thenReturn(null);
+
+        var result = service.cancelCheckIn(12L, "20240001");
+
+        assertEquals(BizCode.CHECK_IN_NOT_FOUND, result.error());
+        verify(checkInMapper, never()).deleteOwnedCheckIn(
+                any(), any(), any()
+        );
+    }
+
+    private static DepartmentCheckIn currentCheckIn() {
+        DepartmentCheckIn checkIn = new DepartmentCheckIn();
+        checkIn.setId(200L);
+        checkIn.setDepartmentId(12L);
+        checkIn.setSessionId(30L);
+        checkIn.setApplicationId(100L);
+        checkIn.setCasId("20240001");
+        return checkIn;
     }
 
     private static DepartmentInterviewSession openSession() {

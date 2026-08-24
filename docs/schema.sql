@@ -71,8 +71,6 @@ CREATE TABLE `department` (
   `max_pass_count` INT NOT NULL DEFAULT 2 COMMENT '单人在本部门最大过号次数',
   `pass_mode` VARCHAR(16) NOT NULL DEFAULT 'DELAY'
     COMMENT '过号处理方式：DELAY/RECHECK_IN',
-  `qr_check_in_enabled` TINYINT(1) NOT NULL DEFAULT 0
-    COMMENT '是否要求通过动态二维码签到',
   `sort_order` INT NOT NULL DEFAULT 0,
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
@@ -217,6 +215,10 @@ CREATE TABLE `department_interview_session` (
   `ends_at` DATETIME NOT NULL,
   `location` VARCHAR(255) NOT NULL,
   `check_in_limit` INT NOT NULL,
+  `qr_check_in_enabled` TINYINT(1) NOT NULL DEFAULT 0
+    COMMENT '是否要求通过动态二维码签到',
+  `qr_code_ttl_seconds` INT NOT NULL DEFAULT 8
+    COMMENT '签到二维码有效秒数',
   `status` VARCHAR(16) NOT NULL DEFAULT 'DRAFT'
     COMMENT 'DRAFT/PUBLISHED/ENDED',
   `published_at` DATETIME NULL,
@@ -228,6 +230,8 @@ CREATE TABLE `department_interview_session` (
     FOREIGN KEY (`department_id`) REFERENCES `department` (`id`),
   CONSTRAINT `chk_interview_session_limit`
     CHECK (`check_in_limit` > 0),
+  CONSTRAINT `chk_interview_session_qr_code_ttl`
+    CHECK (`qr_code_ttl_seconds` BETWEEN 5 AND 86400),
   CONSTRAINT `chk_interview_session_time`
     CHECK (`ends_at` > `starts_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门面试场次';

@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DepartmentInterviewSessionService {
 
+    private static final int DEFAULT_QR_CODE_TTL_SECONDS = 8;
+
     private final AdminOrganizationMapper organizationMapper;
     private final DepartmentInterviewSessionMapper sessionMapper;
 
@@ -139,6 +141,12 @@ public class DepartmentInterviewSessionService {
         session.setEndsAt(request.endsAt());
         session.setLocation(request.location().trim());
         session.setCheckInLimit(request.checkInLimit());
+        session.setQrCheckInEnabled(Boolean.TRUE.equals(
+                request.qrCheckInEnabled()
+        ));
+        session.setQrCodeTtlSeconds(request.qrCodeTtlSeconds() == null
+                ? DEFAULT_QR_CODE_TTL_SECONDS
+                : request.qrCodeTtlSeconds());
         return session;
     }
 }
