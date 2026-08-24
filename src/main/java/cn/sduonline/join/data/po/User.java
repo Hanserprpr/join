@@ -40,6 +40,11 @@ public class User {
     private String phone;
 
     /**
+     * 头像在文件存储中的对象 key；不保存域名，便于切换 CDN 或存储服务。
+     */
+    private String avatarKey;
+
+    /**
      * 当前公众号下的 OpenID，用于发送模板消息。
      */
     private String wechatOpenid;

@@ -57,6 +57,39 @@ paths:
                 $ref: "#/components/schemas/ResultUserProfileVO"
       security:
       - sessionCookie: []
+  /api/user/profile/avatar:
+    post:
+      tags:
+      - 个人资料
+      summary: 上传或替换头像
+      operationId: uploadAvatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: 上传成功，返回更新后的完整个人资料
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultUserProfileVO"
+        "400":
+          description: 文件为空、格式不支持或图片无效
+        "413":
+          description: 文件超过大小限制
+        "503":
+          description: ClamAV 扫描服务或对象存储暂时不可用
+      security:
+      - sessionCookie: []
   /api/departments/{departmentId}:
     get:
       tags:
@@ -1890,6 +1923,10 @@ components:
           pattern: ^\S+@\S+\.\S+$
         phone:
           type: string
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
           pattern: "^1\\d{10}$"
         college:
           type: string

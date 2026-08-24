@@ -43,3 +43,4 @@ docs/openapi.yaml
 
 ### 本项目本地运行数据 ###
 /.local/
+/data/
