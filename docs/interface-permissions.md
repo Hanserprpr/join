@@ -251,6 +251,7 @@
 | GET | `/api/workstations/{workstationId}` | 工作站详情 |
 | GET | `/api/departments/{departmentId}` | 部门详情(可选登录,展示 `canManage`) |
 | GET | `/api/wechat/binding/callback` | 微信授权回调 |
+| GET | `/api/wechat/js-sdk/config` | 获取订阅通知页面的 JS-SDK 签名与模板 ID（仅允许已配置前端域名） |
 
 ---
 

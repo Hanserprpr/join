@@ -45,7 +45,7 @@ class DepartmentInterviewServiceTest {
     @Mock TransactionStatus transactionStatus;
     @Mock InterviewSseService interviewSseService;
     @Mock UserMapper userMapper;
-    @Mock WeChatTemplateMessageService templateMessageService;
+    @Mock WeChatSubscribeMessageService subscribeMessageService;
     @Mock AuthorizationService authorizationService;
     private WeChatProperties weChatProperties;
     private DepartmentInterviewService service;
@@ -61,7 +61,7 @@ class DepartmentInterviewServiceTest {
         service = new DepartmentInterviewService(
                 organizationMapper, interviewMapper, roomMapper,
                 transactionTemplate,
-                interviewSseService, userMapper, templateMessageService,
+                interviewSseService, userMapper, subscribeMessageService,
                 weChatProperties, authorizationService
         );
     }
@@ -90,7 +90,7 @@ class DepartmentInterviewServiceTest {
         var result = service.callNextInRoom(12L, 9L, "admin01");
 
         assertTrue(result.isSuccess());
-        verify(templateMessageService).send(
+        verify(subscribeMessageService).send(
                 org.mockito.ArgumentMatchers.eq("candidate-openid"),
                 org.mockito.ArgumentMatchers.eq(
                         weChatProperties.getInterviewCallTemplateId()
