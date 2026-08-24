@@ -20,6 +20,10 @@ public class WeChatProperties {
     private String bindingResultUrl =
             "http://localhost:5173/wechat-binding";
     private long bindingStateTtlSeconds = 600;
+    private String loginOauthCallbackUrl =
+            "http://localhost:8080/api/wechat/login/callback";
+    private String loginResultUrl = "http://localhost:5173";
+    private long loginStateTtlSeconds = 300;
     private String bindingTemplateId =
             "Tw8ThFuRhgMOkrTirVHRnTPbxFdxyaFo2PIJdFqkxQw";
     private String interviewCallTemplateId =
@@ -58,6 +62,16 @@ public class WeChatProperties {
             throw new IllegalStateException(
                     "微信绑定配置缺失，请设置 WECHAT_OAUTH_CALLBACK_URL 和 "
                             + "WECHAT_BINDING_RESULT_URL");
+        }
+    }
+
+    public void validateLogin() {
+        validate();
+        if (loginOauthCallbackUrl == null || loginOauthCallbackUrl.isBlank()
+                || loginResultUrl == null || loginResultUrl.isBlank()) {
+            throw new IllegalStateException(
+                    "微信登录配置缺失，请设置 WECHAT_LOGIN_OAUTH_CALLBACK_URL 和 "
+                            + "WECHAT_LOGIN_RESULT_URL");
         }
     }
 

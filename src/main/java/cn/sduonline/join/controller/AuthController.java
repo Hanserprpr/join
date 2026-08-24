@@ -59,6 +59,9 @@ public class AuthController {
         } else if (oidcUser != null) {
             data.put("loggedIn", true);
             data.put("source", "oidc");
+        } else if (StpUtil.isLogin()) {
+            data.put("loggedIn", true);
+            data.put("source", "wechat");
         } else {
             data.put("loggedIn", false);
         }

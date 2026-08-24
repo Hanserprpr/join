@@ -2,6 +2,7 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.config.AppProperties;
 import cn.sduonline.join.data.dto.CheckInQrCodeVO;
+import cn.sduonline.join.data.dto.CheckInQrGrant;
 import cn.sduonline.join.data.dto.CheckInVO;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.po.DepartmentApplication;
@@ -64,8 +65,8 @@ public class DepartmentCheckInService {
                         ttlSeconds - 1
                 )
         );
-        String content = appProperties.getFrontendUrl()
-                + "/check-in?token=" + token;
+        String content = appProperties.getCheckIn().getEntryUrl()
+                + "?token=" + token;
         return ServiceResult.success(new CheckInQrCodeVO(
                 content, expiresAt, refreshSeconds
         ));
@@ -79,19 +80,12 @@ public class DepartmentCheckInService {
         Long sessionId;
         boolean scannedWithQr = token != null && !token.isBlank();
         if (scannedWithQr) {
-            String departmentValue = redisTemplate.opsForValue().get(
-                    TOKEN_KEY_PREFIX + token
-            );
-            if (departmentValue == null) {
+            CheckInQrGrant grant = resolveQrGrant(token);
+            if (grant == null) {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
-            try {
-                String[] tokenParts = departmentValue.split(":", 2);
-                departmentId = Long.valueOf(tokenParts[0]);
-                sessionId = Long.valueOf(tokenParts[1]);
-            } catch (RuntimeException exception) {
-                return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
-            }
+            departmentId = grant.departmentId();
+            sessionId = grant.sessionId();
             if (requestedDepartmentId != null
                     && !requestedDepartmentId.equals(departmentId)) {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
@@ -115,6 +109,39 @@ public class DepartmentCheckInService {
             }
             sessionId = published.getId();
         }
+        return completeCheckIn(
+                departmentId, sessionId, scannedWithQr, casId);
+    }
+
+    /**
+     * 在扫码当下验证短效二维码，用于跨越后续的微信 OAuth。
+     */
+    public ServiceResult<CheckInQrGrant> captureQrGrant(String token) {
+        CheckInQrGrant grant = resolveQrGrant(token);
+        return grant == null
+                ? ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID)
+                : ServiceResult.success(grant);
+    }
+
+    /** 使用扫码时已验证的凭证完成签到。 */
+    @Transactional
+    public ServiceResult<CheckInVO> checkInCaptured(
+            CheckInQrGrant grant, String casId
+    ) {
+        if (grant == null || grant.departmentId() == null
+                || grant.sessionId() == null) {
+            return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
+        }
+        return completeCheckIn(
+                grant.departmentId(), grant.sessionId(), true, casId);
+    }
+
+    private ServiceResult<CheckInVO> completeCheckIn(
+            Long departmentId,
+            Long sessionId,
+            boolean scannedWithQr,
+            String casId
+    ) {
         DepartmentInterviewSession session =
                 sessionMapper.selectPublishedForUpdate(
                         departmentId, sessionId
@@ -191,6 +218,24 @@ public class DepartmentCheckInService {
         }
         interviewSseService.publishQueueAfterCommit(departmentId);
         return ServiceResult.success(CheckInVO.from(checkIn));
+    }
+
+    private CheckInQrGrant resolveQrGrant(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        String value = redisTemplate.opsForValue().get(
+                TOKEN_KEY_PREFIX + token);
+        if (value == null) {
+            return null;
+        }
+        try {
+            String[] parts = value.split(":", 2);
+            return new CheckInQrGrant(
+                    Long.valueOf(parts[0]), Long.valueOf(parts[1]));
+        } catch (RuntimeException exception) {
+            return null;
+        }
     }
 
     /** 兼容原有仅携带二维码令牌的调用。 */
