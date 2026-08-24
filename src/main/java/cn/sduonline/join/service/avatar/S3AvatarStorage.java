@@ -5,6 +5,7 @@ import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.time.Duration;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -19,7 +20,10 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 /** S3 兼容头像存储。 */
 @Component
@@ -28,6 +32,7 @@ public class S3AvatarStorage implements AvatarStorage {
 
     private final AppProperties.S3 properties;
     private final S3Client client;
+    private final S3Presigner presigner;
 
     public S3AvatarStorage(AppProperties appProperties) {
         this.properties = appProperties.getAvatar().getS3();
@@ -37,16 +42,25 @@ public class S3AvatarStorage implements AvatarStorage {
         requireText(properties.getBucket(), "AVATAR_S3_BUCKET");
         requireText(properties.getPublicBaseUrl(), "AVATAR_S3_PUBLIC_BASE_URL");
 
+        StaticCredentialsProvider credentialsProvider =
+                StaticCredentialsProvider.create(AwsBasicCredentials.create(
+                        properties.getAccessKey(), properties.getSecretKey()));
+        S3Configuration s3Configuration = S3Configuration.builder()
+                .pathStyleAccessEnabled(properties.isPathStyleAccess())
+                .build();
+
         this.client = S3Client.builder()
                 .endpointOverride(URI.create(properties.getEndpoint()))
                 .region(Region.of(properties.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(
-                                properties.getAccessKey(), properties.getSecretKey())))
+                .credentialsProvider(credentialsProvider)
                 .httpClient(UrlConnectionHttpClient.create())
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(properties.isPathStyleAccess())
-                        .build())
+                .serviceConfiguration(s3Configuration)
+                .build();
+        this.presigner = S3Presigner.builder()
+                .endpointOverride(URI.create(properties.getEndpoint()))
+                .region(Region.of(properties.getRegion()))
+                .credentialsProvider(credentialsProvider)
+                .serviceConfiguration(s3Configuration)
                 .build();
     }
 
@@ -58,7 +72,7 @@ public class S3AvatarStorage implements AvatarStorage {
                 .bucket(properties.getBucket())
                 .key(key)
                 .contentType(fileType.mediaType())
-                .cacheControl("public, max-age=31536000, immutable")
+                .cacheControl("private, max-age=" + presignedUrlTtlSeconds())
                 .build();
         try (InputStream input = file.getInputStream()) {
             try {
@@ -89,12 +103,35 @@ public class S3AvatarStorage implements AvatarStorage {
         if (!StringUtils.hasText(key)) {
             return null;
         }
-        return properties.getPublicBaseUrl().replaceAll("/+$", "") + "/" + key;
+        long ttlSeconds = presignedUrlTtlSeconds();
+        GetObjectRequest objectRequest = GetObjectRequest.builder()
+                .bucket(properties.getBucket())
+                .key(key)
+                .responseCacheControl("private, max-age=" + ttlSeconds)
+                .build();
+        GetObjectPresignRequest presignRequest =
+                GetObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofSeconds(ttlSeconds))
+                        .getObjectRequest(objectRequest)
+                        .build();
+        try {
+            return presigner.presignGetObject(presignRequest)
+                    .url()
+                    .toString();
+        } catch (SdkException exception) {
+            throw new AvatarStorageException("生成 S3 头像预签名 URL 失败", exception);
+        }
     }
 
     @PreDestroy
     public void close() {
         client.close();
+        presigner.close();
+    }
+
+    private long presignedUrlTtlSeconds() {
+        return Math.max(
+                60, Math.min(604800, properties.getPresignedUrlTtlSeconds()));
     }
 
     private static void requireText(String value, String environmentName) {

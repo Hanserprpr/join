@@ -56,6 +56,8 @@ public class AppProperties {
         private String publicBaseUrl = "";
         /** MinIO 等服务通常需要 path-style。 */
         private boolean pathStyleAccess = true;
+        /** 头像预签名读取 URL 的有效秒数，最长 7 天。 */
+        private long presignedUrlTtlSeconds = 3600;
     }
 
     @Data
