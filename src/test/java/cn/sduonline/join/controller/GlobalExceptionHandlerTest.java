@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 
 class GlobalExceptionHandlerTest {
 
@@ -80,6 +81,11 @@ class GlobalExceptionHandlerTest {
                         "Response not usable after response errors."
                 )
         );
+    }
+
+    @Test
+    void timedOutAsyncResponseIsIgnored() {
+        handler.handleAsyncRequestTimeout(new AsyncRequestTimeoutException());
     }
 
     @Test
