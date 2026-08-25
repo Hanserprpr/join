@@ -8,6 +8,7 @@ import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationSummaryVO;
 import cn.sduonline.join.data.dto.MyApplicationVO;
+import cn.sduonline.join.data.dto.MyDepartmentApplicationVO;
 import cn.sduonline.join.data.dto.PageVO;
 import cn.sduonline.join.data.dto.ApplicationAnswerVO;
 import cn.sduonline.join.data.dto.ApplicationAnswerOptionVO;
@@ -183,7 +184,7 @@ public class DepartmentApplicationService {
         return ServiceResult.success(new AdmissionPublishVO(published));
     }
 
-    public ServiceResult<DepartmentApplicationVO> findMyApplication(
+    public ServiceResult<MyDepartmentApplicationVO> findMyApplication(
             Long departmentId,
             String casId
     ) {
@@ -195,8 +196,7 @@ public class DepartmentApplicationService {
         if (application == null) {
             return ServiceResult.failure(BizCode.APPLICATION_NOT_FOUND);
         }
-        exposeApplicantStatus(application);
-        return ServiceResult.success(DepartmentApplicationVO.from(application));
+        return ServiceResult.success(MyDepartmentApplicationVO.from(application));
     }
 
     /**
@@ -240,26 +240,9 @@ public class DepartmentApplicationService {
     public ServiceResult<List<MyApplicationVO>> findMyApplications(String casId) {
         List<MyApplicationVO> applications = applicationMapper.selectByUser(casId)
                 .stream()
-                .map(application -> {
-                    exposeApplicantStatus(application);
-                    return MyApplicationVO.from(application);
-                })
+                .map(MyApplicationVO::from)
                 .toList();
         return ServiceResult.success(applications);
-    }
-
-    private static void exposeApplicantStatus(
-            DepartmentApplication application
-    ) {
-        if (application.getStatus() == ApplicationStatus.ADMITTED) {
-            return;
-        }
-        if (Boolean.TRUE.equals(application.getInterviewed())) {
-            application.setStatus(ApplicationStatus.INTERVIEW_COMPLETED);
-        } else if (application.getStatus()
-                == ApplicationStatus.ADMISSION_DRAFT) {
-            application.setStatus(ApplicationStatus.SUBMITTED);
-        }
     }
 
     public ServiceResult<List<DepartmentApplicationDetailVO>> findForExport(
@@ -284,7 +267,7 @@ public class DepartmentApplicationService {
     }
 
     @Transactional
-    public ServiceResult<DepartmentApplicationVO> submit(
+    public ServiceResult<MyDepartmentApplicationVO> submit(
             Long departmentId,
             String casId,
             DepartmentApplicationRequest request
@@ -332,7 +315,7 @@ public class DepartmentApplicationService {
                     source
             );
         }
-        return ServiceResult.success(DepartmentApplicationVO.from(application));
+        return ServiceResult.success(MyDepartmentApplicationVO.from(application));
     }
 
     private boolean answersAreValid(
