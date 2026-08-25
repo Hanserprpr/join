@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,6 +24,7 @@ import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
 import cn.sduonline.join.service.poster.PosterUrlPolicy;
+import cn.sduonline.join.service.poster.PosterStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +43,8 @@ class DepartmentServiceTest {
     private AuthorizationService authorizationService;
     @Mock
     private PosterUrlPolicy posterUrlPolicy;
+    @Mock
+    private PosterStorage posterStorage;
 
     private DepartmentService service;
 
@@ -48,8 +52,11 @@ class DepartmentServiceTest {
     void setUp() {
         service = new DepartmentService(
                 organizationMapper, questionnaireMapper, authorizationService,
-                posterUrlPolicy
+                posterUrlPolicy, posterStorage
         );
+        lenient().when(posterStorage.accessUrl(
+                        org.mockito.ArgumentMatchers.anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -66,6 +73,27 @@ class DepartmentServiceTest {
         assertEquals(Campus.CENTRAL, result.data().campus());
         assertEquals("组织介绍", result.data().introduction());
         assertTrue(result.data().hasQuestionnaire());
+    }
+
+    @Test
+    void findByIdReturnsPosterAccessUrl() {
+        Department department = department();
+        DepartmentPoster poster = poster(
+                1L, "https://files.example.com/join/posters/example.png", 0
+        );
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(organizationMapper.selectDepartmentPosters(12L))
+                .thenReturn(java.util.List.of(poster));
+        when(posterStorage.accessUrl(poster.getUrl()))
+                .thenReturn("https://s3.example/presigned-example.png?signature=x");
+
+        var result = service.findById(12L, null);
+
+        assertTrue(result.isSuccess());
+        assertEquals(
+                "https://s3.example/presigned-example.png?signature=x",
+                result.data().posters().getFirst().url()
+        );
     }
 
     @Test

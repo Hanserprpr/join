@@ -9,6 +9,11 @@ public interface PosterStorage {
 
     String store(MultipartFile file, AvatarFileType fileType) throws IOException;
 
+    /** 将持久化的海报 URL 转换为对外可访问 URL。 */
+    default String accessUrl(String storedUrl) {
+        return storedUrl;
+    }
+
     /** 当前存储生成 URL 的可信路径前缀，以斜杠结尾。 */
     String publicUrlPrefix();
 }

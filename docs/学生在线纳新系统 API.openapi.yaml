@@ -172,7 +172,7 @@ paths:
       tags:
       - 部门
       summary: 上传部门海报图片
-      description: 需要当前用户对该部门拥有 RECRUITMENT_MANAGE 权限。上传成功后返回可写入 posters 字段的白名单 URL。
+      description: 需要当前用户对该部门拥有 RECRUITMENT_MANAGE 权限。上传成功后返回可写入 posters 字段的稳定白名单 URL；查询部门详情时，S3 海报 URL 会转换为预签名读取 URL。
       operationId: uploadPoster
       parameters:
       - name: departmentId

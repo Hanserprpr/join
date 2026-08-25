@@ -21,9 +21,14 @@ public record DepartmentPosterVO(
      * @return 部门海报展示信息
      */
     public static DepartmentPosterVO from(DepartmentPoster poster) {
+        return from(poster, poster.getUrl());
+    }
+
+    /** 使用指定的对外访问 URL 转换展示信息。 */
+    public static DepartmentPosterVO from(DepartmentPoster poster, String accessUrl) {
         return new DepartmentPosterVO(
                 poster.getId(),
-                poster.getUrl(),
+                accessUrl,
                 poster.getSortOrder()
         );
     }
