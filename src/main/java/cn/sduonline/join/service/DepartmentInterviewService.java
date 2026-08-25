@@ -579,6 +579,20 @@ public class DepartmentInterviewService {
     }
 
     /**
+     * 根据用户 ID 查询其在指定部门的所有面试官评价。
+     */
+    public ServiceResult<List<InterviewEvaluationVO>> findEvaluationsByUserId(
+            Long departmentId,
+            String userId
+    ) {
+        return ServiceResult.success(
+                roomMapper.selectEvaluationsByCandidate(
+                        departmentId, userId
+                )
+        );
+    }
+
+    /**
      * 补写或修改当前用户对指定面试的评价。
      * 一个面试有多位面试官各自提交的评价，本接口只更新当前用户的那一份。
      *

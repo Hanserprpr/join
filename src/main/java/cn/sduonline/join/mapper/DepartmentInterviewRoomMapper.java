@@ -165,6 +165,23 @@ public interface DepartmentInterviewRoomMapper {
                    e.score, e.evaluation, e.submitted_at
             FROM department_interview_evaluation e
             JOIN `user` u ON u.cas_id = e.admin_cas_id
+            JOIN department_interview i ON i.id = e.interview_id
+            WHERE i.department_id = #{departmentId}
+              AND i.candidate_cas_id = #{candidateCasId}
+            ORDER BY i.started_at DESC, e.submitted_at, e.admin_cas_id
+            """)
+    List<InterviewEvaluationVO> selectEvaluationsByCandidate(
+            @Param("departmentId") Long departmentId,
+            @Param("candidateCasId") String candidateCasId
+    );
+
+    @Select("""
+            SELECT e.interview_id,
+                   e.admin_cas_id AS administrator_cas_id,
+                   u.name AS administrator_name,
+                   e.score, e.evaluation, e.submitted_at
+            FROM department_interview_evaluation e
+            JOIN `user` u ON u.cas_id = e.admin_cas_id
             WHERE e.interview_id = #{interviewId}
               AND e.admin_cas_id = #{casId}
             """)

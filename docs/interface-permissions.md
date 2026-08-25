@@ -105,6 +105,7 @@
 |---|---|---|---|
 | GET | `/api/departments/{departmentId}/applications` | 分页查询报名 | `application:read` |
 | GET | `/api/departments/{departmentId}/applications/{applicationId}` | 报名详情 | `application:read` |
+| GET | `/api/departments/{departmentId}/interviews/users/{userId}/evaluations` | 按用户查询面试评价 | `application:read` |
 | GET | `/api/departments/{departmentId}/applications/export` | 导出报名 | `application:export` |
 
 ### admission:manage — 录取结果
@@ -191,6 +192,7 @@
 |---|---|---|---|
 | GET | `/api/departments/{departmentId}/applications` | 分页查询报名 | `application:read` |
 | GET | `/api/departments/{departmentId}/applications/{applicationId}` | 报名详情 | `application:read` |
+| GET | `/api/departments/{departmentId}/interviews/users/{userId}/evaluations` | 按用户查询面试评价 | `application:read` |
 | GET | `/api/departments/{departmentId}/check-in/qr-code` | 生成签到二维码 | `check-in:manage` |
 | GET | `/api/departments/{departmentId}/interviews/queue-config` | 查询过号配置 | `interview:evaluate` |
 | GET | `/api/departments/{departmentId}/interviews/queue` | 查询未完成的面试队列 | `interview:evaluate` |
