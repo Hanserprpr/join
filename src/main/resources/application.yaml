@@ -100,6 +100,18 @@ server:
         secure: true
         http-only: true
 
+sentry:
+  # DSN 留空时 SDK 不会上报，避免本地开发和测试环境污染生产项目。
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:production}
+  # Maven 构建时由 pom.xml 的 artifactId/version 生成，仍可由部署环境覆盖。
+  release: ${SENTRY_RELEASE:@sentry.release@}
+  send-default-pii: false
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.0}
+  logging:
+    minimum-breadcrumb-level: INFO
+    minimum-event-level: ERROR
+
 app:
   avatar:
     storage: ${AVATAR_STORAGE:local}
