@@ -22,6 +22,7 @@ import cn.sduonline.join.service.DepartmentInterviewSessionService;
 import cn.sduonline.join.service.InterviewSseService;
 import cn.sduonline.join.service.ServiceResult;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
@@ -348,6 +349,29 @@ public class DepartmentInterviewController {
         return toResult(interviewService.findById(
                 departmentId, interviewId
         ));
+    }
+
+    /**
+     * 根据用户 ID 查询其在当前部门的全部面试评价。
+     *
+     * @param departmentId 部门 ID
+     * @param userId 用户 ID（统一认证账号/学号）
+     * @return 该用户所有面试记录的评分和评价
+     */
+    @GetMapping("/users/{userId}/evaluations")
+    @DepartmentPermission(PermissionCode.APPLICATION_READ)
+    public Result<List<InterviewEvaluationVO>> findEvaluationsByUserId(
+            @PathVariable @Positive Long departmentId,
+            @PathVariable
+            @Pattern(regexp = "^[A-Za-z0-9_-]{1,32}$") String userId
+    ) {
+        ServiceResult<List<InterviewEvaluationVO>> result =
+                interviewService.findEvaluationsByUserId(
+                        departmentId, userId
+                );
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
     }
 
     /**

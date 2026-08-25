@@ -139,6 +139,36 @@ class DepartmentInterviewServiceTest {
     }
 
     @Test
+    void findsAllEvaluationsByUserIdWithoutRoomMembership() {
+        List<InterviewEvaluationVO> evaluations = List.of(
+                new InterviewEvaluationVO(
+                        300L, "admin01", "管理员一", 5,
+                        "表现优秀", null
+                )
+        );
+        when(roomMapper.selectEvaluationsByCandidate(12L, "20240001"))
+                .thenReturn(evaluations);
+
+        var result = service.findEvaluationsByUserId(12L, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(evaluations, result.data());
+        verify(roomMapper).selectEvaluationsByCandidate(12L, "20240001");
+        verify(roomMapper, never()).countMember(any(), any());
+    }
+
+    @Test
+    void returnsEmptyEvaluationsWhenUserHasNotBeenInterviewed() {
+        when(roomMapper.selectEvaluationsByCandidate(12L, "20249999"))
+                .thenReturn(List.of());
+
+        var result = service.findEvaluationsByUserId(12L, "20249999");
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.data().isEmpty());
+    }
+
+    @Test
     void cannotUpdateEvaluationUnlessRoomMember() {
         DepartmentInterview saved = waitingCandidate();
         saved.setId(300L);
