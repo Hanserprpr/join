@@ -14,6 +14,7 @@ import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishRequest;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.ApplicationStatus;
+import cn.sduonline.join.data.enums.ApplicantApplicationStatus;
 import cn.sduonline.join.data.enums.QuestionType;
 import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentApplication;
@@ -370,7 +371,11 @@ class DepartmentApplicationServiceTest {
         var result = service.findMyApplication(12L, "20240001");
 
         assertTrue(result.isSuccess());
-        assertEquals(ApplicationStatus.SUBMITTED, result.data().status());
+        assertEquals(
+                ApplicantApplicationStatus.SUBMITTED,
+                result.data().status()
+        );
+        assertEquals(ApplicationStatus.ADMISSION_DRAFT, application.getStatus());
     }
 
     @Test
@@ -389,7 +394,7 @@ class DepartmentApplicationServiceTest {
 
         assertTrue(result.isSuccess());
         assertEquals(
-                ApplicationStatus.INTERVIEW_COMPLETED,
+                ApplicantApplicationStatus.INTERVIEW_COMPLETED,
                 result.data().status()
         );
     }
@@ -420,9 +425,12 @@ class DepartmentApplicationServiceTest {
         assertEquals("技术部", result.data().get(0).departmentName());
         assertEquals("软件工作站", result.data().get(0).workstationName());
         assertEquals("技术板块", result.data().get(0).boardName());
-        assertEquals(ApplicationStatus.ADMITTED, result.data().get(0).status());
         assertEquals(
-                ApplicationStatus.INTERVIEW_COMPLETED,
+                ApplicantApplicationStatus.ADMITTED,
+                result.data().get(0).status()
+        );
+        assertEquals(
+                ApplicantApplicationStatus.INTERVIEW_COMPLETED,
                 result.data().get(1).status()
         );
     }

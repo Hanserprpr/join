@@ -1,6 +1,6 @@
 package cn.sduonline.join.data.dto;
 
-import cn.sduonline.join.data.enums.ApplicationStatus;
+import cn.sduonline.join.data.enums.ApplicantApplicationStatus;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import java.time.LocalDateTime;
 
@@ -15,7 +15,7 @@ public record MyApplicationVO(
         String workstationName,
         Long boardId,
         String boardName,
-        ApplicationStatus status,
+        ApplicantApplicationStatus status,
         LocalDateTime submittedAt
 ) {
     public static MyApplicationVO from(DepartmentApplication application) {
@@ -27,7 +27,7 @@ public record MyApplicationVO(
                 application.getWorkstationName(),
                 application.getBoardId(),
                 application.getBoardName(),
-                application.getStatus(),
+                ApplicantApplicationStatus.from(application),
                 application.getSubmittedAt()
         );
     }

@@ -6,6 +6,7 @@ import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
+import cn.sduonline.join.data.dto.MyDepartmentApplicationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationSummaryVO;
 import cn.sduonline.join.data.dto.PageVO;
@@ -157,10 +158,10 @@ public class DepartmentApplicationController {
     }
 
     @GetMapping("/{departmentId}/applications/me")
-    public Result<DepartmentApplicationVO> findMyApplication(
+    public Result<MyDepartmentApplicationVO> findMyApplication(
             @PathVariable @Positive Long departmentId
     ) {
-        ServiceResult<DepartmentApplicationVO> result =
+        ServiceResult<MyDepartmentApplicationVO> result =
                 applicationService.findMyApplication(
                         departmentId, StpUtil.getLoginIdAsString()
                 );
@@ -233,14 +234,14 @@ public class DepartmentApplicationController {
      * @return 创建后的报名记录
      */
     @PostMapping("/{departmentId}/applications")
-    public Result<DepartmentApplicationVO> submit(
+    public Result<MyDepartmentApplicationVO> submit(
             @PathVariable @Positive Long departmentId,
             @Valid @RequestBody(required = false) DepartmentApplicationRequest request
     ) {
         DepartmentApplicationRequest safeRequest = request == null
                 ? new DepartmentApplicationRequest(null)
                 : request;
-        ServiceResult<DepartmentApplicationVO> result = applicationService.submit(
+        ServiceResult<MyDepartmentApplicationVO> result = applicationService.submit(
                 departmentId, StpUtil.getLoginIdAsString(), safeRequest
         );
         return result.isSuccess()

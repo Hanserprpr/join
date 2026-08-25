@@ -1063,7 +1063,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/ResultDepartmentApplicationVO"
+                $ref: "#/components/schemas/ResultMyDepartmentApplicationVO"
       security:
       - sessionCookie: []
   /api/departments/{departmentId}/applications/admissions/publish:
@@ -1895,7 +1895,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/ResultDepartmentApplicationVO"
+                $ref: "#/components/schemas/ResultMyDepartmentApplicationVO"
       security:
       - sessionCookie: []
     delete:
@@ -2665,7 +2665,6 @@ components:
           enum:
           - SUBMITTED
           - INTERVIEW_COMPLETED
-          - ADMISSION_DRAFT
           - ADMITTED
         submittedAt:
           type: string
@@ -2680,6 +2679,37 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MyApplicationVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    MyDepartmentApplicationVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        departmentId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - SUBMITTED
+          - INTERVIEW_COMPLETED
+          - ADMITTED
+        submittedAt:
+          type: string
+          format: date-time
+    ResultMyDepartmentApplicationVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/MyDepartmentApplicationVO"
         msg:
           type: string
         timestamp:
