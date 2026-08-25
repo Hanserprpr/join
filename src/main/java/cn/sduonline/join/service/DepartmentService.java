@@ -16,6 +16,7 @@ import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
 import cn.sduonline.join.service.poster.PosterUrlPolicy;
+import cn.sduonline.join.service.poster.PosterStorage;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class DepartmentService {
     private final DepartmentQuestionnaireMapper questionnaireMapper;
     private final AuthorizationService authorizationService;
     private final PosterUrlPolicy posterUrlPolicy;
+    private final PosterStorage posterStorage;
 
     /**
      * 查询部门详情和海报
@@ -183,7 +185,8 @@ public class DepartmentService {
         List<DepartmentPosterVO> posters = organizationMapper
                 .selectDepartmentPosters(department.getId())
                 .stream()
-                .map(DepartmentPosterVO::from)
+                .map(poster -> DepartmentPosterVO.from(
+                        poster, posterStorage.accessUrl(poster.getUrl())))
                 .toList();
         List<DepartmentAchievementVO> achievements = organizationMapper
                 .selectDepartmentAchievements(department.getId())
