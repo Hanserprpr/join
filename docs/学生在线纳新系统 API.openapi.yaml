@@ -4405,6 +4405,7 @@ components:
         refreshAfterSeconds:
           type: integer
           format: int64
+          description: 当前面试场次二维码有效秒数减 1，用于在二维码失效前一秒重新获取。
     ResultCheckInQrCodeVO:
       type: object
       properties:

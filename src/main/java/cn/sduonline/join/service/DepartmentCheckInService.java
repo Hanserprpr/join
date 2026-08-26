@@ -62,16 +62,10 @@ public class DepartmentCheckInService {
                 Duration.ofSeconds(ttlSeconds)
         );
         Instant expiresAt = Instant.now().plusSeconds(ttlSeconds);
-        long refreshSeconds = Math.max(
-                1, Math.min(
-                        appProperties.getCheckIn().getQrRefreshSeconds(),
-                        ttlSeconds - 1
-                )
-        );
         String content = appProperties.getCheckIn().getEntryUrl()
                 + "?token=" + token;
         return ServiceResult.success(new CheckInQrCodeVO(
-                content, expiresAt, refreshSeconds
+                content, expiresAt, ttlSeconds - 1
         ));
     }
 

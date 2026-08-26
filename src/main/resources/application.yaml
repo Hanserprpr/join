@@ -148,7 +148,6 @@ app:
   cors-allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
   check-in:
     token-ttl-seconds: ${CHECK_IN_TOKEN_TTL_SECONDS:8}
-    qr-refresh-seconds: ${CHECK_IN_QR_REFRESH_SECONDS:8}
     entry-url: ${CHECK_IN_ENTRY_URL:http://localhost:8080/api/wechat/check-in/entry}
     result-url: ${CHECK_IN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}/check-in}
     oauth-state-ttl-seconds: ${CHECK_IN_OAUTH_STATE_TTL_SECONDS:120}

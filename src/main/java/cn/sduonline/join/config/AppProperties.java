@@ -95,8 +95,6 @@ public class AppProperties {
     public static class CheckIn {
         /** 动态签到二维码的有效时间。 */
         private long tokenTtlSeconds = 8;
-        /** 前端刷新动态二维码的建议间隔。 */
-        private long qrRefreshSeconds = 8;
         /** 微信扫码时先进入的后端公网地址。 */
         private String entryUrl =
                 "http://localhost:8080/api/wechat/check-in/entry";
