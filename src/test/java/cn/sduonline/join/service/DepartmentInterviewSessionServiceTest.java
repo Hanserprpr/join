@@ -26,12 +26,25 @@ class DepartmentInterviewSessionServiceTest {
 
     @Mock AdminOrganizationMapper organizationMapper;
     @Mock DepartmentInterviewSessionMapper sessionMapper;
+    @Mock org.springframework.transaction.support.TransactionTemplate
+            transactionTemplate;
+    @Mock org.springframework.transaction.TransactionStatus transactionStatus;
     private DepartmentInterviewSessionService service;
 
     @BeforeEach
     void setUp() {
         service = new DepartmentInterviewSessionService(
-                organizationMapper, sessionMapper
+                organizationMapper, sessionMapper, transactionTemplate
+        );
+    }
+
+    private void executeTransactionsInline() {
+        org.mockito.Mockito.doAnswer(invocation -> {
+            org.springframework.transaction.support.TransactionCallback<?>
+                    callback = invocation.getArgument(0);
+            return callback.doInTransaction(transactionStatus);
+        }).when(transactionTemplate).execute(
+                org.mockito.ArgumentMatchers.any()
         );
     }
 
@@ -152,6 +165,7 @@ class DepartmentInterviewSessionServiceTest {
 
     @Test
     void autoEndsExpiredSessionsWithNoActiveInterviews() {
+        executeTransactionsInline();
         DepartmentInterviewSession expired = session();
         DepartmentInterviewSession ended = session();
         ended.setStatus(InterviewSessionStatus.ENDED);
@@ -178,6 +192,7 @@ class DepartmentInterviewSessionServiceTest {
 
     @Test
     void leavesExpiredSessionOpenWhileAnInterviewIsStillActive() {
+        executeTransactionsInline();
         DepartmentInterviewSession expired = session();
         when(sessionMapper.selectExpiredPublished(
                 org.mockito.ArgumentMatchers.any()
@@ -191,6 +206,38 @@ class DepartmentInterviewSessionServiceTest {
         verify(sessionMapper, never()).end(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void keepsAutoEndingOtherSessionsWhenOneFails() {
+        executeTransactionsInline();
+        DepartmentInterviewSession failing = session();
+        DepartmentInterviewSession healthy = session();
+        healthy.setId(31L);
+        DepartmentInterviewSession ended = session();
+        ended.setId(31L);
+        ended.setStatus(InterviewSessionStatus.ENDED);
+        when(sessionMapper.selectExpiredPublished(
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(java.util.List.of(failing, healthy));
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenThrow(new IllegalStateException("db is unhappy"));
+        when(sessionMapper.selectPublishedForUpdate(12L, 31L))
+                .thenReturn(healthy);
+        when(sessionMapper.end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(31L),
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(1);
+        when(sessionMapper.selectById(12L, 31L)).thenReturn(ended);
+
+        service.autoEndExpiredSessions();
+
+        verify(sessionMapper).end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(31L),
                 org.mockito.ArgumentMatchers.any()
         );
     }

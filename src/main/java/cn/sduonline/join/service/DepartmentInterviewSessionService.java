@@ -10,10 +10,13 @@ import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DepartmentInterviewSessionService {
@@ -22,6 +25,7 @@ public class DepartmentInterviewSessionService {
 
     private final AdminOrganizationMapper organizationMapper;
     private final DepartmentInterviewSessionMapper sessionMapper;
+    private final TransactionTemplate transactionTemplate;
 
     public ServiceResult<InterviewSessionVO> create(
             Long departmentId,
@@ -103,7 +107,6 @@ public class DepartmentInterviewSessionService {
         return findById(departmentId, sessionId);
     }
 
-    @Transactional
     @Scheduled(
             fixedDelayString = "${app.interview-session.auto-end-poll-delay-ms:30000}"
     )
@@ -111,7 +114,16 @@ public class DepartmentInterviewSessionService {
         LocalDateTime now = LocalDateTime.now();
         for (DepartmentInterviewSession session :
                 sessionMapper.selectExpiredPublished(now)) {
-            end(session.getDepartmentId(), session.getId());
+            try {
+                transactionTemplate.execute(status -> end(
+                        session.getDepartmentId(), session.getId()
+                ));
+            } catch (RuntimeException exception) {
+                log.error(
+                        "Failed to auto-end interview session {}",
+                        session.getId(), exception
+                );
+            }
         }
     }
 

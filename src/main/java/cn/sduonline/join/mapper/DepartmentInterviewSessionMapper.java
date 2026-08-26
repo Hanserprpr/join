@@ -141,6 +141,7 @@ public interface DepartmentInterviewSessionMapper {
                    published_at, ended_at
             FROM department_interview_session
             WHERE status = 'PUBLISHED' AND ends_at <= #{now}
+            ORDER BY ends_at ASC, id ASC
             """)
     java.util.List<DepartmentInterviewSession> selectExpiredPublished(
             @Param("now") java.time.LocalDateTime now
