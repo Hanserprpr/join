@@ -10,6 +10,7 @@ import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -100,6 +101,18 @@ public class DepartmentInterviewSessionService {
         sessionMapper.cancelUnusedCarryovers(sessionId);
         sessionMapper.createCarryovers(sessionId);
         return findById(departmentId, sessionId);
+    }
+
+    @Transactional
+    @Scheduled(
+            fixedDelayString = "${app.interview-session.auto-end-poll-delay-ms:30000}"
+    )
+    public void autoEndExpiredSessions() {
+        LocalDateTime now = LocalDateTime.now();
+        for (DepartmentInterviewSession session :
+                sessionMapper.selectExpiredPublished(now)) {
+            end(session.getDepartmentId(), session.getId());
+        }
     }
 
     public ServiceResult<InterviewSessionVO> findPublished(Long departmentId) {

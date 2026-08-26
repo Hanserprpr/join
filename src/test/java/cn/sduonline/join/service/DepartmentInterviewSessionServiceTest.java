@@ -150,6 +150,51 @@ class DepartmentInterviewSessionServiceTest {
         );
     }
 
+    @Test
+    void autoEndsExpiredSessionsWithNoActiveInterviews() {
+        DepartmentInterviewSession expired = session();
+        DepartmentInterviewSession ended = session();
+        ended.setStatus(InterviewSessionStatus.ENDED);
+        when(sessionMapper.selectExpiredPublished(
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(java.util.List.of(expired));
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session());
+        when(sessionMapper.end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(30L),
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(1);
+        when(sessionMapper.selectById(12L, 30L)).thenReturn(ended);
+
+        service.autoEndExpiredSessions();
+
+        verify(sessionMapper).end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(30L),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void leavesExpiredSessionOpenWhileAnInterviewIsStillActive() {
+        DepartmentInterviewSession expired = session();
+        when(sessionMapper.selectExpiredPublished(
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(java.util.List.of(expired));
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session());
+        when(sessionMapper.countActiveInterviews(30L)).thenReturn(1);
+
+        service.autoEndExpiredSessions();
+
+        verify(sessionMapper, never()).end(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
     private static InterviewSessionRequest request() {
         LocalDateTime startsAt = LocalDateTime.of(2026, 8, 1, 9, 0);
         return new InterviewSessionRequest(
