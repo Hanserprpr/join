@@ -1575,6 +1575,43 @@ paths:
                 $ref: "#/components/schemas/ResultDepartmentInterviewVO"
       security:
       - sessionCookie: []
+  /api/departments/{departmentId}/interviews/users/{userId}/evaluations:
+    get:
+      tags:
+      - 面试
+      summary: 按用户查询面试评价
+      description: >-
+        查询用户在指定部门的所有面试官评价。多次面试按面试时间倒序返回；
+        每次面试内按评价提交时间和面试官用户 ID 排序。用户不存在、未参加面试或尚无评价时，
+        data 返回空数组。调用者需要目标部门的 application:read 权限，不要求加入原面试室。
+      operationId: findEvaluationsByUserId
+      parameters:
+      - name: departmentId
+        in: path
+        description: 部门 ID
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: userId
+        in: path
+        description: 用户 ID（统一认证账号，通常为学号）
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,32}$
+          minLength: 1
+          maxLength: 32
+      responses:
+        "200":
+          description: 查询成功
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListInterviewEvaluationVO"
+      security:
+      - sessionCookie: []
   /api/departments/{departmentId}/interviews/sessions/current:
     get:
       tags:

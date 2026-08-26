@@ -62,6 +62,7 @@ public class OpenApiConfig {
             Map.entry("DepartmentInterviewController.findMyQueueStatus", "查询我的排队状态"),
             Map.entry("DepartmentInterviewController.subscribeQueue", "订阅面试队列事件"),
             Map.entry("DepartmentInterviewController.subscribeMyQueueStatus", "订阅我的排队状态事件"),
+            Map.entry("DepartmentInterviewController.findEvaluationsByUserId", "按用户查询面试评价"),
             Map.entry("DepartmentInterviewRoomController.callNext", "面试室呼叫下一位面试者"),
             Map.entry("DepartmentInterviewRoomController.current", "查询面试室当前面试"),
             Map.entry("DepartmentInterviewRoomController.finish", "结束面试室当前面试"),

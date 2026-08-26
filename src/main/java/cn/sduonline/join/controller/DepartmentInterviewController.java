@@ -357,8 +357,14 @@ public class DepartmentInterviewController {
      * @param departmentId 部门 ID
      * @param userId 用户 ID（统一认证账号/学号）
      * @return 该用户所有面试记录的评分和评价
-     */
+    */
     @GetMapping("/users/{userId}/evaluations")
+    @Operation(
+            summary = "按用户查询面试评价",
+            description = "查询用户在指定部门的所有面试官评价；"
+                    + "多次面试按面试时间倒序返回，无评价时 data 为空数组。"
+                    + "需要 application:read 权限，不要求管理员加入面试室。"
+    )
     @DepartmentPermission(PermissionCode.APPLICATION_READ)
     public Result<List<InterviewEvaluationVO>> findEvaluationsByUserId(
             @PathVariable @Positive Long departmentId,

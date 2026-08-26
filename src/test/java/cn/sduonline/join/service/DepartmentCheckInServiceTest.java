@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -198,7 +199,7 @@ class DepartmentCheckInServiceTest {
     }
 
     @Test
-    void repeatedScanReturnsExistingCheckIn() {
+    void repeatedScanReturnsAlreadyCheckedInError() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
@@ -217,13 +218,12 @@ class DepartmentCheckInServiceTest {
 
         var result = service.checkIn("valid", "20240001");
 
-        assertTrue(result.isSuccess());
-        assertEquals(200L, result.data().id());
+        assertEquals(BizCode.CHECK_IN_ALREADY_EXISTS, result.error());
         verify(checkInMapper, never()).insert(any());
     }
 
     @Test
-    void repeatedScanReturnsExistingCheckInAfterSessionEndTime() {
+    void repeatedScanReturnsAlreadyCheckedInErrorAfterSessionEndTime() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
         DepartmentInterviewSession session = openSession();
@@ -244,9 +244,31 @@ class DepartmentCheckInServiceTest {
 
         var result = service.checkIn("valid", "20240001");
 
-        assertTrue(result.isSuccess());
-        assertEquals(200L, result.data().id());
+        assertEquals(BizCode.CHECK_IN_ALREADY_EXISTS, result.error());
         verify(checkInMapper, never()).insert(any());
+    }
+
+    @Test
+    void concurrentRepeatedScanReturnsAlreadyCheckedInError() {
+        when(valueOperations.get("join:check-in:token:valid"))
+                .thenReturn("12:30");
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        DepartmentCheckIn existing = new DepartmentCheckIn();
+        existing.setId(200L);
+        when(checkInMapper.selectBySessionAndApplication(30L, 100L))
+                .thenReturn(null, existing);
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(7);
+        org.mockito.Mockito.doThrow(new DuplicateKeyException("duplicate"))
+                .when(checkInMapper).insert(any());
+
+        var result = service.checkIn("valid", "20240001");
+
+        assertEquals(BizCode.CHECK_IN_ALREADY_EXISTS, result.error());
     }
 
     @Test

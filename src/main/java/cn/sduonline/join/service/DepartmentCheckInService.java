@@ -177,8 +177,9 @@ public class DepartmentCheckInService {
                 existing.setRequiresRecheckIn(false);
                 checkInMapper.reactivateAfterCheckIn(existing);
                 interviewSseService.publishQueueAfterCommit(departmentId);
+                return ServiceResult.success(CheckInVO.from(existing));
             }
-            return ServiceResult.success(CheckInVO.from(existing));
+            return ServiceResult.failure(BizCode.CHECK_IN_ALREADY_EXISTS);
         }
         if (hasCheckInEnded(session)) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
@@ -210,12 +211,14 @@ public class DepartmentCheckInService {
         try {
             checkInMapper.insert(checkIn);
         } catch (DuplicateKeyException exception) {
-            // 同一用户并发扫码时返回已经落库的同一条签到记录。
-            return ServiceResult.success(CheckInVO.from(
-                    checkInMapper.selectBySessionAndApplication(
-                            sessionId, application.getId()
-                    )
-            ));
+            // 仅将同一用户的并发重复签到转为业务错误；
+            // 其他唯一约束冲突仍交给全局异常处理。
+            if (checkInMapper.selectBySessionAndApplication(
+                    sessionId, application.getId()
+            ) != null) {
+                return ServiceResult.failure(BizCode.CHECK_IN_ALREADY_EXISTS);
+            }
+            throw exception;
         }
         if (carryoverId != null) {
             sessionMapper.useCarryover(carryoverId, sessionId);

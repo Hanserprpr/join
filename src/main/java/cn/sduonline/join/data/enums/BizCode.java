@@ -130,6 +130,8 @@ public enum BizCode {
     APPLICATION_CANNOT_CANCEL(140033, "当前报名已进入后续流程，无法取消"),
     /** 已经开始过面试，不允许取消签到。 */
     CHECK_IN_CANNOT_CANCEL(140034, "已进入面试流程，无法取消签到"),
+    /** 当前面试场次已经签到。 */
+    CHECK_IN_ALREADY_EXISTS(140035, "已经签到，请勿重复签到"),
 
     // ---------- 15xxxx 外部依赖错误 ----------
     /** 第三方服务不可用。 */
