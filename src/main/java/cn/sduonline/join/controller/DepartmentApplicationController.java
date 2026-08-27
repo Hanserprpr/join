@@ -10,6 +10,7 @@ import cn.sduonline.join.data.dto.MyDepartmentApplicationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationSummaryVO;
 import cn.sduonline.join.data.dto.PageVO;
+import cn.sduonline.join.data.enums.ApplicationStatus;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.scope.DepartmentPermission;
 import cn.sduonline.join.security.scope.PermissionCode;
@@ -56,6 +57,7 @@ public class DepartmentApplicationController {
      * @param college 学院筛选
      * @param grade 年级筛选
      * @param interviewed 是否已完成面试
+     * @param status 报名状态筛选，不传则查询全部状态
      * @param sortBy 排序字段，支持报名时间和评分
      * @param sortOrder 排序方向，支持升序和降序
      * @param page 页码，从 1 开始
@@ -70,6 +72,7 @@ public class DepartmentApplicationController {
             @RequestParam(required = false) @Size(max = 64) String college,
             @RequestParam(required = false) @Min(2000) @Max(2100) Integer grade,
             @RequestParam(required = false) Boolean interviewed,
+            @RequestParam(required = false) ApplicationStatus status,
             @RequestParam(defaultValue = "submittedAt")
             @Pattern(regexp = "submittedAt|score") String sortBy,
             @RequestParam(defaultValue = "desc")
@@ -80,7 +83,7 @@ public class DepartmentApplicationController {
         ServiceResult<PageVO<DepartmentApplicationSummaryVO>> result =
                 applicationService.findApplications(
                         departmentId, keyword, college, grade, interviewed,
-                        sortBy, sortOrder, page, size
+                        status, sortBy, sortOrder, page, size
                 );
         return result.isSuccess()
                 ? Result.ok(result.data())

@@ -53,6 +53,7 @@ public class DepartmentApplicationService {
             String college,
             Integer grade,
             Boolean interviewed,
+            ApplicationStatus status,
             String sortBy,
             String sortOrder,
             int page,
@@ -65,12 +66,12 @@ public class DepartmentApplicationService {
         String normalizedCollege = trimToNull(college);
         long total = applicationMapper.countApplications(
                 departmentId, normalizedKeyword, normalizedCollege, grade,
-                interviewed
+                interviewed, status
         );
         List<DepartmentApplicationSummaryVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, normalizedKeyword, normalizedCollege, grade,
-                        interviewed, sortBy, sortOrder,
+                        interviewed, status, sortBy, sortOrder,
                         (page - 1) * size, size
                 )
                 .stream()
@@ -258,7 +259,7 @@ public class DepartmentApplicationService {
         List<DepartmentApplicationDetailVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, trimToNull(keyword), trimToNull(college),
-                        grade, interviewed, null, null, null, null
+                        grade, interviewed, null, null, null, null, null
                 )
                 .stream()
                 .map(this::toDetailVO)
