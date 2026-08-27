@@ -39,6 +39,9 @@ public interface DepartmentApplicationMapper {
             <if test="interviewed != null and interviewed == false">
               AND (i.id IS NULL OR i.ended_at IS NULL)
             </if>
+            <if test="status != null">
+              AND a.status = #{status}
+            </if>
             </script>
             """)
     long countApplications(
@@ -46,7 +49,8 @@ public interface DepartmentApplicationMapper {
             @Param("keyword") String keyword,
             @Param("college") String college,
             @Param("grade") Integer grade,
-            @Param("interviewed") Boolean interviewed
+            @Param("interviewed") Boolean interviewed,
+            @Param("status") cn.sduonline.join.data.enums.ApplicationStatus status
     );
 
     @Select("""
@@ -86,6 +90,9 @@ public interface DepartmentApplicationMapper {
             <if test="interviewed != null and interviewed == false">
               AND (i.id IS NULL OR i.ended_at IS NULL)
             </if>
+            <if test="status != null">
+              AND a.status = #{status}
+            </if>
             <choose>
               <when test="sortBy == 'score' and sortOrder == 'asc'">
                 ORDER BY e.score IS NULL ASC, e.score ASC, a.id DESC
@@ -108,6 +115,7 @@ public interface DepartmentApplicationMapper {
             @Param("college") String college,
             @Param("grade") Integer grade,
             @Param("interviewed") Boolean interviewed,
+            @Param("status") cn.sduonline.join.data.enums.ApplicationStatus status,
             @Param("sortBy") String sortBy,
             @Param("sortOrder") String sortOrder,
             @Param("offset") Integer offset,
