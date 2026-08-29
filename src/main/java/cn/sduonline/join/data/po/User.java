@@ -1,6 +1,8 @@
 package cn.sduonline.join.data.po;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
@@ -30,8 +32,15 @@ public class User {
     private String casId;
 
     /**
-     * 邮箱。
+     * 邮箱，选填，允许用户清空。
+     * <p>
+     * {@link FieldStrategy#ALWAYS} 让该列始终参与 {@code updateById}：
+     * 默认的 {@code NOT_NULL} 策略会把值为 null 的列从 UPDATE 语句里剔除，
+     * 清空就只改内存、不落库。所有 {@code updateById(user)} 的调用方都先
+     * {@code selectById} 读出整行再改，因此始终写回不会覆盖他人的值；
+     * 新增调用方若要用半填充的实体更新，必须避开 {@code updateById}。
      */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String email;
 
     /**
@@ -52,7 +61,8 @@ public class User {
     /** 报名必填资料是否已完成。 */
     private Boolean profileCompleted;
 
-    /** QQ 号（选填）。 */
+    /** QQ 号，选填，允许用户清空；策略同 {@link #email}。 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String qq;
 
     /**
