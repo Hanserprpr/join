@@ -238,6 +238,13 @@ class UserServiceTest {
         assertEquals("13800000000", outcome.data().getPhone());
     }
 
+    /**
+     * 必填字段传空字符串不会被清空。
+     * <p>
+     * 其中 phone 的空串经 API 到不了这里——{@code @Pattern("^1\\d{10}$")}
+     * 会先返回 400；college、major 的 {@code @Size} 则放行空串。这里钉的是
+     * service 自身的兜底行为，避免日后放宽校验时把必填字段一起清掉。
+     */
     @Test
     void updateContactKeepsRequiredFieldsOnEmptyString() {
         User user = new User();
