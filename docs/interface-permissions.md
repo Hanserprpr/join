@@ -96,6 +96,7 @@
 | PUT | `/api/departments/{departmentId}` | 完整更新部门详情 |
 | PATCH | `/api/departments/{departmentId}` | 部分更新部门详情 |
 | POST | `/api/departments/{departmentId}/posters/upload` | 上传部门海报图片 |
+| PUT | `/api/departments/{departmentId}/posters/order` | 按海报 ID 全量更新展示顺序 |
 | PUT | `/api/departments/{departmentId}/questionnaire` | 完整更新报名问卷 |
 | DELETE | `/api/departments/{departmentId}/questionnaire` | 清空报名问卷 |
 
