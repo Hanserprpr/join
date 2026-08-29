@@ -4,6 +4,8 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.data.dto.DepartmentDetailUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
+import cn.sduonline.join.data.dto.DepartmentPosterOrderUpdateRequest;
+import cn.sduonline.join.data.dto.DepartmentPosterVO;
 import cn.sduonline.join.data.dto.DepartmentVO;
 import cn.sduonline.join.data.dto.DepartmentQuestionnaireUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentQuestionnaireVO;
@@ -16,6 +18,7 @@ import cn.sduonline.join.service.DepartmentQuestionnaireService;
 import cn.sduonline.join.service.ServiceResult;
 import cn.sduonline.join.service.DepartmentPosterUploadService;
 import java.io.IOException;
+import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +61,22 @@ public class DepartmentController {
         ServiceResult<PosterUploadVO> result = posterUploadService.upload(
                 departmentId, file
         );
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    /**
+     * 原子更新部门全部海报的展示顺序。
+     */
+    @PutMapping("/{departmentId}/posters/order")
+    @DepartmentPermission(PermissionCode.RECRUITMENT_MANAGE)
+    public Result<List<DepartmentPosterVO>> updatePosterOrder(
+            @PathVariable @Positive Long departmentId,
+            @Valid @RequestBody DepartmentPosterOrderUpdateRequest request
+    ) {
+        ServiceResult<List<DepartmentPosterVO>> result =
+                departmentService.reorderPosters(departmentId, request);
         return result.isSuccess()
                 ? Result.ok(result.data())
                 : Result.fail(result.error());

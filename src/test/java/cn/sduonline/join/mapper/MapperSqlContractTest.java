@@ -238,6 +238,42 @@ class MapperSqlContractTest {
         assertTrue(updateSql.contains("WHERE cas_id = #{casId}"));
     }
 
+    @Test
+    void posterReorderingLocksDepartmentAndPostersAndScopesEveryUpdate()
+            throws NoSuchMethodException {
+        Method departmentLock = AdminOrganizationMapper.class.getMethod(
+                "selectDepartmentByIdForUpdate", Long.class
+        );
+        Method posterLock = AdminOrganizationMapper.class.getMethod(
+                "selectDepartmentPostersForUpdate", Long.class
+        );
+        Method update = AdminOrganizationMapper.class.getMethod(
+                "updateDepartmentPosterSortOrder",
+                Long.class, Long.class, Integer.class
+        );
+
+        String departmentLockSql = sql(
+                departmentLock.getAnnotation(Select.class).value()
+        );
+        String posterLockSql = sql(
+                posterLock.getAnnotation(Select.class).value()
+        );
+        String updateSql = sql(update.getAnnotation(Update.class).value());
+
+        assertTrue(departmentLockSql.contains("WHERE id = #{id}"));
+        assertTrue(departmentLockSql.contains("FOR UPDATE"));
+        assertTrue(posterLockSql.contains(
+                "WHERE department_id = #{departmentId}"
+        ));
+        assertTrue(posterLockSql.contains("ORDER BY id ASC"));
+        assertTrue(posterLockSql.contains("FOR UPDATE"));
+        assertTrue(updateSql.contains("SET sort_order = #{sortOrder}"));
+        assertTrue(updateSql.contains(
+                "WHERE department_id = #{departmentId}"
+        ));
+        assertTrue(updateSql.contains("AND id = #{posterId}"));
+    }
+
     private static String sql(String[] fragments) {
         return String.join("\n", fragments);
     }

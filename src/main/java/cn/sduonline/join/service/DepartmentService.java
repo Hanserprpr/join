@@ -5,6 +5,8 @@ import cn.sduonline.join.data.dto.DepartmentAchievementVO;
 import cn.sduonline.join.data.dto.DepartmentDetailUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
+import cn.sduonline.join.data.dto.DepartmentPosterOrderItemRequest;
+import cn.sduonline.join.data.dto.DepartmentPosterOrderUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentPosterRequest;
 import cn.sduonline.join.data.dto.DepartmentPosterVO;
 import cn.sduonline.join.data.enums.BizCode;
@@ -17,7 +19,10 @@ import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
 import cn.sduonline.join.service.poster.PosterUrlPolicy;
 import cn.sduonline.join.service.poster.PosterStorage;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -134,6 +139,80 @@ public class DepartmentService {
         return ServiceResult.success(toVO(department, casId));
     }
 
+    /**
+     * 原子更新部门全部海报的展示顺序。
+     * 请求必须覆盖当前全部海报，且排序值恰好为 {@code 0..n-1}。
+     *
+     * @param departmentId 部门 ID
+     * @param request 全部海报的目标顺序
+     * @return 更新后按新顺序排列的海报
+     */
+    @Transactional
+    public ServiceResult<List<DepartmentPosterVO>> reorderPosters(
+            Long departmentId,
+            DepartmentPosterOrderUpdateRequest request
+    ) {
+        Department department = organizationMapper
+                .selectDepartmentByIdForUpdate(departmentId);
+        if (department == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+
+        List<DepartmentPoster> currentPosters = organizationMapper
+                .selectDepartmentPostersForUpdate(departmentId);
+        List<DepartmentPosterOrderItemRequest> requestedPosters =
+                request == null ? null : request.posters();
+        if (!hasValidCompleteOrder(requestedPosters)) {
+            return ServiceResult.failure(BizCode.PARAM_INVALID);
+        }
+
+        Set<Long> currentIds = new HashSet<>();
+        for (DepartmentPoster poster : currentPosters) {
+            currentIds.add(poster.getId());
+        }
+        Set<Long> requestedIds = new HashSet<>();
+        for (DepartmentPosterOrderItemRequest poster : requestedPosters) {
+            requestedIds.add(poster.id());
+        }
+        if (!currentIds.equals(requestedIds)) {
+            return ServiceResult.failure(BizCode.POSTER_ORDER_CONFLICT);
+        }
+
+        requestedPosters.stream()
+                .sorted(Comparator.comparing(DepartmentPosterOrderItemRequest::id))
+                .forEach(poster -> organizationMapper.updateDepartmentPosterSortOrder(
+                        departmentId, poster.id(), poster.sortOrder()
+                ));
+
+        return ServiceResult.success(toPosterVOs(
+                organizationMapper.selectDepartmentPosters(departmentId)
+        ));
+    }
+
+    private static boolean hasValidCompleteOrder(
+            List<DepartmentPosterOrderItemRequest> posters
+    ) {
+        if (posters == null || posters.size() > 20) {
+            return false;
+        }
+        Set<Long> ids = new HashSet<>();
+        Set<Integer> sortOrders = new HashSet<>();
+        for (DepartmentPosterOrderItemRequest poster : posters) {
+            if (poster == null || poster.id() == null || poster.id() <= 0
+                    || poster.sortOrder() == null || poster.sortOrder() < 0
+                    || !ids.add(poster.id())
+                    || !sortOrders.add(poster.sortOrder())) {
+                return false;
+            }
+        }
+        for (int expected = 0; expected < posters.size(); expected++) {
+            if (!sortOrders.contains(expected)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static String trimToNull(String value) {
         if (value == null) {
             return null;
@@ -182,12 +261,9 @@ public class DepartmentService {
     }
 
     private DepartmentVO toVO(Department department, String casId) {
-        List<DepartmentPosterVO> posters = organizationMapper
-                .selectDepartmentPosters(department.getId())
-                .stream()
-                .map(poster -> DepartmentPosterVO.from(
-                        poster, posterStorage.accessUrl(poster.getUrl())))
-                .toList();
+        List<DepartmentPosterVO> posters = toPosterVOs(
+                organizationMapper.selectDepartmentPosters(department.getId())
+        );
         List<DepartmentAchievementVO> achievements = organizationMapper
                 .selectDepartmentAchievements(department.getId())
                 .stream()
@@ -200,6 +276,15 @@ public class DepartmentService {
                 questionnaireMapper.countQuestions(department.getId()) > 0,
                 canManage(casId, department.getId())
         );
+    }
+
+    private List<DepartmentPosterVO> toPosterVOs(
+            List<DepartmentPoster> posters
+    ) {
+        return posters.stream()
+                .map(poster -> DepartmentPosterVO.from(
+                        poster, posterStorage.accessUrl(poster.getUrl())))
+                .toList();
     }
 
     /**
