@@ -2133,11 +2133,15 @@ components:
   schemas:
     ContactUpdateRequest:
       type: object
+      description: |
+        部分更新：字段缺省或为 null 表示不修改。
+        选填字段（email、qq）传空字符串表示清空该字段。
       properties:
         email:
           type: string
           format: email
-          pattern: ^\S+@\S+\.\S+$
+          description: 邮箱；传空字符串表示清空
+          pattern: ^(?:\S+@\S+\.\S+)?$
         phone:
           type: string
           pattern: "^1\\d{10}$"
@@ -2156,6 +2160,7 @@ components:
           minimum: 2000
         qq:
           type: string
+          description: QQ 号；传空字符串表示清空
           pattern: "^(?:[1-9]\\d{4,11})?$"
     ResultUserProfileVO:
       type: object
