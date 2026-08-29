@@ -191,6 +191,79 @@ class UserServiceTest {
     }
 
     @Test
+    void updateContactClearsEmailAndQqOnEmptyString() {
+        User user = new User();
+        user.setCasId("20240001");
+        user.setEmail("student@sdu.edu.cn");
+        user.setPhone("13900000000");
+        user.setCollege("软件学院");
+        user.setMajor("软件工程");
+        user.setGrade(2024);
+        user.setQq("123456");
+        user.setProfileCompleted(true);
+        when(userMapper.selectById("20240001")).thenReturn(user);
+
+        ServiceResult<User> outcome = userService.updateContact(
+                "20240001",
+                new ContactUpdateRequest("", null, null, null, null, "")
+        );
+
+        assertTrue(outcome.isSuccess());
+        User result = outcome.data();
+        assertEquals(null, result.getEmail());
+        assertEquals(null, result.getQq());
+        // 邮箱与 QQ 不属于必填资料，清空后资料仍然完整
+        assertEquals(true, result.getProfileCompleted());
+        assertEquals("13900000000", result.getPhone());
+        verify(userMapper).updateById(user);
+    }
+
+    @Test
+    void updateContactKeepsEmailAndQqOnNull() {
+        User user = new User();
+        user.setCasId("20240001");
+        user.setEmail("student@sdu.edu.cn");
+        user.setPhone("13900000000");
+        user.setQq("123456");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+
+        ServiceResult<User> outcome = userService.updateContact(
+                "20240001",
+                new ContactUpdateRequest(null, "13800000000", null, null, null, null)
+        );
+
+        assertTrue(outcome.isSuccess());
+        assertEquals("student@sdu.edu.cn", outcome.data().getEmail());
+        assertEquals("123456", outcome.data().getQq());
+        assertEquals("13800000000", outcome.data().getPhone());
+    }
+
+    @Test
+    void updateContactKeepsRequiredFieldsOnEmptyString() {
+        User user = new User();
+        user.setCasId("20240001");
+        user.setPhone("13900000000");
+        user.setCollege("软件学院");
+        user.setMajor("软件工程");
+        user.setGrade(2024);
+        user.setProfileCompleted(true);
+        when(userMapper.selectById("20240001")).thenReturn(user);
+
+        ServiceResult<User> outcome = userService.updateContact(
+                "20240001",
+                new ContactUpdateRequest("", "", "", "", null, null)
+        );
+
+        assertTrue(outcome.isSuccess());
+        User result = outcome.data();
+        assertEquals("13900000000", result.getPhone());
+        assertEquals("软件学院", result.getCollege());
+        assertEquals("软件工程", result.getMajor());
+        assertEquals(2024, result.getGrade());
+        assertEquals(true, result.getProfileCompleted());
+    }
+
+    @Test
     void updateContactRejectsUnknownCollege() {
         User user = new User();
         user.setCasId("20240001");
