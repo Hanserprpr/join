@@ -50,18 +50,19 @@ public class UserProfileController {
      *
      * @param request 需要更新的个人资料字段
      * @return 更新后的个人资料
-     * @apiNote 支持部分更新，未传字段保持原值，至少需要提供一个可更新字段
+     * @apiNote 支持部分更新，未传字段保持原值，至少需要提供一个可更新字段；
+     *          选填字段（邮箱、QQ 号）传空字符串表示清空
      */
     @PutMapping
     public Result<UserProfileVO> updateContact(
             @Valid @RequestBody ContactUpdateRequest request
     ) {
-        if (!StringUtils.hasText(request.email())
+        if (request.email() == null
                 && !StringUtils.hasText(request.phone())
                 && !StringUtils.hasText(request.college())
                 && !StringUtils.hasText(request.major())
                 && request.grade() == null
-                && !StringUtils.hasText(request.qq())) {
+                && request.qq() == null) {
             return Result.fail(
                     BizCode.PARAM_INVALID,
                     "至少填写一个可更新的个人资料字段"

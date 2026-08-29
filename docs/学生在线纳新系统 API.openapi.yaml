@@ -2133,29 +2133,53 @@ components:
   schemas:
     ContactUpdateRequest:
       type: object
+      description: |
+        部分更新：字段缺省或显式传 null 表示不修改，因此每个字段都接受 null。
+        选填字段（email、qq）额外支持传空字符串，表示把该字段清空为 NULL。
+        必填字段（phone、college、major、grade）不支持清空。
       properties:
         email:
-          type: string
-          format: email
-          pattern: ^\S+@\S+\.\S+$
+          description: |
+            邮箱。空字符串表示清空；null 或缺省表示不修改。
+            空字符串不是合法邮箱，故用 oneOf 把“清空”与“合法邮箱”分开描述，
+            避免 format: email 把文档承诺支持的清空请求判为非法。
+          oneOf:
+          - type: "null"
+          - type: string
+            const: ""
+          - type: string
+            format: email
+            pattern: ^\S+@\S+\.\S+$
         phone:
-          type: string
+          description: 手机号；不支持清空，空字符串不满足 pattern 会被拒绝
+          type:
+          - string
+          - "null"
           pattern: "^1\\d{10}$"
         college:
-          type: string
+          type:
+          - string
+          - "null"
           maxLength: 64
           minLength: 0
         major:
-          type: string
+          type:
+          - string
+          - "null"
           maxLength: 64
           minLength: 0
         grade:
-          type: integer
+          type:
+          - integer
+          - "null"
           format: int32
           maximum: 2100
           minimum: 2000
         qq:
-          type: string
+          description: QQ 号。空字符串表示清空；null 或缺省表示不修改
+          type:
+          - string
+          - "null"
           pattern: "^(?:[1-9]\\d{4,11})?$"
     ResultUserProfileVO:
       type: object
