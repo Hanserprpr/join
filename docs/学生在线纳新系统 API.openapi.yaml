@@ -1364,6 +1364,34 @@ paths:
       security:
       - sessionCookie: []
   /api/admin/boards/{boardId}:
+    patch:
+      tags:
+      - 系统管理
+      summary: 修改板块名称
+      operationId: updateBoardName
+      parameters:
+      - name: boardId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationNameUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultOrganizationNameVO"
+      security:
+      - sessionCookie: []
     delete:
       tags:
       - 系统管理
@@ -1386,6 +1414,34 @@ paths:
       security:
       - sessionCookie: []
   /api/admin/workstations/{workstationId}:
+    patch:
+      tags:
+      - 系统管理
+      summary: 修改工作站名称
+      operationId: updateWorkstationName
+      parameters:
+      - name: workstationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationNameUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultOrganizationNameVO"
+      security:
+      - sessionCookie: []
     delete:
       tags:
       - 系统管理
@@ -1408,6 +1464,34 @@ paths:
       security:
       - sessionCookie: []
   /api/admin/departments/{departmentId}:
+    patch:
+      tags:
+      - 系统管理
+      summary: 修改部门名称
+      operationId: updateDepartmentName
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationNameUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultOrganizationNameVO"
+      security:
+      - sessionCookie: []
     delete:
       tags:
       - 系统管理
@@ -1565,6 +1649,8 @@ paths:
       tags:
       - 微信订阅通知
       summary: 获取微信 JS-SDK 签名和订阅通知模板
+      description: 已废弃：叫号通知已改用普通模板消息。
+      deprecated: true
       operationId: weChatJsSdkConfig
       parameters:
       - name: url
@@ -3454,6 +3540,36 @@ components:
           type: boolean
       required:
       - name
+    OrganizationNameUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 64
+          minLength: 1
+      required:
+      - name
+    OrganizationNameVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    ResultOrganizationNameVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/OrganizationNameVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
     BoardVO:
       type: object
       properties:

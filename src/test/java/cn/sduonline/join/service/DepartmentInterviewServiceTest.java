@@ -46,7 +46,7 @@ class DepartmentInterviewServiceTest {
     @Mock TransactionStatus transactionStatus;
     @Mock InterviewSseService interviewSseService;
     @Mock UserMapper userMapper;
-    @Mock WeChatSubscribeMessageService subscribeMessageService;
+    @Mock WeChatTemplateMessageService templateMessageService;
     @Mock AuthorizationService authorizationService;
     private WeChatProperties weChatProperties;
     private DepartmentInterviewService service;
@@ -62,7 +62,7 @@ class DepartmentInterviewServiceTest {
         service = new DepartmentInterviewService(
                 organizationMapper, interviewMapper, roomMapper,
                 transactionTemplate,
-                interviewSseService, userMapper, subscribeMessageService,
+                interviewSseService, userMapper, templateMessageService,
                 weChatProperties, authorizationService
         );
     }
@@ -91,21 +91,25 @@ class DepartmentInterviewServiceTest {
         var result = service.callNextInRoom(12L, 9L, "admin01");
 
         assertTrue(result.isSuccess());
-        verify(subscribeMessageService).send(
+        verify(templateMessageService).send(
                 org.mockito.ArgumentMatchers.eq("candidate-openid"),
                 org.mockito.ArgumentMatchers.eq(
                         weChatProperties.getInterviewCallTemplateId()
                 ),
                 org.mockito.ArgumentMatchers.eq(java.util.Map.of(
-                        "character_string1",
+                        "thing2",
+                        new cn.sduonline.join.client.WeChatApiClient.TemplateData(
+                                "张三"
+                        ),
+                        "character_string14",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "7"
                         ),
-                        "thing2",
+                        "thing23",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "第一面试室"
                         ),
-                        "thing3",
+                        "thing31",
                         new cn.sduonline.join.client.WeChatApiClient.TemplateData(
                                 "技术部"
                         )

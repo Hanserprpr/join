@@ -32,6 +32,9 @@
 | POST | `/api/admin/boards` | 创建板块 |
 | POST | `/api/admin/workstations` | 创建工作站 |
 | POST | `/api/admin/departments` | 创建部门 |
+| PATCH | `/api/admin/boards/{boardId}` | 修改板块名称 |
+| PATCH | `/api/admin/workstations/{workstationId}` | 修改工作站名称 |
+| PATCH | `/api/admin/departments/{departmentId}` | 修改部门名称 |
 | DELETE | `/api/admin/boards/{boardId}` | 删除板块(级联删除其下所有工作站、部门及关联数据) |
 | DELETE | `/api/admin/workstations/{workstationId}` | 删除工作站(级联删除其下所有部门及关联数据) |
 | DELETE | `/api/admin/departments/{departmentId}` | 删除部门(级联删除报名、面试、签到等关联数据) |
@@ -259,7 +262,7 @@
 | GET | `/api/wechat/login/url` | 获取微信内登录授权地址 |
 | GET | `/api/wechat/login/callback` | 已绑定微信登录回调 |
 | GET | `/api/wechat/check-in/entry` | 微信扫码登录并签到 |
-| GET | `/api/wechat/js-sdk/config` | 获取订阅通知页面的 JS-SDK 签名与模板 ID（仅允许已配置前端域名） |
+| GET | `/api/wechat/js-sdk/config` | 【已废弃】获取订阅通知页面的 JS-SDK 签名与模板 ID（仅为兼容旧前端保留） |
 
 ---
 

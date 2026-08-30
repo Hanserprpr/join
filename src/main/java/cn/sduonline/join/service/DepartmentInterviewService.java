@@ -43,7 +43,7 @@ public class DepartmentInterviewService {
     private final TransactionTemplate transactionTemplate;
     private final InterviewSseService interviewSseService;
     private final UserMapper userMapper;
-    private final WeChatSubscribeMessageService subscribeMessageService;
+    private final WeChatTemplateMessageService templateMessageService;
     private final WeChatProperties weChatProperties;
     private final AuthorizationService authorizationService;
 
@@ -420,15 +420,16 @@ public class DepartmentInterviewService {
             }
             String window = resolveInterviewRoomName(interview);
             String departmentName = resolveDepartmentName(interview);
-            subscribeMessageService.send(
+            templateMessageService.send(
                     candidate.getWechatOpenid(),
                     weChatProperties.getInterviewCallTemplateId(),
                     Map.of(
-                            "character_string1",
+                            "thing2", new TemplateData(candidate.getName()),
+                            "character_string14",
                             new TemplateData(String.valueOf(
                                     interview.queueNumber())),
-                            "thing2", new TemplateData(window),
-                            "thing3", new TemplateData(departmentName)
+                            "thing23", new TemplateData(window),
+                            "thing31", new TemplateData(departmentName)
                     )
             );
         } catch (RuntimeException exception) {

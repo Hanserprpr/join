@@ -7,6 +7,8 @@ import cn.sduonline.join.data.dto.BoardCreateRequest;
 import cn.sduonline.join.data.dto.BoardVO;
 import cn.sduonline.join.data.dto.DepartmentCreateRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
+import cn.sduonline.join.data.dto.OrganizationNameUpdateRequest;
+import cn.sduonline.join.data.dto.OrganizationNameVO;
 import cn.sduonline.join.data.dto.RoleAssignmentRequest;
 import cn.sduonline.join.data.dto.RoleAssignmentMemberVO;
 import cn.sduonline.join.data.dto.RoleAssignmentVO;
@@ -27,6 +29,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -76,6 +79,55 @@ public class AdminController {
     ) {
         ServiceResult<DepartmentVO> result = organizationService.createDepartment(request);
         return result.isSuccess() ? Result.ok(result.data()) : Result.fail(result.error());
+    }
+
+    /**
+     * 修改板块名称。
+     */
+    @PatchMapping("/boards/{boardId}")
+    @SaCheckRole("SYSTEM_ADMIN")
+    public Result<OrganizationNameVO> updateBoardName(
+            @PathVariable @Positive Long boardId,
+            @Valid @RequestBody OrganizationNameUpdateRequest request
+    ) {
+        ServiceResult<OrganizationNameVO> result =
+                organizationService.updateBoardName(boardId, request);
+        return result.isSuccess()
+                ? Result.ok(result.data()) : Result.fail(result.error());
+    }
+
+    /**
+     * 修改工作站名称。
+     */
+    @PatchMapping("/workstations/{workstationId}")
+    @SaCheckRole("SYSTEM_ADMIN")
+    public Result<OrganizationNameVO> updateWorkstationName(
+            @PathVariable @Positive Long workstationId,
+            @Valid @RequestBody OrganizationNameUpdateRequest request
+    ) {
+        ServiceResult<OrganizationNameVO> result =
+                organizationService.updateWorkstationName(
+                        workstationId, request
+                );
+        return result.isSuccess()
+                ? Result.ok(result.data()) : Result.fail(result.error());
+    }
+
+    /**
+     * 修改部门名称。
+     */
+    @PatchMapping("/departments/{departmentId}")
+    @SaCheckRole("SYSTEM_ADMIN")
+    public Result<OrganizationNameVO> updateDepartmentName(
+            @PathVariable @Positive Long departmentId,
+            @Valid @RequestBody OrganizationNameUpdateRequest request
+    ) {
+        ServiceResult<OrganizationNameVO> result =
+                organizationService.updateDepartmentName(
+                        departmentId, request
+                );
+        return result.isSuccess()
+                ? Result.ok(result.data()) : Result.fail(result.error());
     }
 
     /**

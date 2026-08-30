@@ -27,8 +27,13 @@ public class WeChatProperties {
     private String bindingTemplateId =
             "";
     private String interviewCallTemplateId =
-            "79icrV3YXPf6_FRxqDLgzGsyW1QNU-X-1IFk1j48LKw";
-    /** 前端一次发起订阅时展示的订阅通知模板 ID。 */
+            "";
+    /**
+     * 前端一次发起订阅时展示的订阅通知模板 ID。
+     *
+     * @deprecated 叫号通知已改用普通模板消息。
+     */
+    @Deprecated(forRemoval = true)
     private List<String> subscribeTemplateIds = new ArrayList<>();
     /** 允许生成 JS-SDK 签名的前端 Origin。 */
     private List<String> jsSdkAllowedOrigins = new ArrayList<>();
