@@ -164,10 +164,10 @@ public class DepartmentApplicationService {
         if (drafts.isEmpty()) {
             return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
         }
-        if (drafts.stream().anyMatch(application ->
-                !StringUtils.hasText(application.getEmail()))) {
-            return ServiceResult.failure(BizCode.EMAIL_INVALID);
-        }
+        List<DepartmentApplication> emailRecipients = drafts.stream()
+                .filter(application ->
+                        StringUtils.hasText(application.getEmail()))
+                .toList();
         List<Long> applicationIds = drafts.stream()
                 .map(DepartmentApplication::getId)
                 .toList();
@@ -179,9 +179,11 @@ public class DepartmentApplicationService {
                     "Admission draft set changed while publishing"
             );
         }
-        admissionEmailService.enqueue(
-                drafts, request.subject(), request.content()
-        );
+        if (!emailRecipients.isEmpty()) {
+            admissionEmailService.enqueue(
+                    emailRecipients, request.subject(), request.content()
+            );
+        }
         return ServiceResult.success(new AdmissionPublishVO(published));
     }
 
