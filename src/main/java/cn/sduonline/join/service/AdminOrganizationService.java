@@ -4,6 +4,8 @@ import cn.sduonline.join.data.dto.BoardCreateRequest;
 import cn.sduonline.join.data.dto.BoardVO;
 import cn.sduonline.join.data.dto.DepartmentCreateRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
+import cn.sduonline.join.data.dto.OrganizationNameUpdateRequest;
+import cn.sduonline.join.data.dto.OrganizationNameVO;
 import cn.sduonline.join.data.dto.WorkstationCreateRequest;
 import cn.sduonline.join.data.dto.WorkstationVO;
 import cn.sduonline.join.data.enums.BizCode;
@@ -60,6 +62,45 @@ public class AdminOrganizationService {
 
         organizationMapper.insertDepartment(department);
         return ServiceResult.success(DepartmentVO.from(department));
+    }
+
+    @Transactional
+    public ServiceResult<OrganizationNameVO> updateBoardName(
+            Long boardId,
+            OrganizationNameUpdateRequest request
+    ) {
+        if (organizationMapper.countBoard(boardId) == 0) {
+            return ServiceResult.failure(BizCode.BOARD_NOT_FOUND);
+        }
+        String name = request.name().trim();
+        organizationMapper.updateBoardName(boardId, name);
+        return ServiceResult.success(new OrganizationNameVO(boardId, name));
+    }
+
+    @Transactional
+    public ServiceResult<OrganizationNameVO> updateWorkstationName(
+            Long workstationId,
+            OrganizationNameUpdateRequest request
+    ) {
+        if (organizationMapper.countWorkstation(workstationId) == 0) {
+            return ServiceResult.failure(BizCode.WORKSTATION_NOT_FOUND);
+        }
+        String name = request.name().trim();
+        organizationMapper.updateWorkstationName(workstationId, name);
+        return ServiceResult.success(new OrganizationNameVO(workstationId, name));
+    }
+
+    @Transactional
+    public ServiceResult<OrganizationNameVO> updateDepartmentName(
+            Long departmentId,
+            OrganizationNameUpdateRequest request
+    ) {
+        if (organizationMapper.countDepartment(departmentId) == 0) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        String name = request.name().trim();
+        organizationMapper.updateDepartmentName(departmentId, name);
+        return ServiceResult.success(new OrganizationNameVO(departmentId, name));
     }
 
     @Transactional

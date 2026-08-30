@@ -122,6 +122,24 @@ public interface AdminOrganizationMapper {
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insertDepartment(Department department);
 
+    @Update("UPDATE board SET name = #{name} WHERE id = #{id}")
+    int updateBoardName(
+            @Param("id") Long id,
+            @Param("name") String name
+    );
+
+    @Update("UPDATE workstation SET name = #{name} WHERE id = #{id}")
+    int updateWorkstationName(
+            @Param("id") Long id,
+            @Param("name") String name
+    );
+
+    @Update("UPDATE department SET name = #{name} WHERE id = #{id}")
+    int updateDepartmentName(
+            @Param("id") Long id,
+            @Param("name") String name
+    );
+
     @Select("""
             SELECT id, workstation_id, name, campus, introduction,
                    recruitment_requirements, contact,

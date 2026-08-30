@@ -10,6 +10,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
+@Deprecated(forRemoval = true)
 public class WeChatSubscribeMessageService {
 
     private static final int INVALID_ACCESS_TOKEN = 40014;
