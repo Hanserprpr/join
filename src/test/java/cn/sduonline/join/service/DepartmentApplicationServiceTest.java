@@ -358,6 +358,59 @@ class DepartmentApplicationServiceTest {
     }
 
     @Test
+    void publishesAllDraftAdmissionsButSkipsApplicantsWithoutEmail() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication withEmail = new DepartmentApplication();
+        withEmail.setId(100L);
+        withEmail.setApplicantName("张三");
+        withEmail.setEmail("zhangsan@example.com");
+        DepartmentApplication withoutEmail = new DepartmentApplication();
+        withoutEmail.setId(101L);
+        withoutEmail.setApplicantName("李四");
+        withoutEmail.setEmail("  ");
+        when(applicationMapper.selectAdmissionDraftsForUpdate(12L))
+                .thenReturn(List.of(withEmail, withoutEmail));
+        when(applicationMapper.publishAdmissionDraftsByIds(
+                12L, List.of(100L, 101L)
+        )).thenReturn(2);
+
+        var result = service.publishAdmissions(
+                12L,
+                new AdmissionPublishRequest("录取通知", "恭喜你被录取。")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(2, result.data().publishedCount());
+        verify(admissionEmailService).enqueue(
+                List.of(withEmail), "录取通知", "恭喜你被录取。"
+        );
+    }
+
+    @Test
+    void publishesAdmissionsWithoutEnqueueingWhenAllEmailsAreMissing() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setApplicantName("张三");
+        when(applicationMapper.selectAdmissionDraftsForUpdate(12L))
+                .thenReturn(List.of(application));
+        when(applicationMapper.publishAdmissionDraftsByIds(
+                12L, List.of(100L)
+        )).thenReturn(1);
+
+        var result = service.publishAdmissions(
+                12L,
+                new AdmissionPublishRequest("录取通知", "恭喜你被录取。")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, result.data().publishedCount());
+        verify(admissionEmailService, never()).enqueue(any(), any(), any());
+    }
+
+    @Test
     void abortsPublishingIfLockedDraftSetCannotBeUpdatedExactly() {
         when(organizationMapper.selectDepartmentById(12L))
                 .thenReturn(new Department());
