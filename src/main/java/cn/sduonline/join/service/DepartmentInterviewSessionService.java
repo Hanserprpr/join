@@ -69,7 +69,6 @@ public class DepartmentInterviewSessionService {
                     BizCode.INTERVIEW_SESSION_STATE_INVALID
             );
         }
-        sessionMapper.assignPendingCarryovers(departmentId, sessionId);
         return findById(departmentId, sessionId);
     }
 
@@ -102,12 +101,14 @@ public class DepartmentInterviewSessionService {
         return findById(departmentId, sessionId);
     }
 
-    public ServiceResult<InterviewSessionVO> findPublished(Long departmentId) {
-        DepartmentInterviewSession session =
-                sessionMapper.selectPublished(departmentId);
-        return session == null
-                ? ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN)
-                : ServiceResult.success(InterviewSessionVO.from(session));
+    public ServiceResult<List<InterviewSessionVO>> findPublished(
+            Long departmentId
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        return ServiceResult.success(sessionMapper.selectPublished(departmentId)
+                .stream().map(InterviewSessionVO::from).toList());
     }
 
     public ServiceResult<List<InterviewSessionVO>> findAll(Long departmentId) {
@@ -137,6 +138,7 @@ public class DepartmentInterviewSessionService {
         DepartmentInterviewSession session = new DepartmentInterviewSession();
         session.setId(sessionId);
         session.setDepartmentId(departmentId);
+        session.setName(request.name().trim());
         session.setStartsAt(request.startsAt());
         session.setEndsAt(request.endsAt());
         session.setLocation(request.location().trim());

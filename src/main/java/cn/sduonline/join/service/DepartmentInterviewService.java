@@ -669,7 +669,7 @@ public class DepartmentInterviewService {
         List<DepartmentCheckIn> queue =
                 new java.util.ArrayList<>(
                         interviewMapper.selectReorderableQueueForUpdate(
-                                departmentId
+                                departmentId, target.getSessionId()
                         )
                 );
         int currentIndex = java.util.stream.IntStream.range(0, queue.size())

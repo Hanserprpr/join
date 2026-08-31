@@ -2,6 +2,7 @@ package cn.sduonline.join.data.dto;
 
 import cn.sduonline.join.data.enums.ApplicationStatus;
 import cn.sduonline.join.data.po.DepartmentApplication;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record DepartmentApplicationSummaryVO(
@@ -17,7 +18,7 @@ public record DepartmentApplicationSummaryVO(
         LocalDateTime submittedAt,
         Boolean interviewed,
         Long interviewId,
-        Integer score
+        BigDecimal score
 ) {
     public static DepartmentApplicationSummaryVO from(
             DepartmentApplication application

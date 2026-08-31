@@ -67,7 +67,7 @@ public interface DepartmentApplicationMapper {
             JOIN `user` u ON u.cas_id = a.cas_id
             LEFT JOIN department_interview i ON i.application_id = a.id
             LEFT JOIN (
-              SELECT interview_id, ROUND(AVG(score)) AS score
+              SELECT interview_id, ROUND(AVG(score), 1) AS score
               FROM department_interview_evaluation
               GROUP BY interview_id
             ) e ON e.interview_id = i.id
@@ -135,7 +135,7 @@ public interface DepartmentApplicationMapper {
             JOIN `user` u ON u.cas_id = a.cas_id
             LEFT JOIN department_interview i ON i.application_id = a.id
             LEFT JOIN (
-              SELECT interview_id, ROUND(AVG(score)) AS score
+              SELECT interview_id, ROUND(AVG(score), 1) AS score
               FROM department_interview_evaluation
               GROUP BY interview_id
             ) e ON e.interview_id = i.id

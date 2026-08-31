@@ -76,9 +76,9 @@ class DepartmentCheckInServiceTest {
         DepartmentInterviewSession session = openSession();
         session.setQrCheckInEnabled(true);
         session.setQrCodeTtlSeconds(90);
-        when(sessionMapper.selectPublished(12L)).thenReturn(session);
+        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(session);
 
-        var result = service.createQrCode(12L);
+        var result = service.createQrCode(12L, 30L);
 
         assertTrue(result.isSuccess());
         assertTrue(result.data().content().startsWith(
@@ -96,9 +96,9 @@ class DepartmentCheckInServiceTest {
         DepartmentInterviewSession session = openSession();
         session.setQrCheckInEnabled(true);
         session.setEndsAt(LocalDateTime.now().minusMinutes(1));
-        when(sessionMapper.selectPublished(12L)).thenReturn(session);
+        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(session);
 
-        var result = service.createQrCode(12L);
+        var result = service.createQrCode(12L, 30L);
 
         assertEquals(BizCode.INTERVIEW_SESSION_NOT_OPEN, result.error());
         verify(valueOperations, never()).set(any(), any(), any(Duration.class));
@@ -320,7 +320,7 @@ class DepartmentCheckInServiceTest {
         Department department = new Department();
         department.setId(12L);
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
-        when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
+        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(openSession());
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
@@ -329,7 +329,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(application);
         when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(1);
 
-        var result = service.checkIn(12L, null, "20240001");
+        var result = service.checkIn(12L, 30L, null, "20240001");
 
         assertTrue(result.isSuccess());
         assertEquals(12L, result.data().departmentId());
@@ -344,9 +344,9 @@ class DepartmentCheckInServiceTest {
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         DepartmentInterviewSession session = openSession();
         session.setQrCheckInEnabled(true);
-        when(sessionMapper.selectPublished(12L)).thenReturn(session);
+        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(session);
 
-        var result = service.checkIn(12L, null, "20240001");
+        var result = service.checkIn(12L, 30L, null, "20240001");
 
         assertEquals(BizCode.CHECK_IN_TOKEN_INVALID, result.error());
         verify(applicationMapper, never())
@@ -357,7 +357,7 @@ class DepartmentCheckInServiceTest {
     void checkingInAgainRejoinsQueueAtTheEnd() {
         Department department = new Department();
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
-        when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
+        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(openSession());
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
@@ -374,7 +374,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(existing);
         when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(9);
 
-        var result = service.checkIn(12L, null, "20240001");
+        var result = service.checkIn(12L, 30L, null, "20240001");
 
         assertTrue(result.isSuccess());
         assertEquals(9, result.data().queueNumber());
@@ -385,7 +385,7 @@ class DepartmentCheckInServiceTest {
     void rejectsRecheckInAfterSessionEndTime() {
         Department department = new Department();
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
-        when(sessionMapper.selectPublished(12L)).thenReturn(openSession());
+        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(openSession());
         DepartmentInterviewSession session = openSession();
         session.setEndsAt(LocalDateTime.now().minusMinutes(1));
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
@@ -403,7 +403,7 @@ class DepartmentCheckInServiceTest {
         when(checkInMapper.selectBySessionAndApplication(30L, 100L))
                 .thenReturn(existing);
 
-        var result = service.checkIn(12L, null, "20240001");
+        var result = service.checkIn(12L, 30L, null, "20240001");
 
         assertEquals(BizCode.INTERVIEW_SESSION_NOT_OPEN, result.error());
         verify(checkInMapper, never()).reactivateAfterCheckIn(any());
@@ -417,14 +417,14 @@ class DepartmentCheckInServiceTest {
         DepartmentCheckIn checkIn = currentCheckIn();
         checkIn.setPriority(true);
         when(checkInMapper.selectCurrentByDepartmentAndUserForUpdate(
-                12L, "20240001"
+                12L, 30L, "20240001"
         )).thenReturn(checkIn);
         when(checkInMapper.countInterviewsByCheckIn(200L)).thenReturn(0);
         when(checkInMapper.deleteOwnedCheckIn(
                 200L, 12L, "20240001"
         )).thenReturn(1);
 
-        var result = service.cancelCheckIn(12L, "20240001");
+        var result = service.cancelCheckIn(12L, 30L, "20240001");
 
         assertTrue(result.isSuccess());
         verifyNoInteractions(sessionMapper);
@@ -440,11 +440,11 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(new Department());
         DepartmentCheckIn checkIn = currentCheckIn();
         when(checkInMapper.selectCurrentByDepartmentAndUserForUpdate(
-                12L, "20240001"
+                12L, 30L, "20240001"
         )).thenReturn(checkIn);
         when(checkInMapper.countInterviewsByCheckIn(200L)).thenReturn(1);
 
-        var result = service.cancelCheckIn(12L, "20240001");
+        var result = service.cancelCheckIn(12L, 30L, "20240001");
 
         assertEquals(BizCode.CHECK_IN_CANNOT_CANCEL, result.error());
         verify(checkInMapper, never()).deleteOwnedCheckIn(
@@ -458,10 +458,10 @@ class DepartmentCheckInServiceTest {
         when(organizationMapper.selectDepartmentById(12L))
                 .thenReturn(new Department());
         when(checkInMapper.selectCurrentByDepartmentAndUserForUpdate(
-                12L, "20240001"
+                12L, 30L, "20240001"
         )).thenReturn(null);
 
-        var result = service.cancelCheckIn(12L, "20240001");
+        var result = service.cancelCheckIn(12L, 30L, "20240001");
 
         assertEquals(BizCode.CHECK_IN_NOT_FOUND, result.error());
         verify(checkInMapper, never()).deleteOwnedCheckIn(

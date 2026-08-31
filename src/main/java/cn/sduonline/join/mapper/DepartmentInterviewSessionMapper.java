@@ -13,11 +13,11 @@ public interface DepartmentInterviewSessionMapper {
 
     @Insert("""
             INSERT INTO department_interview_session
-                (department_id, starts_at, ends_at, location,
+                (department_id, name, starts_at, ends_at, location,
                  check_in_limit, qr_check_in_enabled,
                  qr_code_ttl_seconds, status)
             VALUES
-                (#{departmentId}, #{startsAt}, #{endsAt}, #{location},
+                (#{departmentId}, #{name}, #{startsAt}, #{endsAt}, #{location},
                  #{checkInLimit}, #{qrCheckInEnabled},
                  #{qrCodeTtlSeconds}, #{status})
             """)
@@ -25,7 +25,7 @@ public interface DepartmentInterviewSessionMapper {
     int insert(DepartmentInterviewSession session);
 
     @Select("""
-            SELECT id, department_id, starts_at, ends_at, location,
+            SELECT id, department_id, name, starts_at, ends_at, location,
                    check_in_limit, qr_check_in_enabled,
                    qr_code_ttl_seconds, status,
                    published_at, ended_at
@@ -38,7 +38,7 @@ public interface DepartmentInterviewSessionMapper {
     );
 
     @Select("""
-            SELECT id, department_id, starts_at, ends_at, location,
+            SELECT id, department_id, name, starts_at, ends_at, location,
                    check_in_limit, qr_check_in_enabled,
                    qr_code_ttl_seconds, status,
                    published_at, ended_at
@@ -46,14 +46,27 @@ public interface DepartmentInterviewSessionMapper {
             WHERE department_id = #{departmentId}
               AND status = 'PUBLISHED'
             ORDER BY starts_at ASC, id ASC
-            LIMIT 1
             """)
-    DepartmentInterviewSession selectPublished(
+    java.util.List<DepartmentInterviewSession> selectPublished(
             @Param("departmentId") Long departmentId
     );
 
     @Select("""
-            SELECT id, department_id, starts_at, ends_at, location,
+            SELECT id, department_id, name, starts_at, ends_at, location,
+                   check_in_limit, qr_check_in_enabled,
+                   qr_code_ttl_seconds, status,
+                   published_at, ended_at
+            FROM department_interview_session
+            WHERE id = #{sessionId} AND department_id = #{departmentId}
+              AND status = 'PUBLISHED'
+            """)
+    DepartmentInterviewSession selectPublishedById(
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
+    );
+
+    @Select("""
+            SELECT id, department_id, name, starts_at, ends_at, location,
                    check_in_limit, qr_check_in_enabled,
                    qr_code_ttl_seconds, status,
                    published_at, ended_at
@@ -68,7 +81,7 @@ public interface DepartmentInterviewSessionMapper {
     );
 
     @Select("""
-            SELECT id, department_id, starts_at, ends_at, location,
+            SELECT id, department_id, name, starts_at, ends_at, location,
                    check_in_limit, qr_check_in_enabled,
                    qr_code_ttl_seconds, status,
                    published_at, ended_at
@@ -82,7 +95,7 @@ public interface DepartmentInterviewSessionMapper {
 
     @Update("""
             UPDATE department_interview_session
-            SET starts_at = #{startsAt}, ends_at = #{endsAt},
+            SET name = #{name}, starts_at = #{startsAt}, ends_at = #{endsAt},
                 location = #{location}, check_in_limit = #{checkInLimit},
                 qr_check_in_enabled = #{qrCheckInEnabled},
                 qr_code_ttl_seconds = #{qrCodeTtlSeconds}
@@ -96,30 +109,11 @@ public interface DepartmentInterviewSessionMapper {
             SET status = 'PUBLISHED', published_at = #{publishedAt}
             WHERE id = #{sessionId} AND department_id = #{departmentId}
               AND status = 'DRAFT'
-              AND NOT EXISTS (
-                SELECT 1 FROM (
-                  SELECT id FROM department_interview_session
-                  WHERE department_id = #{departmentId}
-                    AND status = 'PUBLISHED'
-                ) published
-              )
             """)
     int publish(
             @Param("departmentId") Long departmentId,
             @Param("sessionId") Long sessionId,
             @Param("publishedAt") java.time.LocalDateTime publishedAt
-    );
-
-    @Update("""
-            UPDATE department_interview_carryover
-            SET target_session_id = #{sessionId}
-            WHERE department_id = #{departmentId}
-              AND status = 'PENDING'
-              AND target_session_id IS NULL
-            """)
-    int assignPendingCarryovers(
-            @Param("departmentId") Long departmentId,
-            @Param("sessionId") Long sessionId
     );
 
     @Update("""
@@ -176,7 +170,8 @@ public interface DepartmentInterviewSessionMapper {
             FROM department_interview_carryover
             WHERE department_id = #{departmentId}
               AND application_id = #{applicationId}
-              AND target_session_id = #{sessionId}
+              AND (target_session_id IS NULL
+                   OR target_session_id = #{sessionId})
               AND status = 'PENDING'
             ORDER BY created_at ASC, id ASC
             LIMIT 1

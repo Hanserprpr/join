@@ -27,6 +27,7 @@ import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentApplicationMapper;
 import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.mapper.UserMapper;
+import java.math.BigDecimal;
 import java.util.List;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -209,7 +210,7 @@ class DepartmentApplicationServiceTest {
         application.setSubmittedAt(LocalDateTime.now());
         application.setInterviewId(300L);
         application.setInterviewed(true);
-        application.setScore(5);
+        application.setScore(new BigDecimal("4.5"));
         when(applicationMapper.countApplications(
                 12L, "张三", "软件学院", 2024, true,
                 ApplicationStatus.SUBMITTED
@@ -232,7 +233,10 @@ class DepartmentApplicationServiceTest {
         assertEquals("张三", result.data().items().getFirst().applicantName());
         assertEquals("软件学院", result.data().items().getFirst().college());
         assertTrue(result.data().items().getFirst().interviewed());
-        assertEquals(5, result.data().items().getFirst().score());
+        assertEquals(
+                new BigDecimal("4.5"),
+                result.data().items().getFirst().score()
+        );
     }
 
     @Test

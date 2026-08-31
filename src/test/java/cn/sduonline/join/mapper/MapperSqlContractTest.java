@@ -27,8 +27,34 @@ class MapperSqlContractTest {
         String selectSql = sql(select.getAnnotation(Select.class).value());
         assertTrue(insertSql.contains("qr_check_in_enabled"));
         assertTrue(insertSql.contains("qr_code_ttl_seconds"));
+        assertTrue(insertSql.contains("name"));
         assertTrue(selectSql.contains("qr_check_in_enabled"));
         assertTrue(selectSql.contains("qr_code_ttl_seconds"));
+        assertTrue(selectSql.contains("name"));
+    }
+
+    @Test
+    void publishingDoesNotRejectAnotherPublishedSession()
+            throws NoSuchMethodException {
+        Method method = DepartmentInterviewSessionMapper.class.getMethod(
+                "publish", Long.class, Long.class,
+                java.time.LocalDateTime.class
+        );
+
+        assertFalse(sql(method.getAnnotation(Update.class).value())
+                .contains("NOT EXISTS"));
+    }
+
+    @Test
+    void pendingCarryoverCanBeClaimedByTheChosenSession()
+            throws NoSuchMethodException {
+        Method method = DepartmentInterviewSessionMapper.class.getMethod(
+                "selectPendingCarryoverForUpdate",
+                Long.class, Long.class, Long.class
+        );
+
+        assertTrue(sql(method.getAnnotation(Select.class).value())
+                .contains("target_session_id IS NULL"));
     }
 
     @Test
@@ -64,6 +90,17 @@ class MapperSqlContractTest {
 
         assertTrue(sql(method.getAnnotation(Update.class).value())
                 .contains("priority = #{priority}"));
+    }
+
+    @Test
+    void queueReorderingIsScopedToOneSession()
+            throws NoSuchMethodException {
+        Method method = DepartmentInterviewMapper.class.getMethod(
+                "selectReorderableQueueForUpdate", Long.class, Long.class
+        );
+
+        assertTrue(sql(method.getAnnotation(Select.class).value())
+                .contains("c.session_id = #{sessionId}"));
     }
 
     @Test
@@ -125,7 +162,7 @@ class MapperSqlContractTest {
             throws NoSuchMethodException {
         Method select = DepartmentCheckInMapper.class.getMethod(
                 "selectCurrentByDepartmentAndUserForUpdate",
-                Long.class, String.class
+                Long.class, Long.class, String.class
         );
         Method delete = DepartmentCheckInMapper.class.getMethod(
                 "deleteOwnedCheckIn", Long.class, Long.class, String.class
@@ -135,6 +172,7 @@ class MapperSqlContractTest {
                 org.apache.ibatis.annotations.Delete.class).value());
 
         assertTrue(selectSql.contains("s.status = 'PUBLISHED'"));
+        assertTrue(selectSql.contains("c.session_id = #{sessionId}"));
         assertTrue(selectSql.contains("FOR UPDATE"));
         assertTrue(deleteSql.contains("cas_id = #{casId}"));
         assertTrue(deleteSql.contains("department_id = #{departmentId}"));
