@@ -27,6 +27,7 @@ import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentApplicationMapper;
 import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.mapper.UserMapper;
+import java.math.BigDecimal;
 import java.util.List;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -209,19 +210,22 @@ class DepartmentApplicationServiceTest {
         application.setSubmittedAt(LocalDateTime.now());
         application.setInterviewId(300L);
         application.setInterviewed(true);
-        application.setScore(5);
+        application.setScore(new BigDecimal("4.5"));
         when(applicationMapper.countApplications(
-                12L, "张三", "软件学院", 2024, true
+                12L, "张三", "软件学院", 2024, true,
+                ApplicationStatus.SUBMITTED
         )).thenReturn(1L);
         when(applicationMapper.selectApplications(
                 12L, "张三", "软件学院", 2024,
-                true, "score", "desc", 0, 20
+                true, ApplicationStatus.SUBMITTED,
+                "score", "desc", 0, 20
         ))
                 .thenReturn(List.of(application));
 
         var result = service.findApplications(
                 12L, " 张三 ", " 软件学院 ", 2024,
-                true, "score", "desc", 1, 20
+                true, ApplicationStatus.SUBMITTED,
+                "score", "desc", 1, 20
         );
 
         assertTrue(result.isSuccess());
@@ -229,7 +233,31 @@ class DepartmentApplicationServiceTest {
         assertEquals("张三", result.data().items().getFirst().applicantName());
         assertEquals("软件学院", result.data().items().getFirst().college());
         assertTrue(result.data().items().getFirst().interviewed());
-        assertEquals(5, result.data().items().getFirst().score());
+        assertEquals(
+                new BigDecimal("4.5"),
+                result.data().items().getFirst().score()
+        );
+    }
+
+    @Test
+    void listsAllApplicationStatusesWhenStatusIsNotProvided() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        when(applicationMapper.countApplications(
+                12L, null, null, null, null, null
+        )).thenReturn(0L);
+        when(applicationMapper.selectApplications(
+                12L, null, null, null, null, null,
+                "submittedAt", "desc", 0, 20
+        )).thenReturn(List.of());
+
+        var result = service.findApplications(
+                12L, null, null, null, null, null,
+                "submittedAt", "desc", 1, 20
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(0L, result.data().total());
     }
 
     @Test
@@ -331,6 +359,59 @@ class DepartmentApplicationServiceTest {
         verify(admissionEmailService).enqueue(
                 List.of(application), "录取通知", "恭喜你被录取。"
         );
+    }
+
+    @Test
+    void publishesAllDraftAdmissionsButSkipsApplicantsWithoutEmail() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication withEmail = new DepartmentApplication();
+        withEmail.setId(100L);
+        withEmail.setApplicantName("张三");
+        withEmail.setEmail("zhangsan@example.com");
+        DepartmentApplication withoutEmail = new DepartmentApplication();
+        withoutEmail.setId(101L);
+        withoutEmail.setApplicantName("李四");
+        withoutEmail.setEmail("  ");
+        when(applicationMapper.selectAdmissionDraftsForUpdate(12L))
+                .thenReturn(List.of(withEmail, withoutEmail));
+        when(applicationMapper.publishAdmissionDraftsByIds(
+                12L, List.of(100L, 101L)
+        )).thenReturn(2);
+
+        var result = service.publishAdmissions(
+                12L,
+                new AdmissionPublishRequest("录取通知", "恭喜你被录取。")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(2, result.data().publishedCount());
+        verify(admissionEmailService).enqueue(
+                List.of(withEmail), "录取通知", "恭喜你被录取。"
+        );
+    }
+
+    @Test
+    void publishesAdmissionsWithoutEnqueueingWhenAllEmailsAreMissing() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        application.setApplicantName("张三");
+        when(applicationMapper.selectAdmissionDraftsForUpdate(12L))
+                .thenReturn(List.of(application));
+        when(applicationMapper.publishAdmissionDraftsByIds(
+                12L, List.of(100L)
+        )).thenReturn(1);
+
+        var result = service.publishAdmissions(
+                12L,
+                new AdmissionPublishRequest("录取通知", "恭喜你被录取。")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, result.data().publishedCount());
+        verify(admissionEmailService, never()).enqueue(any(), any(), any());
     }
 
     @Test

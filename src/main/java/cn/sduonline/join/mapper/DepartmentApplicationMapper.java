@@ -39,6 +39,9 @@ public interface DepartmentApplicationMapper {
             <if test="interviewed != null and interviewed == false">
               AND (i.id IS NULL OR i.ended_at IS NULL)
             </if>
+            <if test="status != null">
+              AND a.status = #{status}
+            </if>
             </script>
             """)
     long countApplications(
@@ -46,7 +49,8 @@ public interface DepartmentApplicationMapper {
             @Param("keyword") String keyword,
             @Param("college") String college,
             @Param("grade") Integer grade,
-            @Param("interviewed") Boolean interviewed
+            @Param("interviewed") Boolean interviewed,
+            @Param("status") cn.sduonline.join.data.enums.ApplicationStatus status
     );
 
     @Select("""
@@ -63,7 +67,7 @@ public interface DepartmentApplicationMapper {
             JOIN `user` u ON u.cas_id = a.cas_id
             LEFT JOIN department_interview i ON i.application_id = a.id
             LEFT JOIN (
-              SELECT interview_id, ROUND(AVG(score)) AS score
+              SELECT interview_id, ROUND(AVG(score), 1) AS score
               FROM department_interview_evaluation
               GROUP BY interview_id
             ) e ON e.interview_id = i.id
@@ -85,6 +89,9 @@ public interface DepartmentApplicationMapper {
             </if>
             <if test="interviewed != null and interviewed == false">
               AND (i.id IS NULL OR i.ended_at IS NULL)
+            </if>
+            <if test="status != null">
+              AND a.status = #{status}
             </if>
             <choose>
               <when test="sortBy == 'score' and sortOrder == 'asc'">
@@ -108,6 +115,7 @@ public interface DepartmentApplicationMapper {
             @Param("college") String college,
             @Param("grade") Integer grade,
             @Param("interviewed") Boolean interviewed,
+            @Param("status") cn.sduonline.join.data.enums.ApplicationStatus status,
             @Param("sortBy") String sortBy,
             @Param("sortOrder") String sortOrder,
             @Param("offset") Integer offset,
@@ -127,7 +135,7 @@ public interface DepartmentApplicationMapper {
             JOIN `user` u ON u.cas_id = a.cas_id
             LEFT JOIN department_interview i ON i.application_id = a.id
             LEFT JOIN (
-              SELECT interview_id, ROUND(AVG(score)) AS score
+              SELECT interview_id, ROUND(AVG(score), 1) AS score
               FROM department_interview_evaluation
               GROUP BY interview_id
             ) e ON e.interview_id = i.id

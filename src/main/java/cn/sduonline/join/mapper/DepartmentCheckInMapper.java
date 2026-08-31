@@ -21,6 +21,25 @@ public interface DepartmentCheckInMapper {
             @Param("applicationId") Long applicationId
     );
 
+    /**
+     * 统计同一报名在本部门其他已发布场次的签到数。
+     * 用于保证同一部门同时只排一条队，避免跨校区双签占号。
+     */
+    @Select("""
+            SELECT COUNT(1)
+            FROM department_check_in c
+            JOIN department_interview_session s
+              ON s.id = c.session_id AND s.status = 'PUBLISHED'
+            WHERE c.department_id = #{departmentId}
+              AND c.application_id = #{applicationId}
+              AND c.session_id <> #{sessionId}
+            """)
+    int countOtherSessionCheckIns(
+            @Param("departmentId") Long departmentId,
+            @Param("applicationId") Long applicationId,
+            @Param("sessionId") Long sessionId
+    );
+
     @Select("""
             SELECT id, department_id, application_id, cas_id,
                    session_id, checked_in_at, queue_number, queue_order,
@@ -39,14 +58,14 @@ public interface DepartmentCheckInMapper {
                    c.session_id, c.checked_in_at, c.queue_number, c.queue_order,
                    c.pass_count, c.priority, c.requires_recheck_in
             FROM department_check_in c
-            JOIN department_interview_session s
-              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             WHERE c.department_id = #{departmentId}
+              AND c.session_id = #{sessionId}
               AND c.cas_id = #{casId}
             FOR UPDATE
             """)
     DepartmentCheckIn selectCurrentByDepartmentAndUserForUpdate(
             @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId,
             @Param("casId") String casId
     );
 

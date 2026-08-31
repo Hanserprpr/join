@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
@@ -13,6 +16,8 @@ import static org.mockito.Mockito.when;
 import cn.sduonline.join.data.dto.DepartmentAchievementRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentDetailPatchRequest;
+import cn.sduonline.join.data.dto.DepartmentPosterOrderItemRequest;
+import cn.sduonline.join.data.dto.DepartmentPosterOrderUpdateRequest;
 import cn.sduonline.join.data.dto.DepartmentPosterRequest;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.Campus;
@@ -25,6 +30,7 @@ import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
 import cn.sduonline.join.service.poster.PosterUrlPolicy;
 import cn.sduonline.join.service.poster.PosterStorage;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -372,6 +378,280 @@ class DepartmentServiceTest {
         assertNull(result.data().contact());
         verify(posterUrlPolicy).validateAll(null);
         verify(organizationMapper).deleteDepartmentPosters(12L);
+    }
+
+    @Test
+    void reorderPostersSwapsByIdAndReturnsSignedUrlsInTargetOrder() {
+        Department first = department();
+        DepartmentPoster posterOne = poster(
+                1L, "https://files.example.com/join/posters/one.jpg", 0
+        );
+        DepartmentPoster posterTwo = poster(
+                2L, "https://files.example.com/join/posters/two.jpg", 1
+        );
+        DepartmentPoster reorderedTwo = poster(
+                2L, posterTwo.getUrl(), 0
+        );
+        DepartmentPoster reorderedOne = poster(
+                1L, posterOne.getUrl(), 1
+        );
+        when(organizationMapper.selectDepartmentByIdForUpdate(12L))
+                .thenReturn(first);
+        when(organizationMapper.selectDepartmentPostersForUpdate(12L))
+                .thenReturn(java.util.List.of(posterOne, posterTwo));
+        when(organizationMapper.updateDepartmentPosterSortOrder(12L, 1L, 1))
+                .thenReturn(1);
+        when(organizationMapper.updateDepartmentPosterSortOrder(12L, 2L, 0))
+                .thenReturn(1);
+        when(organizationMapper.selectDepartmentPosters(12L))
+                .thenReturn(java.util.List.of(reorderedTwo, reorderedOne));
+        when(posterStorage.accessUrl(posterOne.getUrl()))
+                .thenReturn("https://s3.example/one.jpg?signature=one");
+        when(posterStorage.accessUrl(posterTwo.getUrl()))
+                .thenReturn("https://s3.example/two.jpg?signature=two");
+
+        var result = service.reorderPosters(
+                12L,
+                posterOrder(
+                        new DepartmentPosterOrderItemRequest(2L, 0),
+                        new DepartmentPosterOrderItemRequest(1L, 1)
+                )
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(2L, result.data().getFirst().id());
+        assertEquals(0, result.data().getFirst().sortOrder());
+        assertEquals(
+                "https://s3.example/two.jpg?signature=two",
+                result.data().getFirst().url()
+        );
+        assertEquals(1L, result.data().get(1).id());
+        assertEquals(1, result.data().get(1).sortOrder());
+        assertEquals(
+                "https://s3.example/one.jpg?signature=one",
+                result.data().get(1).url()
+        );
+        var mapperOrder = inOrder(organizationMapper);
+        mapperOrder.verify(organizationMapper).selectDepartmentByIdForUpdate(12L);
+        mapperOrder.verify(organizationMapper).selectDepartmentPostersForUpdate(12L);
+        mapperOrder.verify(organizationMapper)
+                .updateDepartmentPosterSortOrder(12L, 1L, 1);
+        mapperOrder.verify(organizationMapper)
+                .updateDepartmentPosterSortOrder(12L, 2L, 0);
+        mapperOrder.verify(organizationMapper).selectDepartmentPosters(12L);
+        verify(posterUrlPolicy, never()).validateAll(
+                org.mockito.ArgumentMatchers.any()
+        );
+        verify(organizationMapper, never()).deleteDepartmentPosters(anyLong());
+        verify(organizationMapper, never()).insertDepartmentPoster(
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void reorderPostersIsIdempotentAndKeepsPosterIdentityAndStoredUrl() {
+        DepartmentPoster first = poster(
+                1L, "https://files.example.com/join/posters/one.jpg", 0
+        );
+        DepartmentPoster second = poster(
+                2L, "https://files.example.com/join/posters/two.jpg", 1
+        );
+        when(organizationMapper.selectDepartmentByIdForUpdate(12L))
+                .thenReturn(department());
+        when(organizationMapper.selectDepartmentPostersForUpdate(12L))
+                .thenReturn(java.util.List.of(first, second));
+        when(organizationMapper.updateDepartmentPosterSortOrder(12L, 1L, 0))
+                .thenReturn(1);
+        when(organizationMapper.updateDepartmentPosterSortOrder(12L, 2L, 1))
+                .thenReturn(1);
+        when(organizationMapper.selectDepartmentPosters(12L))
+                .thenReturn(java.util.List.of(first, second));
+        DepartmentPosterOrderUpdateRequest request = posterOrder(
+                new DepartmentPosterOrderItemRequest(1L, 0),
+                new DepartmentPosterOrderItemRequest(2L, 1)
+        );
+
+        var firstResult = service.reorderPosters(12L, request);
+        var secondResult = service.reorderPosters(12L, request);
+
+        assertTrue(firstResult.isSuccess());
+        assertTrue(secondResult.isSuccess());
+        assertEquals(firstResult.data(), secondResult.data());
+        assertEquals(1L, secondResult.data().getFirst().id());
+        assertEquals(first.getUrl(), secondResult.data().getFirst().url());
+        assertEquals(2L, secondResult.data().get(1).id());
+        assertEquals(second.getUrl(), secondResult.data().get(1).url());
+        verify(organizationMapper, never()).deleteDepartmentPosters(anyLong());
+        verify(organizationMapper, never()).insertDepartmentPoster(
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void reorderPostersRejectsDuplicateIdsWithoutWriting() {
+        stubPosterOrderLock(
+                java.util.List.of(
+                        poster(1L, "https://example.com/one.jpg", 0),
+                        poster(2L, "https://example.com/two.jpg", 1)
+                )
+        );
+
+        var result = service.reorderPosters(
+                12L,
+                posterOrder(
+                        new DepartmentPosterOrderItemRequest(1L, 0),
+                        new DepartmentPosterOrderItemRequest(1L, 1)
+                )
+        );
+
+        assertEquals(BizCode.PARAM_INVALID, result.error());
+        verifyNoPosterOrderUpdates();
+    }
+
+    @Test
+    void reorderPostersRejectsNonContinuousSortOrdersWithoutWriting() {
+        stubPosterOrderLock(
+                java.util.List.of(
+                        poster(1L, "https://example.com/one.jpg", 0),
+                        poster(2L, "https://example.com/two.jpg", 1),
+                        poster(3L, "https://example.com/three.jpg", 2)
+                )
+        );
+
+        var result = service.reorderPosters(
+                12L,
+                posterOrder(
+                        new DepartmentPosterOrderItemRequest(1L, 0),
+                        new DepartmentPosterOrderItemRequest(2L, 2),
+                        new DepartmentPosterOrderItemRequest(3L, 3)
+                )
+        );
+
+        assertEquals(BizCode.PARAM_INVALID, result.error());
+        verifyNoPosterOrderUpdates();
+    }
+
+    @Test
+    void reorderPostersRejectsDuplicateSortOrdersWithoutWriting() {
+        stubPosterOrderLock(
+                java.util.List.of(
+                        poster(1L, "https://example.com/one.jpg", 0),
+                        poster(2L, "https://example.com/two.jpg", 1)
+                )
+        );
+
+        var result = service.reorderPosters(
+                12L,
+                posterOrder(
+                        new DepartmentPosterOrderItemRequest(1L, 0),
+                        new DepartmentPosterOrderItemRequest(2L, 0)
+                )
+        );
+
+        assertEquals(BizCode.PARAM_INVALID, result.error());
+        verifyNoPosterOrderUpdates();
+    }
+
+    @Test
+    void reorderPostersRejectsStaleOrForeignIdsAsConflictWithoutWriting() {
+        stubPosterOrderLock(
+                java.util.List.of(
+                        poster(1L, "https://example.com/one.jpg", 0),
+                        poster(2L, "https://example.com/two.jpg", 1)
+                )
+        );
+
+        var result = service.reorderPosters(
+                12L,
+                posterOrder(
+                        new DepartmentPosterOrderItemRequest(1L, 0),
+                        new DepartmentPosterOrderItemRequest(99L, 1)
+                )
+        );
+
+        assertEquals(BizCode.POSTER_ORDER_CONFLICT, result.error());
+        verifyNoPosterOrderUpdates();
+    }
+
+    @Test
+    void reorderPostersRejectsMissingIdsAsConflictWithoutWriting() {
+        stubPosterOrderLock(
+                java.util.List.of(
+                        poster(1L, "https://example.com/one.jpg", 0),
+                        poster(2L, "https://example.com/two.jpg", 1)
+                )
+        );
+
+        var result = service.reorderPosters(
+                12L,
+                posterOrder(new DepartmentPosterOrderItemRequest(1L, 0))
+        );
+
+        assertEquals(BizCode.POSTER_ORDER_CONFLICT, result.error());
+        verifyNoPosterOrderUpdates();
+    }
+
+    @Test
+    void reorderPostersAllowsEmptyRequestWhenDepartmentHasNoPosters() {
+        stubPosterOrderLock(java.util.List.of());
+        when(organizationMapper.selectDepartmentPosters(12L))
+                .thenReturn(java.util.List.of());
+
+        var result = service.reorderPosters(
+                12L, new DepartmentPosterOrderUpdateRequest(java.util.List.of())
+        );
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.data().isEmpty());
+        verifyNoPosterOrderUpdates();
+    }
+
+    @Test
+    void reorderPostersRejectsEmptyRequestWhenDepartmentHasPosters() {
+        stubPosterOrderLock(java.util.List.of(
+                poster(1L, "https://example.com/one.jpg", 0)
+        ));
+
+        var result = service.reorderPosters(
+                12L, new DepartmentPosterOrderUpdateRequest(java.util.List.of())
+        );
+
+        assertEquals(BizCode.POSTER_ORDER_CONFLICT, result.error());
+        verifyNoPosterOrderUpdates();
+    }
+
+    @Test
+    void reorderPostersRejectsMissingDepartmentWithoutReadingOrWritingPosters() {
+        when(organizationMapper.selectDepartmentByIdForUpdate(99L))
+                .thenReturn(null);
+
+        var result = service.reorderPosters(
+                99L,
+                posterOrder(new DepartmentPosterOrderItemRequest(1L, 0))
+        );
+
+        assertEquals(BizCode.DEPARTMENT_NOT_FOUND, result.error());
+        verify(organizationMapper, never()).selectDepartmentPostersForUpdate(anyLong());
+        verifyNoPosterOrderUpdates();
+    }
+
+    private void stubPosterOrderLock(List<DepartmentPoster> posters) {
+        when(organizationMapper.selectDepartmentByIdForUpdate(12L))
+                .thenReturn(department());
+        when(organizationMapper.selectDepartmentPostersForUpdate(12L))
+                .thenReturn(posters);
+    }
+
+    private void verifyNoPosterOrderUpdates() {
+        verify(organizationMapper, never()).updateDepartmentPosterSortOrder(
+                anyLong(), anyLong(), anyInt()
+        );
+    }
+
+    private static DepartmentPosterOrderUpdateRequest posterOrder(
+            DepartmentPosterOrderItemRequest... items
+    ) {
+        return new DepartmentPosterOrderUpdateRequest(java.util.List.of(items));
     }
 
     private static Department department() {

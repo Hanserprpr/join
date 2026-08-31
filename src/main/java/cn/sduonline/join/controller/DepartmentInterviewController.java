@@ -33,6 +33,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -128,13 +129,17 @@ public class DepartmentInterviewController {
      * 查询当前已发布的面试场次
      *
      * @param departmentId 部门 ID
-     * @return 当前场次的时间、地点和取号上限
+     * @return 当前所有已发布场次
      */
     @GetMapping("/sessions/current")
-    public Result<InterviewSessionVO> findPublishedSession(
+    public Result<List<InterviewSessionVO>> findPublishedSession(
             @PathVariable @Positive Long departmentId
     ) {
-        return toSessionResult(sessionService.findPublished(departmentId));
+        ServiceResult<List<InterviewSessionVO>> result =
+                sessionService.findPublished(departmentId);
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
     }
 
     /**
@@ -216,18 +221,20 @@ public class DepartmentInterviewController {
     }
 
     /**
-     * 查询部门尚未完成的面试队列
+     * 查询指定面试场次尚未完成的面试队列
      *
      * @param departmentId 部门 ID
+     * @param sessionId 面试场次 ID，队列按场次隔离
      * @return 按叫号序号排列的等待与面试中队列
      */
     @GetMapping("/queue")
     @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
     public Result<List<InterviewQueueItemVO>> findQueue(
-            @PathVariable @Positive Long departmentId
+            @PathVariable @Positive Long departmentId,
+            @RequestParam @Positive Long sessionId
     ) {
         ServiceResult<List<InterviewQueueItemVO>> result =
-                interviewService.findQueue(departmentId);
+                interviewService.findQueue(departmentId, sessionId);
         return result.isSuccess()
                 ? Result.ok(result.data())
                 : Result.fail(result.error());
@@ -256,7 +263,8 @@ public class DepartmentInterviewController {
      * 通过 SSE 订阅部门面试队列实时事件
      *
      * @param departmentId 部门 ID
-     * @return 部门队列 SSE 连接
+     * @param sessionId 面试场次 ID，队列按场次隔离
+     * @return 指定场次的队列 SSE 连接
      * @apiNote SSE 接口，推送 queue-updated 和 heartbeat 事件
      */
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -277,12 +285,15 @@ public class DepartmentInterviewController {
     )
     @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
     public SseEmitter subscribeQueue(
-            @PathVariable @Positive Long departmentId
+            @PathVariable @Positive Long departmentId,
+            @RequestParam @Positive Long sessionId
     ) {
         return interviewSseService.subscribe(
                 departmentId,
+                sessionId,
                 "queue-updated",
-                () -> interviewService.findQueue(departmentId).data(),
+                () -> interviewService
+                        .findQueue(departmentId, sessionId).data(),
                 StpUtil.getLoginIdAsString(),
                 PermissionCode.INTERVIEW_EVALUATE
         );
@@ -324,7 +335,7 @@ public class DepartmentInterviewController {
         if (!initial.isSuccess()) {
             return interviewSseService.failed(Result.fail(initial.error()));
         }
-        return interviewSseService.subscribe(
+        return interviewSseService.subscribeSelfScoped(
                 departmentId,
                 "my-queue-status-updated",
                 () -> interviewService
@@ -357,8 +368,14 @@ public class DepartmentInterviewController {
      * @param departmentId 部门 ID
      * @param userId 用户 ID（统一认证账号/学号）
      * @return 该用户所有面试记录的评分和评价
-     */
+    */
     @GetMapping("/users/{userId}/evaluations")
+    @Operation(
+            summary = "按用户查询面试评价",
+            description = "查询用户在指定部门的所有面试官评价；"
+                    + "多次面试按面试时间倒序返回，无评价时 data 为空数组。"
+                    + "需要 application:read 权限，不要求管理员加入面试室。"
+    )
     @DepartmentPermission(PermissionCode.APPLICATION_READ)
     public Result<List<InterviewEvaluationVO>> findEvaluationsByUserId(
             @PathVariable @Positive Long departmentId,

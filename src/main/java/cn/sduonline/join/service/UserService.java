@@ -119,6 +119,8 @@ public class UserService {
      * 更新请求中提供的个人资料
      * 未提供的字段保持不变
      * <p>
+     * 选填字段（邮箱、QQ 号）传空字符串表示清空，写入 null。
+     * <p>
      * 提供学院或专业时，校验其是否属于系统维护的学院专业字典。
      *
      * @param casId 当前用户统一认证账号
@@ -138,8 +140,9 @@ public class UserService {
         if (validation != null) {
             return validation;
         }
-        if (StringUtils.hasText(request.email())) {
-            user.setEmail(request.email().trim().toLowerCase());
+        if (request.email() != null) {
+            String email = request.email().trim().toLowerCase();
+            user.setEmail(email.isEmpty() ? null : email);
         }
         if (StringUtils.hasText(request.phone())) {
             user.setPhone(request.phone().trim());
@@ -153,8 +156,9 @@ public class UserService {
         if (request.grade() != null) {
             user.setGrade(request.grade());
         }
-        if (StringUtils.hasText(request.qq())) {
-            user.setQq(request.qq().trim());
+        if (request.qq() != null) {
+            String qq = request.qq().trim();
+            user.setQq(qq.isEmpty() ? null : qq);
         }
         user.setProfileCompleted(isProfileComplete(user));
         user.setUpdatedAt(LocalDateTime.now());

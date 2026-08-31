@@ -56,6 +56,7 @@ class DepartmentInterviewSessionServiceTest {
         var result = service.create(12L, request());
 
         assertTrue(result.isSuccess());
+        assertEquals("中心校区上午场", result.data().name());
         assertEquals("中心校区 101", result.data().location());
         assertEquals(50, result.data().checkInLimit());
         assertTrue(result.data().qrCheckInEnabled());
@@ -72,6 +73,7 @@ class DepartmentInterviewSessionServiceTest {
                 .thenReturn(new Department());
         InterviewSessionRequest configured = request();
         InterviewSessionRequest withoutTtl = new InterviewSessionRequest(
+                configured.name(),
                 configured.startsAt(), configured.endsAt(),
                 configured.location(), configured.checkInLimit(),
                 configured.qrCheckInEnabled(), null
@@ -84,7 +86,7 @@ class DepartmentInterviewSessionServiceTest {
     }
 
     @Test
-    void publishingAssignsPendingCarryoversToThisNextSession() {
+    void publishingAllowsAnotherSessionToBeOpenAtTheSameTime() {
         DepartmentInterviewSession published = session();
         when(sessionMapper.publish(
                 org.mockito.ArgumentMatchers.eq(12L),
@@ -96,7 +98,6 @@ class DepartmentInterviewSessionServiceTest {
         var result = service.publish(12L, 30L);
 
         assertTrue(result.isSuccess());
-        verify(sessionMapper).assignPendingCarryovers(12L, 30L);
     }
 
     @Test
@@ -117,32 +118,56 @@ class DepartmentInterviewSessionServiceTest {
         assertTrue(result.isSuccess());
         var order = inOrder(sessionMapper);
         order.verify(sessionMapper).selectPublishedForUpdate(12L, 30L);
-        order.verify(sessionMapper).countActiveInterviews(30L);
         order.verify(sessionMapper).end(
                 org.mockito.ArgumentMatchers.eq(12L),
                 org.mockito.ArgumentMatchers.eq(30L),
                 org.mockito.ArgumentMatchers.any()
         );
-        verify(sessionMapper).cancelUnusedCarryovers(30L);
+        verify(sessionMapper).cancelUnusedCarryovers(12L, 30L);
         verify(sessionMapper).createCarryovers(30L);
     }
 
     @Test
-    void refusesToEndWhileAnInterviewIsStillActive() {
+    void endingCancelsOutstandingCarryoversBeforeIssuingNewOnes() {
+        DepartmentInterviewSession ended = session();
+        ended.setStatus(InterviewSessionStatus.ENDED);
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
                 .thenReturn(session());
-        when(sessionMapper.countActiveInterviews(30L)).thenReturn(1);
+        when(sessionMapper.end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(30L),
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(1);
+        when(sessionMapper.selectById(12L, 30L)).thenReturn(ended);
 
         var result = service.end(12L, 30L);
 
-        assertEquals(
-                BizCode.INTERVIEW_SESSION_STATE_INVALID, result.error()
-        );
-        verify(sessionMapper, never()).end(
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(),
+        assertTrue(result.isSuccess());
+        // 顺序不能反：先清掉本部门没用掉的资格，再按本场到场情况重新发放，
+        // 否则刚发的那一批会被立刻作废。
+        var order = inOrder(sessionMapper);
+        order.verify(sessionMapper).cancelUnusedCarryovers(12L, 30L);
+        order.verify(sessionMapper).createCarryovers(30L);
+    }
+
+    @Test
+    void endsTheSessionEvenWhileAnInterviewIsStillActive() {
+        DepartmentInterviewSession ended = session();
+        ended.setStatus(InterviewSessionStatus.ENDED);
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(session());
+        when(sessionMapper.end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(30L),
                 org.mockito.ArgumentMatchers.any()
-        );
+        )).thenReturn(1);
+        when(sessionMapper.selectById(12L, 30L)).thenReturn(ended);
+
+        var result = service.end(12L, 30L);
+
+        // 结束场次只关签到，进行中的面试和排队的人都不受影响。
+        assertTrue(result.isSuccess());
+        verify(sessionMapper).createCarryovers(30L);
     }
 
     @Test
@@ -155,7 +180,6 @@ class DepartmentInterviewSessionServiceTest {
         assertEquals(
                 BizCode.INTERVIEW_SESSION_STATE_INVALID, result.error()
         );
-        verify(sessionMapper, never()).countActiveInterviews(30L);
         verify(sessionMapper, never()).end(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
@@ -191,21 +215,29 @@ class DepartmentInterviewSessionServiceTest {
     }
 
     @Test
-    void leavesExpiredSessionOpenWhileAnInterviewIsStillActive() {
+    void autoEndsExpiredSessionEvenWhileAnInterviewIsStillActive() {
         executeTransactionsInline();
         DepartmentInterviewSession expired = session();
+        DepartmentInterviewSession ended = session();
+        ended.setStatus(InterviewSessionStatus.ENDED);
         when(sessionMapper.selectExpiredPublished(
                 org.mockito.ArgumentMatchers.any()
         )).thenReturn(java.util.List.of(expired));
         when(sessionMapper.selectPublishedForUpdate(12L, 30L))
                 .thenReturn(session());
-        when(sessionMapper.countActiveInterviews(30L)).thenReturn(1);
+        when(sessionMapper.end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(30L),
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(1);
+        when(sessionMapper.selectById(12L, 30L)).thenReturn(ended);
 
         service.autoEndExpiredSessions();
 
-        verify(sessionMapper, never()).end(
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(),
+        // 到点只关签到，不等场内面试做完——排队的人继续面完。
+        verify(sessionMapper).end(
+                org.mockito.ArgumentMatchers.eq(12L),
+                org.mockito.ArgumentMatchers.eq(30L),
                 org.mockito.ArgumentMatchers.any()
         );
     }
@@ -245,6 +277,7 @@ class DepartmentInterviewSessionServiceTest {
     private static InterviewSessionRequest request() {
         LocalDateTime startsAt = LocalDateTime.of(2026, 8, 1, 9, 0);
         return new InterviewSessionRequest(
+                " 中心校区上午场 ",
                 startsAt, startsAt.plusHours(3), " 中心校区 101 ",
                 50, true, 90
         );
@@ -255,6 +288,7 @@ class DepartmentInterviewSessionServiceTest {
                 new DepartmentInterviewSession();
         session.setId(30L);
         session.setDepartmentId(12L);
+        session.setName("中心校区上午场");
         session.setStartsAt(LocalDateTime.of(2026, 8, 1, 9, 0));
         session.setEndsAt(LocalDateTime.of(2026, 8, 1, 12, 0));
         session.setLocation("中心校区 101");

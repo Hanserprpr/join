@@ -74,10 +74,16 @@ public class DepartmentInterviewSessionService {
                     BizCode.INTERVIEW_SESSION_STATE_INVALID
             );
         }
-        sessionMapper.assignPendingCarryovers(departmentId, sessionId);
         return findById(departmentId, sessionId);
     }
 
+    /**
+     * 结束场次：只关闭签到，已经排队的人仍然继续叫号面试。
+     * <p>
+     * 不检查进行中的面试——按上述语义，面试本来就要跨过这个状态继续，
+     * 没有理由等面试做完才允许关签到。进行中的候选人已经有面试记录，
+     * {@link DepartmentInterviewSessionMapper#createCarryovers} 会把他们排除在顺延之外。
+     */
     @Transactional
     public ServiceResult<InterviewSessionVO> end(
             Long departmentId,
@@ -90,11 +96,6 @@ public class DepartmentInterviewSessionService {
                     BizCode.INTERVIEW_SESSION_STATE_INVALID
             );
         }
-        if (sessionMapper.countActiveInterviews(sessionId) > 0) {
-            return ServiceResult.failure(
-                    BizCode.INTERVIEW_SESSION_STATE_INVALID
-            );
-        }
         if (sessionMapper.end(
                 departmentId, sessionId, LocalDateTime.now()
         ) == 0) {
@@ -102,13 +103,23 @@ public class DepartmentInterviewSessionService {
                     BizCode.INTERVIEW_SESSION_STATE_INVALID
             );
         }
-        sessionMapper.cancelUnusedCarryovers(sessionId);
+        // 先作废再发放：顺延只对下一场有效，本场到场者没用掉的清零，
+        // 再按本场"签到了但没面上"重新发一轮。没来的人资格留着，
+        // 等他真正到场的那一场结束时再结算。
+        sessionMapper.cancelUnusedCarryovers(departmentId, sessionId);
         sessionMapper.createCarryovers(sessionId);
         return findById(departmentId, sessionId);
     }
 
+    /**
+     * 到点自动关闭签到。
+     * <p>
+     * 只把 {@code status} 翻成 ENDED，面试不受影响——叫号、队列、个人状态都
+     * 不再依赖场次状态，排队的人继续面完。
+     */
     @Scheduled(
-            fixedDelayString = "${app.interview-session.auto-end-poll-delay-ms:30000}"
+            fixedDelayString =
+                    "${app.interview-session.auto-end-poll-delay-ms:30000}"
     )
     public void autoEndExpiredSessions() {
         LocalDateTime now = LocalDateTime.now();
@@ -127,12 +138,14 @@ public class DepartmentInterviewSessionService {
         }
     }
 
-    public ServiceResult<InterviewSessionVO> findPublished(Long departmentId) {
-        DepartmentInterviewSession session =
-                sessionMapper.selectPublished(departmentId);
-        return session == null
-                ? ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN)
-                : ServiceResult.success(InterviewSessionVO.from(session));
+    public ServiceResult<List<InterviewSessionVO>> findPublished(
+            Long departmentId
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        return ServiceResult.success(sessionMapper.selectPublished(departmentId)
+                .stream().map(InterviewSessionVO::from).toList());
     }
 
     public ServiceResult<List<InterviewSessionVO>> findAll(Long departmentId) {
@@ -162,6 +175,7 @@ public class DepartmentInterviewSessionService {
         DepartmentInterviewSession session = new DepartmentInterviewSession();
         session.setId(sessionId);
         session.setDepartmentId(departmentId);
+        session.setName(request.name().trim());
         session.setStartsAt(request.startsAt());
         session.setEndsAt(request.endsAt());
         session.setLocation(request.location().trim());

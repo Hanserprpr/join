@@ -148,7 +148,6 @@ app:
   cors-allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
   check-in:
     token-ttl-seconds: ${CHECK_IN_TOKEN_TTL_SECONDS:8}
-    qr-refresh-seconds: ${CHECK_IN_QR_REFRESH_SECONDS:8}
     entry-url: ${CHECK_IN_ENTRY_URL:http://localhost:8080/api/wechat/check-in/entry}
     result-url: ${CHECK_IN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}/check-in}
     oauth-state-ttl-seconds: ${CHECK_IN_OAUTH_STATE_TTL_SECONDS:120}
@@ -165,9 +164,9 @@ app:
     login-result-url: ${WECHAT_LOGIN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}}
     login-state-ttl-seconds: ${WECHAT_LOGIN_STATE_TTL_SECONDS:300}
     binding-template-id: ${WECHAT_BINDING_TEMPLATE_ID:Tw8ThFuRhgMOkrTirVHRnTPbxFdxyaFo2PIJdFqkxQw}
-    interview-call-template-id: ${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:79icrV3YXPf6_FRxqDLgzGsyW1QNU-X-1IFk1j48LKw}
-    # 服务号后台选用的订阅通知模板 ID，多个用逗号分隔
-    subscribe-template-ids: ${WECHAT_SUBSCRIBE_TEMPLATE_IDS:${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:79icrV3YXPf6_FRxqDLgzGsyW1QNU-X-1IFk1j48LKw}}
+    interview-call-template-id: ${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:gmRpMS8vWvQuR02-tcVMpyuOC3sLafkpErxPfAFE1DQ}
+    # 已废弃：叫号通知已改用普通模板消息；仅为兼容旧前端保留
+    subscribe-template-ids: ${WECHAT_SUBSCRIBE_TEMPLATE_IDS:}
     # 仅为这些前端 Origin 生成 JS-SDK 签名，多个用逗号分隔
     js-sdk-allowed-origins: ${WECHAT_JS_SDK_ALLOWED_ORIGINS:${FRONTEND_URL:http://localhost:5173}}
     ticket-refresh-ahead-seconds: ${WECHAT_TICKET_REFRESH_AHEAD_SECONDS:300}

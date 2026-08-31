@@ -211,6 +211,7 @@ CREATE TABLE `department_application_answer_option` (
 CREATE TABLE `department_interview_session` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `department_id` BIGINT NOT NULL,
+  `name` VARCHAR(64) NOT NULL COMMENT '场次名称',
   `starts_at` DATETIME NOT NULL,
   `ends_at` DATETIME NOT NULL,
   `location` VARCHAR(255) NOT NULL,
@@ -370,12 +371,12 @@ CREATE TABLE `department_interview_evaluation` (
   `interview_id` BIGINT NOT NULL,
   `admin_cas_id` VARCHAR(32)
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `score` TINYINT UNSIGNED NOT NULL,
+  `score` DECIMAL(2,1) NOT NULL,
   `evaluation` VARCHAR(2000) NULL,
   `submitted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`interview_id`, `admin_cas_id`),
   CONSTRAINT `chk_interview_evaluation_score`
-    CHECK (`score` BETWEEN 1 AND 5),
+    CHECK (`score` BETWEEN 1.0 AND 5.0 AND MOD(`score` * 2, 1) = 0),
   CONSTRAINT `fk_interview_evaluation_interview`
     FOREIGN KEY (`interview_id`) REFERENCES `department_interview` (`id`)
     ON DELETE CASCADE,

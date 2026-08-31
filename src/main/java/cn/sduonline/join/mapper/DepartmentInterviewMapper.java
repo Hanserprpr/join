@@ -36,10 +36,8 @@ public interface DepartmentInterviewMapper {
                      ELSE NULL
                    END AS interviewer_name,
                    own_interview.started_at, own_interview.ended_at,
-                   c.priority
+                   c.priority, c.session_id
             FROM department_check_in c
-            JOIN department_interview_session s
-              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             JOIN `user` candidate ON candidate.cas_id = c.cas_id
             LEFT JOIN department_interview own_interview
                    ON own_interview.check_in_id = c.id
@@ -51,11 +49,13 @@ public interface DepartmentInterviewMapper {
             LEFT JOIN `user` interviewer
                    ON interviewer.cas_id = own_interview.interviewer_cas_id
             WHERE c.department_id = #{departmentId}
+              AND c.session_id = #{sessionId}
               AND own_interview.ended_at IS NULL
             ORDER BY c.priority DESC, c.queue_order ASC
             """)
     java.util.List<InterviewQueueItemVO> selectQueue(
-            @Param("departmentId") Long departmentId
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
     );
 
     @Select("""
@@ -81,10 +81,8 @@ public interface DepartmentInterviewMapper {
                      ELSE NULL
                    END AS interviewer_name,
                    own_interview.started_at, own_interview.ended_at,
-                   c.priority
+                   c.priority, c.session_id
             FROM department_check_in c
-            JOIN department_interview_session s
-              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             JOIN `user` candidate ON candidate.cas_id = c.cas_id
             LEFT JOIN department_interview own_interview
                    ON own_interview.check_in_id = c.id
@@ -97,6 +95,8 @@ public interface DepartmentInterviewMapper {
                    ON interviewer.cas_id = own_interview.interviewer_cas_id
             WHERE c.department_id = #{departmentId}
               AND c.cas_id = #{casId}
+            ORDER BY c.checked_in_at DESC, c.id DESC
+            LIMIT 1
             """)
     InterviewQueueItemVO selectCandidateQueueItem(
             @Param("departmentId") Long departmentId,
@@ -106,8 +106,6 @@ public interface DepartmentInterviewMapper {
     @Select("""
             SELECT COUNT(1)
             FROM department_check_in ahead
-            JOIN department_interview_session s
-              ON s.id = ahead.session_id AND s.status = 'PUBLISHED'
             LEFT JOIN department_interview own_interview
                    ON own_interview.check_in_id = ahead.id
             LEFT JOIN department_interview_active other_active
@@ -115,6 +113,7 @@ public interface DepartmentInterviewMapper {
                   AND other_active.interview_id
                       <> COALESCE(own_interview.id, -1)
             WHERE ahead.department_id = #{departmentId}
+              AND ahead.session_id = #{sessionId}
               AND ahead.requires_recheck_in = FALSE
               AND (
                 (#{priority} = TRUE
@@ -136,6 +135,7 @@ public interface DepartmentInterviewMapper {
             """)
     int countPeopleAhead(
             @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId,
             @Param("queueOrder") Long queueOrder,
             @Param("priority") Boolean priority
     );
@@ -145,13 +145,13 @@ public interface DepartmentInterviewMapper {
             FROM department_interview_active a
             JOIN department_interview i ON i.id = a.interview_id
             JOIN department_check_in c ON c.id = i.check_in_id
-            JOIN department_interview_session s
-              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             WHERE i.department_id = #{departmentId}
+              AND c.session_id = #{sessionId}
             ORDER BY i.queue_number ASC
             """)
     java.util.List<Integer> selectInterviewingQueueNumbers(
-            @Param("departmentId") Long departmentId
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
     );
 
     @Select("""
@@ -195,15 +195,15 @@ public interface DepartmentInterviewMapper {
                    c.cas_id AS candidate_cas_id, u.name AS candidate_name,
                    c.queue_number
             FROM department_check_in c
-            JOIN department_interview_session s
-              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             JOIN `user` u ON u.cas_id = c.cas_id
-            LEFT JOIN department_interview i ON i.check_in_id = c.id
+            LEFT JOIN department_interview done
+                   ON done.department_id = c.department_id
+                  AND done.candidate_cas_id = c.cas_id
             LEFT JOIN department_interview_active a
                    ON a.candidate_cas_id = c.cas_id
             WHERE c.department_id = #{departmentId}
               AND c.session_id = #{sessionId}
-              AND i.id IS NULL
+              AND done.id IS NULL
               AND a.interview_id IS NULL
               AND c.requires_recheck_in = FALSE
             ORDER BY c.priority DESC, c.queue_order ASC
@@ -255,10 +255,9 @@ public interface DepartmentInterviewMapper {
                    c.cas_id, c.checked_in_at, c.queue_number, c.queue_order,
                    c.pass_count, c.priority
             FROM department_check_in c
-            JOIN department_interview_session s
-              ON s.id = c.session_id AND s.status = 'PUBLISHED'
             LEFT JOIN department_interview i ON i.check_in_id = c.id
             WHERE c.department_id = #{departmentId}
+              AND c.session_id = #{sessionId}
               AND i.id IS NULL
               AND c.requires_recheck_in = FALSE
             ORDER BY c.priority DESC, c.queue_order ASC
@@ -266,7 +265,8 @@ public interface DepartmentInterviewMapper {
             """)
     java.util.List<cn.sduonline.join.data.po.DepartmentCheckIn>
             selectReorderableQueueForUpdate(
-                    @Param("departmentId") Long departmentId
+                    @Param("departmentId") Long departmentId,
+                    @Param("sessionId") Long sessionId
             );
 
     @Update("""

@@ -211,6 +211,45 @@ paths:
           description: ClamAV 或对象存储暂时不可用
       security:
       - sessionCookie: []
+  /api/departments/{departmentId}/posters/order:
+    put:
+      tags:
+      - 部门
+      summary: 更新部门海报顺序
+      description: |
+        需要当前用户对该部门拥有 RECRUITMENT_MANAGE 权限。
+        请求必须包含该部门当前全部海报的 ID，ID 不得重复；sortOrder 不得重复，
+        且必须恰好组成 0..n-1 的连续整数序列。请求数组的元素顺序不影响结果。
+        空数组仅在该部门当前没有海报时有效。
+        若请求中的海报 ID 集合与部门当前海报不一致，返回业务码 140036（海报列表已变化，请刷新后重试）。
+      operationId: updatePosterOrder
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentPosterOrderUpdateRequest"
+      responses:
+        "200":
+          description: 更新成功；重复 ID、重复或不连续的 sortOrder 返回业务码 40000，海报列表已变化返回业务码 140036
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListDepartmentPosterVO"
+        "400":
+          description: 请求体格式错误、字段缺失，或 id、sortOrder 超出允许范围
+        "403":
+          description: 无部门管理权限
+      security:
+      - sessionCookie: []
   /api/departments/{departmentId}/questionnaire:
     get:
       tags:
@@ -999,6 +1038,17 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: status
+        in: query
+        required: false
+        description: 报名状态；不传则查询全部状态
+        schema:
+          type: string
+          enum:
+          - SUBMITTED
+          - INTERVIEW_COMPLETED
+          - ADMISSION_DRAFT
+          - ADMITTED
       - name: sortBy
         in: query
         required: false
@@ -1098,7 +1148,7 @@ paths:
     post:
       tags:
       - 签到
-      summary: 签到（按部门设置决定是否需要扫码）
+      summary: 签到（普通签到需指定场次，扫码签到由令牌确定场次）
       operationId: checkIn
       requestBody:
         content:
@@ -1115,7 +1165,7 @@ paths:
                 $ref: "#/components/schemas/ResultCheckInVO"
       security:
       - sessionCookie: []
-  /api/departments/{departmentId}/check-ins/me:
+  /api/departments/{departmentId}/interviews/sessions/{sessionId}/check-ins/me:
     delete:
       tags:
       - 签到
@@ -1124,6 +1174,13 @@ paths:
       operationId: cancelCheckIn
       parameters:
       - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
         in: path
         required: true
         schema:
@@ -1314,6 +1371,34 @@ paths:
       security:
       - sessionCookie: []
   /api/admin/boards/{boardId}:
+    patch:
+      tags:
+      - 系统管理
+      summary: 修改板块名称
+      operationId: updateBoardName
+      parameters:
+      - name: boardId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationNameUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultOrganizationNameVO"
+      security:
+      - sessionCookie: []
     delete:
       tags:
       - 系统管理
@@ -1336,6 +1421,34 @@ paths:
       security:
       - sessionCookie: []
   /api/admin/workstations/{workstationId}:
+    patch:
+      tags:
+      - 系统管理
+      summary: 修改工作站名称
+      operationId: updateWorkstationName
+      parameters:
+      - name: workstationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationNameUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultOrganizationNameVO"
+      security:
+      - sessionCookie: []
     delete:
       tags:
       - 系统管理
@@ -1358,6 +1471,34 @@ paths:
       security:
       - sessionCookie: []
   /api/admin/departments/{departmentId}:
+    patch:
+      tags:
+      - 系统管理
+      summary: 修改部门名称
+      operationId: updateDepartmentName
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationNameUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultOrganizationNameVO"
+      security:
+      - sessionCookie: []
     delete:
       tags:
       - 系统管理
@@ -1515,6 +1656,8 @@ paths:
       tags:
       - 微信订阅通知
       summary: 获取微信 JS-SDK 签名和订阅通知模板
+      description: 已废弃：叫号通知已改用普通模板消息。
+      deprecated: true
       operationId: weChatJsSdkConfig
       parameters:
       - name: url
@@ -1575,11 +1718,48 @@ paths:
                 $ref: "#/components/schemas/ResultDepartmentInterviewVO"
       security:
       - sessionCookie: []
+  /api/departments/{departmentId}/interviews/users/{userId}/evaluations:
+    get:
+      tags:
+      - 面试
+      summary: 按用户查询面试评价
+      description: >-
+        查询用户在指定部门的所有面试官评价。多次面试按面试时间倒序返回；
+        每次面试内按评价提交时间和面试官用户 ID 排序。用户不存在、未参加面试或尚无评价时，
+        data 返回空数组。调用者需要目标部门的 application:read 权限，不要求加入原面试室。
+      operationId: findEvaluationsByUserId
+      parameters:
+      - name: departmentId
+        in: path
+        description: 部门 ID
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: userId
+        in: path
+        description: 用户 ID（统一认证账号，通常为学号）
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,32}$
+          minLength: 1
+          maxLength: 32
+      responses:
+        "200":
+          description: 查询成功
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultListInterviewEvaluationVO"
+      security:
+      - sessionCookie: []
   /api/departments/{departmentId}/interviews/sessions/current:
     get:
       tags:
       - 面试
-      summary: 查询当前已发布场次
+      summary: 查询当前全部已发布场次
       operationId: findPublishedSession
       parameters:
       - name: departmentId
@@ -1595,7 +1775,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/ResultInterviewSessionVO"
+                $ref: "#/components/schemas/ResultListInterviewSessionVO"
       security:
       - sessionCookie: []
   /api/departments/{departmentId}/interviews/queue:
@@ -1823,14 +2003,21 @@ paths:
                 $ref: "#/components/schemas/ResultDepartmentInterviewVO"
       security:
       - sessionCookie: []
-  /api/departments/{departmentId}/check-in/qr-code:
+  /api/departments/{departmentId}/interviews/sessions/{sessionId}/check-in/qr-code:
     get:
       tags:
       - 签到
-      summary: 生成部门签到二维码
+      summary: 生成指定场次签到二维码
       operationId: createQrCode
       parameters:
       - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
         in: path
         required: true
         schema:
@@ -2085,29 +2272,53 @@ components:
   schemas:
     ContactUpdateRequest:
       type: object
+      description: |
+        部分更新：字段缺省或显式传 null 表示不修改，因此每个字段都接受 null。
+        选填字段（email、qq）额外支持传空字符串，表示把该字段清空为 NULL。
+        必填字段（phone、college、major、grade）不支持清空。
       properties:
         email:
-          type: string
-          format: email
-          pattern: ^\S+@\S+\.\S+$
+          description: |
+            邮箱。空字符串表示清空；null 或缺省表示不修改。
+            空字符串不是合法邮箱，故用 oneOf 把“清空”与“合法邮箱”分开描述，
+            避免 format: email 把文档承诺支持的清空请求判为非法。
+          oneOf:
+          - type: "null"
+          - type: string
+            const: ""
+          - type: string
+            format: email
+            pattern: ^\S+@\S+\.\S+$
         phone:
-          type: string
+          description: 手机号；不支持清空，空字符串不满足 pattern 会被拒绝
+          type:
+          - string
+          - "null"
           pattern: "^1\\d{10}$"
         college:
-          type: string
+          type:
+          - string
+          - "null"
           maxLength: 64
           minLength: 0
         major:
-          type: string
+          type:
+          - string
+          - "null"
           maxLength: 64
           minLength: 0
         grade:
-          type: integer
+          type:
+          - integer
+          - "null"
           format: int32
           maximum: 2100
           minimum: 2000
         qq:
-          type: string
+          description: QQ 号。空字符串表示清空；null 或缺省表示不修改
+          type:
+          - string
+          - "null"
           pattern: "^(?:[1-9]\\d{4,11})?$"
     ResultUserProfileVO:
       type: object
@@ -2230,6 +2441,32 @@ components:
           minimum: 0
       required:
       - url
+    DepartmentPosterOrderUpdateRequest:
+      type: object
+      description: 海报调序的全量请求；posters 必须覆盖部门当前全部海报。
+      properties:
+        posters:
+          type: array
+          minItems: 0
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/DepartmentPosterOrderItemRequest"
+      required:
+      - posters
+    DepartmentPosterOrderItemRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - id
+      - sortOrder
     DepartmentAchievementRequest:
       type: object
       properties:
@@ -2254,6 +2491,21 @@ components:
         sortOrder:
           type: integer
           format: int32
+    ResultListDepartmentPosterVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentPosterVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
     DepartmentAchievementVO:
       type: object
       properties:
@@ -2437,8 +2689,9 @@ components:
       type: object
       properties:
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
+          multipleOf: 0.5
           maximum: 5
           minimum: 1
         evaluation:
@@ -2458,8 +2711,8 @@ components:
         administratorName:
           type: string
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
         evaluation:
           type: string
         submittedAt:
@@ -2481,6 +2734,10 @@ components:
     InterviewSessionRequest:
       type: object
       properties:
+        name:
+          type: string
+          maxLength: 64
+          minLength: 1
         startsAt:
           type: string
           format: date-time
@@ -2509,6 +2766,7 @@ components:
       - checkInLimit
       - endsAt
       - location
+      - name
       - startsAt
     InterviewSessionVO:
       type: object
@@ -2519,6 +2777,8 @@ components:
         departmentId:
           type: integer
           format: int64
+        name:
+          type: string
         startsAt:
           type: string
           format: date-time
@@ -2989,6 +3249,10 @@ components:
           type: integer
           format: int64
           minimum: 1
+        sessionId:
+          type: integer
+          format: int64
+          minimum: 1
         token:
           type: string
           maxLength: 128
@@ -3302,6 +3566,36 @@ components:
           type: boolean
       required:
       - name
+    OrganizationNameUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 64
+          minLength: 1
+      required:
+      - name
+    OrganizationNameVO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    ResultOrganizationNameVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/OrganizationNameVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
     BoardVO:
       type: object
       properties:
@@ -4405,6 +4699,7 @@ components:
         refreshAfterSeconds:
           type: integer
           format: int64
+          description: 当前面试场次二维码有效秒数减 1，用于在二维码失效前一秒重新获取。
     ResultCheckInQrCodeVO:
       type: object
       properties:
@@ -4455,8 +4750,8 @@ components:
           type: integer
           format: int64
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
     PageVODepartmentApplicationSummaryVO:
       type: object
       properties:

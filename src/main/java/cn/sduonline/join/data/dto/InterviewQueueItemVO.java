@@ -17,6 +17,7 @@ public record InterviewQueueItemVO(
         String interviewerName,
         LocalDateTime startedAt,
         LocalDateTime endedAt,
-        Boolean priority
-) {
+        Boolean priority,
+        Long sessionId
+) implements SessionScopedSnapshot {
 }

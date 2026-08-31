@@ -15,6 +15,7 @@ import cn.sduonline.join.data.po.DepartmentInterviewSession;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewRoomMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +61,52 @@ class DepartmentInterviewRoomServiceTest {
         assertEquals(5L, result.data().sessionId());
         assertEquals("第一面试室", result.data().name());
         verify(roomMapper).insertMember(9L, "admin01");
+    }
+
+    @Test
+    void listsOnlyTheRequestedSessionsRooms() {
+        when(sessionMapper.selectById(12L, 5L))
+                .thenReturn(new DepartmentInterviewSession());
+        DepartmentInterviewRoom room = new DepartmentInterviewRoom();
+        room.setId(9L);
+        room.setDepartmentId(12L);
+        room.setSessionId(5L);
+        room.setName("第一面试室");
+        room.setStatus("OPEN");
+        when(roomMapper.selectBySession(12L, 5L)).thenReturn(List.of(room));
+
+        var result = service.findBySession(12L, 5L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(1, result.data().size());
+        assertEquals(5L, result.data().getFirst().sessionId());
+    }
+
+    @Test
+    void rejectsListingRoomsOfASessionOutsideTheDepartment() {
+        when(sessionMapper.selectById(12L, 5L)).thenReturn(null);
+
+        var result = service.findBySession(12L, 5L);
+
+        assertEquals(BizCode.INTERVIEW_SESSION_NOT_FOUND, result.error());
+        verify(roomMapper, never()).selectBySession(any(), any());
+    }
+
+    @Test
+    void joiningIgnoresSessionStatusSoEndedSessionsCanFinishTheirQueue() {
+        DepartmentInterviewRoom room = new DepartmentInterviewRoom();
+        room.setId(9L);
+        room.setDepartmentId(12L);
+        room.setSessionId(5L);
+        room.setStatus("OPEN");
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+
+        var result = service.join(12L, 9L, "admin02");
+
+        // 场次结束只关签到，面试室仍要能进去把排队的人面完。
+        assertTrue(result.isSuccess());
+        verify(roomMapper).insertMember(9L, "admin02");
+        verify(sessionMapper, never()).selectPublishedById(any(), any());
     }
 
     @Test

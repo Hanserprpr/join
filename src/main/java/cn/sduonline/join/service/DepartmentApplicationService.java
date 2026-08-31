@@ -53,6 +53,7 @@ public class DepartmentApplicationService {
             String college,
             Integer grade,
             Boolean interviewed,
+            ApplicationStatus status,
             String sortBy,
             String sortOrder,
             int page,
@@ -65,12 +66,12 @@ public class DepartmentApplicationService {
         String normalizedCollege = trimToNull(college);
         long total = applicationMapper.countApplications(
                 departmentId, normalizedKeyword, normalizedCollege, grade,
-                interviewed
+                interviewed, status
         );
         List<DepartmentApplicationSummaryVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, normalizedKeyword, normalizedCollege, grade,
-                        interviewed, sortBy, sortOrder,
+                        interviewed, status, sortBy, sortOrder,
                         (page - 1) * size, size
                 )
                 .stream()
@@ -163,10 +164,10 @@ public class DepartmentApplicationService {
         if (drafts.isEmpty()) {
             return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
         }
-        if (drafts.stream().anyMatch(application ->
-                !StringUtils.hasText(application.getEmail()))) {
-            return ServiceResult.failure(BizCode.EMAIL_INVALID);
-        }
+        List<DepartmentApplication> emailRecipients = drafts.stream()
+                .filter(application ->
+                        StringUtils.hasText(application.getEmail()))
+                .toList();
         List<Long> applicationIds = drafts.stream()
                 .map(DepartmentApplication::getId)
                 .toList();
@@ -178,9 +179,11 @@ public class DepartmentApplicationService {
                     "Admission draft set changed while publishing"
             );
         }
-        admissionEmailService.enqueue(
-                drafts, request.subject(), request.content()
-        );
+        if (!emailRecipients.isEmpty()) {
+            admissionEmailService.enqueue(
+                    emailRecipients, request.subject(), request.content()
+            );
+        }
         return ServiceResult.success(new AdmissionPublishVO(published));
     }
 
@@ -258,7 +261,7 @@ public class DepartmentApplicationService {
         List<DepartmentApplicationDetailVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, trimToNull(keyword), trimToNull(college),
-                        grade, interviewed, null, null, null, null
+                        grade, interviewed, null, null, null, null, null
                 )
                 .stream()
                 .map(this::toDetailVO)

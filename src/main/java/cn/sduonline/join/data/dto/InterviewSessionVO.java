@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
  *
  * @param id 面试场次 ID
  * @param departmentId 部门 ID
+ * @param name 场次名称
  * @param startsAt 面试开始时间
  * @param endsAt 面试结束时间
  * @param location 面试地点
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 public record InterviewSessionVO(
         Long id,
         Long departmentId,
+        String name,
         LocalDateTime startsAt,
         LocalDateTime endsAt,
         String location,
@@ -41,6 +43,7 @@ public record InterviewSessionVO(
     public static InterviewSessionVO from(DepartmentInterviewSession source) {
         return new InterviewSessionVO(
                 source.getId(), source.getDepartmentId(),
+                source.getName(),
                 source.getStartsAt(), source.getEndsAt(),
                 source.getLocation(), source.getCheckInLimit(),
                 source.getQrCheckInEnabled(),

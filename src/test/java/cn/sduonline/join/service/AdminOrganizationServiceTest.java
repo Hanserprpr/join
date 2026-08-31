@@ -11,6 +11,8 @@ import cn.sduonline.join.data.dto.BoardCreateRequest;
 import cn.sduonline.join.data.dto.BoardVO;
 import cn.sduonline.join.data.dto.DepartmentCreateRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
+import cn.sduonline.join.data.dto.OrganizationNameUpdateRequest;
+import cn.sduonline.join.data.dto.OrganizationNameVO;
 import cn.sduonline.join.data.dto.WorkstationCreateRequest;
 import cn.sduonline.join.data.dto.WorkstationVO;
 import cn.sduonline.join.data.enums.BizCode;
@@ -113,6 +115,86 @@ class AdminOrganizationServiceTest {
 
         assertEquals(BizCode.WORKSTATION_NOT_FOUND, result.error());
         verify(organizationMapper, never()).insertDepartment(any());
+    }
+
+    @Test
+    void updateBoardNameTrimsAndReturnsNewName() {
+        when(organizationMapper.countBoard(1L)).thenReturn(1L);
+
+        ServiceResult<OrganizationNameVO> result = service.updateBoardName(
+                1L, new OrganizationNameUpdateRequest("  新板块  ")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(1L, result.data().id());
+        assertEquals("新板块", result.data().name());
+        verify(organizationMapper).updateBoardName(1L, "新板块");
+    }
+
+    @Test
+    void updateBoardNameRejectsMissingBoard() {
+        when(organizationMapper.countBoard(1L)).thenReturn(0L);
+
+        ServiceResult<OrganizationNameVO> result = service.updateBoardName(
+                1L, new OrganizationNameUpdateRequest("新板块")
+        );
+
+        assertEquals(BizCode.BOARD_NOT_FOUND, result.error());
+        verify(organizationMapper, never()).updateBoardName(any(), any());
+    }
+
+    @Test
+    void updateWorkstationNameTrimsAndReturnsNewName() {
+        when(organizationMapper.countWorkstation(5L)).thenReturn(1L);
+
+        ServiceResult<OrganizationNameVO> result =
+                service.updateWorkstationName(
+                        5L, new OrganizationNameUpdateRequest("  新工作站  ")
+                );
+
+        assertTrue(result.isSuccess());
+        assertEquals(5L, result.data().id());
+        assertEquals("新工作站", result.data().name());
+        verify(organizationMapper).updateWorkstationName(5L, "新工作站");
+    }
+
+    @Test
+    void updateWorkstationNameRejectsMissingWorkstation() {
+        when(organizationMapper.countWorkstation(5L)).thenReturn(0L);
+
+        ServiceResult<OrganizationNameVO> result =
+                service.updateWorkstationName(
+                        5L, new OrganizationNameUpdateRequest("新工作站")
+                );
+
+        assertEquals(BizCode.WORKSTATION_NOT_FOUND, result.error());
+        verify(organizationMapper, never()).updateWorkstationName(any(), any());
+    }
+
+    @Test
+    void updateDepartmentNameTrimsAndReturnsNewName() {
+        when(organizationMapper.countDepartment(12L)).thenReturn(1L);
+
+        ServiceResult<OrganizationNameVO> result = service.updateDepartmentName(
+                12L, new OrganizationNameUpdateRequest("  新部门  ")
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(12L, result.data().id());
+        assertEquals("新部门", result.data().name());
+        verify(organizationMapper).updateDepartmentName(12L, "新部门");
+    }
+
+    @Test
+    void updateDepartmentNameRejectsMissingDepartment() {
+        when(organizationMapper.countDepartment(12L)).thenReturn(0L);
+
+        ServiceResult<OrganizationNameVO> result = service.updateDepartmentName(
+                12L, new OrganizationNameUpdateRequest("新部门")
+        );
+
+        assertEquals(BizCode.DEPARTMENT_NOT_FOUND, result.error());
+        verify(organizationMapper, never()).updateDepartmentName(any(), any());
     }
 
     @Test

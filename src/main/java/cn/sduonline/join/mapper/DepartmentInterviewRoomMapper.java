@@ -3,6 +3,7 @@ package cn.sduonline.join.mapper;
 import cn.sduonline.join.data.po.DepartmentInterviewRoom;
 import cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO;
 import cn.sduonline.join.data.dto.InterviewEvaluationVO;
+import java.math.BigDecimal;
 import java.util.List;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
@@ -29,10 +30,12 @@ public interface DepartmentInterviewRoomMapper {
                    created_by, created_at
             FROM department_interview_room
             WHERE department_id = #{departmentId}
+              AND session_id = #{sessionId}
             ORDER BY id
             """)
-    List<DepartmentInterviewRoom> selectByDepartment(
-            @Param("departmentId") Long departmentId
+    List<DepartmentInterviewRoom> selectBySession(
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
     );
 
     @Select("""
@@ -137,7 +140,7 @@ public interface DepartmentInterviewRoomMapper {
     int upsertEvaluation(
             @Param("interviewId") Long interviewId,
             @Param("adminCasId") String adminCasId,
-            @Param("score") Integer score,
+            @Param("score") BigDecimal score,
             @Param("evaluation") String evaluation
     );
 

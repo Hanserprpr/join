@@ -122,6 +122,24 @@ public interface AdminOrganizationMapper {
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insertDepartment(Department department);
 
+    @Update("UPDATE board SET name = #{name} WHERE id = #{id}")
+    int updateBoardName(
+            @Param("id") Long id,
+            @Param("name") String name
+    );
+
+    @Update("UPDATE workstation SET name = #{name} WHERE id = #{id}")
+    int updateWorkstationName(
+            @Param("id") Long id,
+            @Param("name") String name
+    );
+
+    @Update("UPDATE department SET name = #{name} WHERE id = #{id}")
+    int updateDepartmentName(
+            @Param("id") Long id,
+            @Param("name") String name
+    );
+
     @Select("""
             SELECT id, workstation_id, name, campus, introduction,
                    recruitment_requirements, contact,
@@ -131,6 +149,17 @@ public interface AdminOrganizationMapper {
               AND enabled = 1
             """)
     Department selectDepartmentById(@Param("id") Long id);
+
+    @Select("""
+            SELECT id, workstation_id, name, campus, introduction,
+                   recruitment_requirements, contact,
+                   recruitment_group, sort_order, enabled
+            FROM department
+            WHERE id = #{id}
+              AND enabled = 1
+            FOR UPDATE
+            """)
+    Department selectDepartmentByIdForUpdate(@Param("id") Long id);
 
     @Update("""
             UPDATE department
@@ -175,6 +204,17 @@ public interface AdminOrganizationMapper {
             @Param("departmentId") Long departmentId
     );
 
+    @Select("""
+            SELECT id, department_id, url, sort_order
+            FROM department_poster
+            WHERE department_id = #{departmentId}
+            ORDER BY id ASC
+            FOR UPDATE
+            """)
+    List<DepartmentPoster> selectDepartmentPostersForUpdate(
+            @Param("departmentId") Long departmentId
+    );
+
     @Delete("DELETE FROM department_poster WHERE department_id = #{departmentId}")
     int deleteDepartmentPosters(@Param("departmentId") Long departmentId);
 
@@ -184,6 +224,18 @@ public interface AdminOrganizationMapper {
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insertDepartmentPoster(DepartmentPoster poster);
+
+    @Update("""
+            UPDATE department_poster
+            SET sort_order = #{sortOrder}
+            WHERE department_id = #{departmentId}
+              AND id = #{posterId}
+            """)
+    int updateDepartmentPosterSortOrder(
+            @Param("departmentId") Long departmentId,
+            @Param("posterId") Long posterId,
+            @Param("sortOrder") Integer sortOrder
+    );
 
     @Select("SELECT id FROM workstation WHERE board_id = #{boardId}")
     List<Long> selectWorkstationIdsByBoard(@Param("boardId") Long boardId);

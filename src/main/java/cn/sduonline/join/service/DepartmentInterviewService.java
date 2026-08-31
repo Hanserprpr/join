@@ -5,6 +5,7 @@ import cn.sduonline.join.config.WeChatProperties;
 import cn.sduonline.join.data.dto.DepartmentInterviewVO;
 import cn.sduonline.join.data.dto.InterviewQueueItemVO;
 import cn.sduonline.join.data.dto.MyInterviewQueueStatusVO;
+import cn.sduonline.join.data.dto.SessionScopedSnapshot;
 import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigRequest;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
@@ -21,6 +22,7 @@ import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewRoomMapper;
+import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import cn.sduonline.join.mapper.UserMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
@@ -40,10 +42,11 @@ public class DepartmentInterviewService {
     private final AdminOrganizationMapper organizationMapper;
     private final DepartmentInterviewMapper interviewMapper;
     private final DepartmentInterviewRoomMapper roomMapper;
+    private final DepartmentInterviewSessionMapper sessionMapper;
     private final TransactionTemplate transactionTemplate;
     private final InterviewSseService interviewSseService;
     private final UserMapper userMapper;
-    private final WeChatSubscribeMessageService subscribeMessageService;
+    private final WeChatTemplateMessageService templateMessageService;
     private final WeChatProperties weChatProperties;
     private final AuthorizationService authorizationService;
 
@@ -91,7 +94,8 @@ public class DepartmentInterviewService {
             ));
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishQueue(
+                    departmentId, sessionOf(result.data()));
             interviewSseService.publishRoom(departmentId, roomId);
             sendCallNotification(result.data().currentInterview());
         }
@@ -135,7 +139,8 @@ public class DepartmentInterviewService {
             ));
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishQueue(
+                    departmentId, sessionOf(result.data()));
             interviewSseService.publishRoom(departmentId, roomId);
             sendCallNotification(result.data().currentInterview());
         }
@@ -272,7 +277,8 @@ public class DepartmentInterviewService {
             );
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishQueue(
+                    departmentId, sessionOf(result.data()));
             interviewSseService.publishRoom(departmentId, roomId);
         }
         return result;
@@ -298,7 +304,8 @@ public class DepartmentInterviewService {
             return passActiveInTransaction(departmentId, active);
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(departmentId);
+            interviewSseService.publishQueue(
+                    departmentId, sessionOf(result.data()));
             interviewSseService.publishRoom(departmentId, roomId);
         }
         return result;
@@ -342,6 +349,16 @@ public class DepartmentInterviewService {
         );
     }
 
+    /**
+     * 取快照所属场次，用于把队列推送限定在该场次的订阅者。
+     * 取不到时返回 null，退化为部门级广播——多推几条总好过漏推。
+     */
+    private static Long sessionOf(Object snapshot) {
+        return snapshot instanceof SessionScopedSnapshot scoped
+                ? scoped.sessionId()
+                : null;
+    }
+
     private InterviewRoomStateVO buildRoomState(
             Long departmentId, Long roomId, String administratorCasId
     ) {
@@ -359,7 +376,7 @@ public class DepartmentInterviewService {
                 .anyMatch(member -> member.casId().equals(administratorCasId)
                         && member.submitted());
         return new InterviewRoomStateVO(
-                roomId, room.getName(), room.getStatus(),
+                roomId, room.getSessionId(), room.getName(), room.getStatus(),
                 active == null ? null : DepartmentInterviewVO.from(active),
                 administrators, submittedCount, administrators.size(),
                 pending, currentUserSubmitted,
@@ -420,15 +437,16 @@ public class DepartmentInterviewService {
             }
             String window = resolveInterviewRoomName(interview);
             String departmentName = resolveDepartmentName(interview);
-            subscribeMessageService.send(
+            templateMessageService.send(
                     candidate.getWechatOpenid(),
                     weChatProperties.getInterviewCallTemplateId(),
                     Map.of(
-                            "character_string1",
+                            "thing2", new TemplateData(candidate.getName()),
+                            "character_string14",
                             new TemplateData(String.valueOf(
                                     interview.queueNumber())),
-                            "thing2", new TemplateData(window),
-                            "thing3", new TemplateData(departmentName)
+                            "thing23", new TemplateData(window),
+                            "thing31", new TemplateData(departmentName)
                     )
             );
         } catch (RuntimeException exception) {
@@ -467,12 +485,18 @@ public class DepartmentInterviewService {
     }
 
     public ServiceResult<List<InterviewQueueItemVO>> findQueue(
-            Long departmentId
+            Long departmentId, Long sessionId
     ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
-        return ServiceResult.success(interviewMapper.selectQueue(departmentId));
+        // 不要求场次仍在签到中：场次结束只关签到，排队的人还要继续面完，
+        // 队列必须照常可看。
+        if (sessionMapper.selectById(departmentId, sessionId) == null) {
+            return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_FOUND);
+        }
+        return ServiceResult.success(
+                interviewMapper.selectQueue(departmentId, sessionId));
     }
 
     public ServiceResult<MyInterviewQueueStatusVO> findMyQueueStatus(
@@ -487,19 +511,24 @@ public class DepartmentInterviewService {
         if (item == null) {
             return ServiceResult.failure(BizCode.CHECK_IN_NOT_FOUND);
         }
+        // 同一部门同时只会有一条签到记录，场次直接取自本人的签到，
+        // 前方人数与叫号中号码都只统计同场次（同校区）的候选人。
+        Long sessionId = item.sessionId();
         int peopleAhead = item.status() == InterviewQueueStatus.WAITING
                 || item.status() == InterviewQueueStatus.INTERVIEWING_ELSEWHERE
                 ? interviewMapper.countPeopleAhead(
-                        departmentId, item.queueOrder(),
+                        departmentId, sessionId, item.queueOrder(),
                         Boolean.TRUE.equals(item.priority())
                 )
                 : 0;
         return ServiceResult.success(new MyInterviewQueueStatusVO(
                 departmentId,
+                sessionId,
                 item.queueNumber(),
                 item.status(),
                 peopleAhead,
-                interviewMapper.selectInterviewingQueueNumbers(departmentId)
+                interviewMapper.selectInterviewingQueueNumbers(
+                        departmentId, sessionId)
         ));
     }
 
@@ -668,7 +697,7 @@ public class DepartmentInterviewService {
         List<DepartmentCheckIn> queue =
                 new java.util.ArrayList<>(
                         interviewMapper.selectReorderableQueueForUpdate(
-                                departmentId
+                                departmentId, target.getSessionId()
                         )
                 );
         int currentIndex = java.util.stream.IntStream.range(0, queue.size())

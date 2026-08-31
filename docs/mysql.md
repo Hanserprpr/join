@@ -255,6 +255,7 @@
 |---|---|---|---|
 | `id` | BIGINT | PK，自增 | 场次 ID |
 | `department_id` | BIGINT | FK，非空 | 所属部门 |
+| `name` | VARCHAR(64) | 非空 | 场次名称 |
 | `starts_at` | DATETIME | 非空 | 开始时间 |
 | `ends_at` | DATETIME | 非空 | 结束时间 |
 | `location` | VARCHAR(255) | 非空 | 面试地点 |
@@ -265,7 +266,8 @@
 | `published_at` | DATETIME | 可空 | 发布时间 |
 | `ended_at` | DATETIME | 可空 | 结束时间 |
 
-`status` 可选值：`DRAFT`、`PUBLISHED`、`ENDED`
+`status` 可选值：`DRAFT`、`PUBLISHED`、`ENDED`。同一部门可同时存在多个
+`PUBLISHED` 场次，签到、二维码和叫号均按场次隔离。
 
 索引、外键与检查约束：
 
@@ -333,8 +335,6 @@
 | `queue_number` | INT | 非空 | 叫号序号 |
 | `started_at` | DATETIME | 非空 | 开始时间 |
 | `ended_at` | DATETIME | 可空 | 结束时间 |
-| `score` | TINYINT UNSIGNED | 可空 | 面试评分，1-5 分 |
-| `evaluation` | VARCHAR(2000) | 可空 | 面试评价 |
 
 索引、外键与检查约束：
 
@@ -346,7 +346,6 @@
 - 外键：`application_id → department_application.id`
 - 外键：`candidate_cas_id → user.cas_id`
 - 外键：`interviewer_cas_id → user.cas_id`
-- 检查约束：`score IS NULL OR score BETWEEN 1 AND 5`
 
 ## `department_interview_active`
 
@@ -368,6 +367,25 @@
 - 外键：`check_in_id → department_check_in.id`
 - 外键：`interviewer_cas_id → user.cas_id`
 - 外键：`candidate_cas_id → user.cas_id`
+
+## `department_interview_evaluation`
+
+管理员针对面试独立提交的评分与评价。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| `interview_id` | BIGINT | 联合 PK，FK，非空 | 面试 ID |
+| `admin_cas_id` | VARCHAR(32) | 联合 PK，FK，非空 | 评分管理员 |
+| `score` | DECIMAL(2,1) | 非空 | 1–5 分，以 0.5 为步进 |
+| `evaluation` | VARCHAR(2000) | 可空 | 面试评价 |
+| `submitted_at` | DATETIME | 非空，默认当前时间 | 提交时间 |
+
+约束与外键：
+
+- 联合主键：`(interview_id, admin_cas_id)`
+- 检查约束：评分在 1–5 之间，且只允许整分或半分
+- 外键：`interview_id → department_interview.id`，`ON DELETE CASCADE`
+- 外键：`admin_cas_id → user.cas_id`
 
 ## `department_interview_carryover`
 

@@ -8,6 +8,7 @@ import lombok.Data;
 public class DepartmentInterviewSession {
     private Long id;
     private Long departmentId;
+    private String name;
     private LocalDateTime startsAt;
     private LocalDateTime endsAt;
     private String location;

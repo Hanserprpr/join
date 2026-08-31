@@ -36,12 +36,14 @@ public class DepartmentCheckInService {
     private final AppProperties appProperties;
     private final InterviewSseService interviewSseService;
 
-    public ServiceResult<CheckInQrCodeVO> createQrCode(Long departmentId) {
+    public ServiceResult<CheckInQrCodeVO> createQrCode(
+            Long departmentId, Long sessionId
+    ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         DepartmentInterviewSession session =
-                sessionMapper.selectPublished(departmentId);
+                sessionMapper.selectPublishedById(departmentId, sessionId);
         if (session == null) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
         }
@@ -62,22 +64,17 @@ public class DepartmentCheckInService {
                 Duration.ofSeconds(ttlSeconds)
         );
         Instant expiresAt = Instant.now().plusSeconds(ttlSeconds);
-        long refreshSeconds = Math.max(
-                1, Math.min(
-                        appProperties.getCheckIn().getQrRefreshSeconds(),
-                        ttlSeconds - 1
-                )
-        );
         String content = appProperties.getCheckIn().getEntryUrl()
                 + "?token=" + token;
         return ServiceResult.success(new CheckInQrCodeVO(
-                content, expiresAt, refreshSeconds
+                content, expiresAt, ttlSeconds - 1
         ));
     }
 
     @Transactional
     public ServiceResult<CheckInVO> checkIn(
-            Long requestedDepartmentId, String token, String casId
+            Long requestedDepartmentId, Long requestedSessionId,
+            String token, String casId
     ) {
         Long departmentId;
         Long sessionId;
@@ -93,17 +90,23 @@ public class DepartmentCheckInService {
                     && !requestedDepartmentId.equals(departmentId)) {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
+            if (requestedSessionId != null
+                    && !requestedSessionId.equals(sessionId)) {
+                return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
+            }
             // 令牌本身已绑定部门和场次，因此切换开关期间已展示的二维码
             // 仍可完成签到；仅开启二维码模式时才享有跨场次优先资格。
         } else {
-            if (requestedDepartmentId == null) {
+            if (requestedDepartmentId == null || requestedSessionId == null) {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
             departmentId = requestedDepartmentId;
             if (organizationMapper.selectDepartmentById(departmentId) == null) {
                 return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
             }
-            DepartmentInterviewSession published = sessionMapper.selectPublished(departmentId);
+            DepartmentInterviewSession published =
+                    sessionMapper.selectPublishedById(
+                            departmentId, requestedSessionId);
             if (published == null) {
                 return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
             }
@@ -163,6 +166,13 @@ public class DepartmentCheckInService {
                 > 0) {
             return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
         }
+        // 同一部门同时只允许排一条队：已在其他已发布场次签到时，
+        // 必须先取消，避免同一人跨校区双排队并重复占用取号名额。
+        if (checkInMapper.countOtherSessionCheckIns(
+                departmentId, application.getId(), sessionId) > 0) {
+            return ServiceResult.failure(
+                    BizCode.CHECK_IN_OTHER_SESSION_EXISTS);
+        }
         DepartmentCheckIn existing =
                 checkInMapper.selectBySessionAndApplication(
                         sessionId, application.getId()
@@ -182,9 +192,11 @@ public class DepartmentCheckInService {
                 existing.setQueueOrder((long) queueNumber);
                 existing.setRequiresRecheckIn(false);
                 checkInMapper.reactivateAfterCheckIn(existing);
-                interviewSseService.publishQueueAfterCommit(departmentId);
+                interviewSseService.publishQueueAfterCommit(
+                        departmentId, sessionId);
+                return ServiceResult.success(CheckInVO.from(existing));
             }
-            return ServiceResult.success(CheckInVO.from(existing));
+            return ServiceResult.failure(BizCode.CHECK_IN_ALREADY_EXISTS);
         }
         if (hasCheckInEnded(session)) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
@@ -216,17 +228,19 @@ public class DepartmentCheckInService {
         try {
             checkInMapper.insert(checkIn);
         } catch (DuplicateKeyException exception) {
-            // 同一用户并发扫码时返回已经落库的同一条签到记录。
-            return ServiceResult.success(CheckInVO.from(
-                    checkInMapper.selectBySessionAndApplication(
-                            sessionId, application.getId()
-                    )
-            ));
+            // 仅将同一用户的并发重复签到转为业务错误；
+            // 其他唯一约束冲突仍交给全局异常处理。
+            if (checkInMapper.selectBySessionAndApplication(
+                    sessionId, application.getId()
+            ) != null) {
+                return ServiceResult.failure(BizCode.CHECK_IN_ALREADY_EXISTS);
+            }
+            throw exception;
         }
         if (carryoverId != null) {
             sessionMapper.useCarryover(carryoverId, sessionId);
         }
-        interviewSseService.publishQueueAfterCommit(departmentId);
+        interviewSseService.publishQueueAfterCommit(departmentId, sessionId);
         return ServiceResult.success(CheckInVO.from(checkIn));
     }
 
@@ -253,23 +267,25 @@ public class DepartmentCheckInService {
         }
     }
 
-    /** 兼容原有仅携带二维码令牌的调用。 */
+    /** 兼容仅携带二维码令牌的调用。 */
     public ServiceResult<CheckInVO> checkIn(String token, String casId) {
-        return checkIn(null, token, casId);
+        return checkIn(null, null, token, casId);
     }
 
     /**
-     * 取消当前用户在部门当前已发布场次的签到。
+     * 取消当前用户在指定已发布场次的签到。
      * 主动取消不会恢复已经使用的顺延优先资格。
      */
     @Transactional
-    public ServiceResult<Void> cancelCheckIn(Long departmentId, String casId) {
+    public ServiceResult<Void> cancelCheckIn(
+            Long departmentId, Long sessionId, String casId
+    ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         DepartmentCheckIn checkIn = checkInMapper
                 .selectCurrentByDepartmentAndUserForUpdate(
-                        departmentId, casId
+                        departmentId, sessionId, casId
                 );
         if (checkIn == null) {
             return ServiceResult.failure(BizCode.CHECK_IN_NOT_FOUND);
@@ -284,7 +300,8 @@ public class DepartmentCheckInService {
         if (deleted != 1) {
             throw new IllegalStateException("Check-in changed while cancelling");
         }
-        interviewSseService.publishQueueAfterCommit(departmentId);
+        interviewSseService.publishQueueAfterCommit(
+                departmentId, checkIn.getSessionId());
         return ServiceResult.success(null);
     }
 

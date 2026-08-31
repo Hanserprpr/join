@@ -27,8 +27,34 @@ class MapperSqlContractTest {
         String selectSql = sql(select.getAnnotation(Select.class).value());
         assertTrue(insertSql.contains("qr_check_in_enabled"));
         assertTrue(insertSql.contains("qr_code_ttl_seconds"));
+        assertTrue(insertSql.contains("name"));
         assertTrue(selectSql.contains("qr_check_in_enabled"));
         assertTrue(selectSql.contains("qr_code_ttl_seconds"));
+        assertTrue(selectSql.contains("name"));
+    }
+
+    @Test
+    void publishingDoesNotRejectAnotherPublishedSession()
+            throws NoSuchMethodException {
+        Method method = DepartmentInterviewSessionMapper.class.getMethod(
+                "publish", Long.class, Long.class,
+                java.time.LocalDateTime.class
+        );
+
+        assertFalse(sql(method.getAnnotation(Update.class).value())
+                .contains("NOT EXISTS"));
+    }
+
+    @Test
+    void pendingCarryoverCanBeClaimedByTheChosenSession()
+            throws NoSuchMethodException {
+        Method method = DepartmentInterviewSessionMapper.class.getMethod(
+                "selectPendingCarryoverForUpdate",
+                Long.class, Long.class, Long.class
+        );
+
+        assertTrue(sql(method.getAnnotation(Select.class).value())
+                .contains("target_session_id IS NULL"));
     }
 
     @Test
@@ -67,6 +93,17 @@ class MapperSqlContractTest {
     }
 
     @Test
+    void queueReorderingIsScopedToOneSession()
+            throws NoSuchMethodException {
+        Method method = DepartmentInterviewMapper.class.getMethod(
+                "selectReorderableQueueForUpdate", Long.class, Long.class
+        );
+
+        assertTrue(sql(method.getAnnotation(Select.class).value())
+                .contains("c.session_id = #{sessionId}"));
+    }
+
+    @Test
     void applicantQueriesExposeCompletedInterviews()
             throws NoSuchMethodException {
         Method one = DepartmentApplicationMapper.class.getMethod(
@@ -87,7 +124,7 @@ class MapperSqlContractTest {
     void queueItemQueriesMatchTheRecordConstructor()
             throws NoSuchMethodException {
         Method queue = DepartmentInterviewMapper.class.getMethod(
-                "selectQueue", Long.class
+                "selectQueue", Long.class, Long.class
         );
         Method candidate = DepartmentInterviewMapper.class.getMethod(
                 "selectCandidateQueueItem", Long.class, String.class
@@ -99,7 +136,9 @@ class MapperSqlContractTest {
             assertTrue(sql.contains("AS interviewer_cas_id,"));
             assertTrue(sql.contains("AS interviewer_name,"));
             assertTrue(sql.replaceAll("\\s+", " ")
-                    .contains("own_interview.ended_at, c.priority"));
+                    .contains(
+                            "own_interview.ended_at, c.priority, c.session_id"
+                    ));
             assertTrue(sql.contains("LEFT JOIN `user` interviewer"));
         }
     }
@@ -108,7 +147,7 @@ class MapperSqlContractTest {
     void publicQueueExcludesCompletedButPersonalStatusKeepsIt()
             throws NoSuchMethodException {
         Method queue = DepartmentInterviewMapper.class.getMethod(
-                "selectQueue", Long.class
+                "selectQueue", Long.class, Long.class
         );
         Method candidate = DepartmentInterviewMapper.class.getMethod(
                 "selectCandidateQueueItem", Long.class, String.class
@@ -121,11 +160,130 @@ class MapperSqlContractTest {
     }
 
     @Test
+    void interviewingAndQueueReadsDoNotDependOnSessionStatus()
+            throws NoSuchMethodException {
+        // 场次结束只关签到：排队的人还要继续面完，因此叫号、重排、队列展示、
+        // 个人状态都不能再挂在 status = 'PUBLISHED' 上。
+        List<Method> methods = List.of(
+                DepartmentInterviewMapper.class.getMethod(
+                        "selectNextWaitingForUpdate", Long.class, Long.class),
+                DepartmentInterviewMapper.class.getMethod(
+                        "selectReorderableQueueForUpdate",
+                        Long.class, Long.class),
+                DepartmentInterviewMapper.class.getMethod(
+                        "selectQueue", Long.class, Long.class),
+                DepartmentInterviewMapper.class.getMethod(
+                        "selectCandidateQueueItem", Long.class, String.class),
+                DepartmentInterviewMapper.class.getMethod(
+                        "countPeopleAhead",
+                        Long.class, Long.class, Long.class, Boolean.class),
+                DepartmentInterviewMapper.class.getMethod(
+                        "selectInterviewingQueueNumbers",
+                        Long.class, Long.class),
+                DepartmentCheckInMapper.class.getMethod(
+                        "selectCurrentByDepartmentAndUserForUpdate",
+                        Long.class, Long.class, String.class)
+        );
+
+        for (Method method : methods) {
+            assertFalse(
+                    sql(method.getAnnotation(Select.class).value())
+                            .contains("s.status = 'PUBLISHED'"),
+                    method.getName() + " 不应再按场次状态过滤"
+            );
+        }
+    }
+
+    @Test
+    void dispatchSkipsAnyoneAlreadyInterviewedInTheDepartment()
+            throws NoSuchMethodException {
+        // 去掉 PUBLISHED 过滤后，同一个人可能同时留在已结束场次和进行中场次的
+        // 队列里。排除条件必须按"本部门是否已面过"算，只按 check_in_id 算会
+        // 让他被叫第二次。
+        Method method = DepartmentInterviewMapper.class.getMethod(
+                "selectNextWaitingForUpdate", Long.class, Long.class
+        );
+        String sql = sql(method.getAnnotation(Select.class).value());
+
+        assertTrue(sql.contains("done.candidate_cas_id = c.cas_id"));
+        assertTrue(sql.contains("done.department_id = c.department_id"));
+        assertTrue(sql.contains("done.id IS NULL"));
+        assertFalse(sql.contains("i.check_in_id = c.id"));
+    }
+
+    @Test
+    void candidateQueueItemPicksTheMostRecentCheckIn()
+            throws NoSuchMethodException {
+        // 去掉 PUBLISHED 过滤后，历史场次会给同一个人留下多条签到，
+        // 必须显式收敛到最近一条，否则会撞 TooManyResultsException。
+        Method method = DepartmentInterviewMapper.class.getMethod(
+                "selectCandidateQueueItem", Long.class, String.class
+        );
+        String sql = sql(method.getAnnotation(Select.class).value());
+
+        assertTrue(sql.contains("ORDER BY c.checked_in_at DESC, c.id DESC"));
+        assertTrue(sql.contains("LIMIT 1"));
+    }
+
+    @Test
+    void carryoverCancellationOnlyTouchesThisSessionsAttendees()
+            throws NoSuchMethodException {
+        // 顺延只对下一场有效，但作废必须限定在本场到场的人身上：按整个部门清
+        // 会把并行场次（另一校区）里还没签到的考生的资格提前作废。
+        Method method = DepartmentInterviewSessionMapper.class.getMethod(
+                "cancelUnusedCarryovers", Long.class, Long.class
+        );
+        String sql = sql(method.getAnnotation(Update.class).value());
+
+        assertTrue(sql.contains("status = 'PENDING'"));
+        assertTrue(sql.contains("department_id = #{departmentId}"));
+        assertTrue(sql.contains("c.session_id = #{sessionId}"));
+        assertFalse(sql.contains("target_session_id = #{sessionId}"));
+    }
+
+    @Test
+    void queueReadsAreScopedToASingleSession()
+            throws NoSuchMethodException {
+        Method queue = DepartmentInterviewMapper.class.getMethod(
+                "selectQueue", Long.class, Long.class
+        );
+        Method interviewing = DepartmentInterviewMapper.class.getMethod(
+                "selectInterviewingQueueNumbers", Long.class, Long.class
+        );
+        Method ahead = DepartmentInterviewMapper.class.getMethod(
+                "countPeopleAhead",
+                Long.class, Long.class, Long.class, Boolean.class
+        );
+
+        assertTrue(sql(queue.getAnnotation(Select.class).value())
+                .contains("c.session_id = #{sessionId}"));
+        assertTrue(sql(interviewing.getAnnotation(Select.class).value())
+                .contains("c.session_id = #{sessionId}"));
+        assertTrue(sql(ahead.getAnnotation(Select.class).value())
+                .contains("ahead.session_id = #{sessionId}"));
+    }
+
+    @Test
+    void checkInRejectsASecondQueueInAnotherPublishedSession()
+            throws NoSuchMethodException {
+        Method method = DepartmentCheckInMapper.class.getMethod(
+                "countOtherSessionCheckIns",
+                Long.class, Long.class, Long.class
+        );
+        String sql = sql(method.getAnnotation(Select.class).value());
+
+        assertTrue(sql.contains("c.department_id = #{departmentId}"));
+        assertTrue(sql.contains("c.application_id = #{applicationId}"));
+        assertTrue(sql.contains("c.session_id <> #{sessionId}"));
+        assertTrue(sql.contains("s.status = 'PUBLISHED'"));
+    }
+
+    @Test
     void cancellingCheckInLocksAndDeletesOnlyOwnedCurrentRecord()
             throws NoSuchMethodException {
         Method select = DepartmentCheckInMapper.class.getMethod(
                 "selectCurrentByDepartmentAndUserForUpdate",
-                Long.class, String.class
+                Long.class, Long.class, String.class
         );
         Method delete = DepartmentCheckInMapper.class.getMethod(
                 "deleteOwnedCheckIn", Long.class, Long.class, String.class
@@ -134,7 +292,7 @@ class MapperSqlContractTest {
         String deleteSql = sql(delete.getAnnotation(
                 org.apache.ibatis.annotations.Delete.class).value());
 
-        assertTrue(selectSql.contains("s.status = 'PUBLISHED'"));
+        assertTrue(selectSql.contains("c.session_id = #{sessionId}"));
         assertTrue(selectSql.contains("FOR UPDATE"));
         assertTrue(deleteSql.contains("cas_id = #{casId}"));
         assertTrue(deleteSql.contains("department_id = #{departmentId}"));
@@ -236,6 +394,42 @@ class MapperSqlContractTest {
 
         assertTrue(updateSql.contains("wechat_openid = NULL"));
         assertTrue(updateSql.contains("WHERE cas_id = #{casId}"));
+    }
+
+    @Test
+    void posterReorderingLocksDepartmentAndPostersAndScopesEveryUpdate()
+            throws NoSuchMethodException {
+        Method departmentLock = AdminOrganizationMapper.class.getMethod(
+                "selectDepartmentByIdForUpdate", Long.class
+        );
+        Method posterLock = AdminOrganizationMapper.class.getMethod(
+                "selectDepartmentPostersForUpdate", Long.class
+        );
+        Method update = AdminOrganizationMapper.class.getMethod(
+                "updateDepartmentPosterSortOrder",
+                Long.class, Long.class, Integer.class
+        );
+
+        String departmentLockSql = sql(
+                departmentLock.getAnnotation(Select.class).value()
+        );
+        String posterLockSql = sql(
+                posterLock.getAnnotation(Select.class).value()
+        );
+        String updateSql = sql(update.getAnnotation(Update.class).value());
+
+        assertTrue(departmentLockSql.contains("WHERE id = #{id}"));
+        assertTrue(departmentLockSql.contains("FOR UPDATE"));
+        assertTrue(posterLockSql.contains(
+                "WHERE department_id = #{departmentId}"
+        ));
+        assertTrue(posterLockSql.contains("ORDER BY id ASC"));
+        assertTrue(posterLockSql.contains("FOR UPDATE"));
+        assertTrue(updateSql.contains("SET sort_order = #{sortOrder}"));
+        assertTrue(updateSql.contains(
+                "WHERE department_id = #{departmentId}"
+        ));
+        assertTrue(updateSql.contains("AND id = #{posterId}"));
     }
 
     private static String sql(String[] fragments) {
