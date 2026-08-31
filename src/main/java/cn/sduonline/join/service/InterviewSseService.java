@@ -1,5 +1,6 @@
 package cn.sduonline.join.service;
 
+import cn.sduonline.join.data.dto.SessionScopedSnapshot;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.scope.OrgType;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
@@ -50,13 +52,14 @@ public class InterviewSseService {
      * @param snapshotSupplier 快照函数
      * @return SSE 连接
      */
-    public SseEmitter subscribe(
+    public SseEmitter subscribeSelfScoped(
             Long departmentId,
             String eventName,
             Supplier<?> snapshotSupplier
     ) {
         return subscribeInternal(
-                departmentId, null, eventName, snapshotSupplier, null
+                departmentId, null, null, true,
+                eventName, snapshotSupplier, null
         );
     }
 
@@ -72,13 +75,15 @@ public class InterviewSseService {
      */
     public SseEmitter subscribe(
             Long departmentId,
+            Long sessionId,
             String eventName,
             Supplier<?> snapshotSupplier,
             String casId,
             PermissionCode permission
     ) {
         return subscribeInternal(
-                departmentId, null, eventName, snapshotSupplier,
+                departmentId, sessionId, null, false,
+                eventName, snapshotSupplier,
                 new AccessCheck(casId, permission.code(), departmentId)
         );
     }
@@ -103,21 +108,25 @@ public class InterviewSseService {
             PermissionCode permission
     ) {
         return subscribeInternal(
-                departmentId, roomId, eventName, snapshotSupplier,
+                departmentId, null, roomId, false,
+                eventName, snapshotSupplier,
                 new AccessCheck(casId, permission.code(), departmentId)
         );
     }
 
     private SseEmitter subscribeInternal(
             Long departmentId,
+            Long sessionId,
             Long roomId,
+            boolean selfScoped,
             String eventName,
             Supplier<?> snapshotSupplier,
             AccessCheck access
     ) {
         SseEmitter emitter = new SseEmitter(TIMEOUT_MILLIS);
         Subscription subscription = new Subscription(
-                emitter, eventName, snapshotSupplier, roomId, access
+                emitter, eventName, snapshotSupplier, roomId,
+                new AtomicReference<>(sessionId), selfScoped, access
         );
         List<Subscription> departmentSubscriptions = subscriptions.computeIfAbsent(
                 departmentId, ignored -> new CopyOnWriteArrayList<>()
@@ -150,12 +159,15 @@ public class InterviewSseService {
     }
 
     /**
-     * 队列变化后广播部门级订阅（队列、个人排队状态）。
+     * 队列变化后推送受影响场次的订阅（队列大屏、个人排队状态）。
      *
      * @param departmentId 部门 ID
+     * @param sessionId 发生变化的场次；为 null 时退化为部门级广播
      */
-    public void publishQueueAfterCommit(Long departmentId) {
-        afterCommit(departmentId, () -> publishQueue(departmentId));
+    public void publishQueueAfterCommit(Long departmentId, Long sessionId) {
+        afterCommit(
+                departmentId, () -> publishQueue(departmentId, sessionId)
+        );
     }
 
     /**
@@ -184,12 +196,30 @@ public class InterviewSseService {
     }
 
     /**
-     * 广播部门级订阅（队列、个人排队状态等非面试室订阅）。
+     * 推送指定场次的非面试室订阅（队列大屏、个人排队状态）。
+     * <p>
+     * 同一部门可以同时开多个场次（不同校区），一个场次的签到与叫号不应该
+     * 唤醒另一个场次的订阅者。订阅侧场次为 null（尚未收敛到某个场次的候选人）
+     * 或推送侧场次为 null（调用方无法确定受影响场次）时按部门级广播处理。
      *
      * @param departmentId 部门 ID
+     * @param sessionId 发生变化的场次；为 null 时退化为部门级广播
      */
-    public void publishQueue(Long departmentId) {
-        publishIf(departmentId, subscription -> subscription.roomId() == null);
+    public void publishQueue(Long departmentId, Long sessionId) {
+        publishIf(
+                departmentId,
+                subscription -> subscription.roomId() == null
+                        && matchesSession(subscription, sessionId)
+        );
+    }
+
+    private static boolean matchesSession(
+            Subscription subscription, Long sessionId
+    ) {
+        Long subscribed = subscription.session().get();
+        return sessionId == null
+                || subscribed == null
+                || subscribed.equals(sessionId);
     }
 
     /**
@@ -352,10 +382,20 @@ public class InterviewSseService {
             Subscription subscription
     ) {
         try {
+            Object snapshot = subscription.snapshotSupplier().get();
+            if (subscription.selfScoped()) {
+                // 快照自报场次，订阅据此收敛；取消签到后回落为部门级，
+                // 下一次任意场次的推送仍能到达并重新收敛。
+                subscription.session().set(
+                        snapshot instanceof SessionScopedSnapshot scoped
+                                ? scoped.sessionId()
+                                : null
+                );
+            }
             subscription.emitter().send(
                     SseEmitter.event()
                             .name(subscription.eventName())
-                            .data(subscription.snapshotSupplier().get())
+                            .data(snapshot)
             );
         } catch (Exception exception) {
             remove(departmentId, subscription);
@@ -382,11 +422,20 @@ public class InterviewSseService {
         }
     }
 
+    /**
+     * 一条订阅。
+     *
+     * @param session 订阅关注的场次；null 表示接收本部门全部推送
+     * @param selfScoped 场次是否由快照自报（候选人订阅），
+     *                   否则由订阅参数固定（队列大屏）
+     */
     private record Subscription(
             SseEmitter emitter,
             String eventName,
             Supplier<?> snapshotSupplier,
             Long roomId,
+            AtomicReference<Long> session,
+            boolean selfScoped,
             AccessCheck access
     ) {
     }

@@ -179,6 +179,28 @@ class DepartmentCheckInServiceTest {
     }
 
     @Test
+    void rejectsCheckInWhenAlreadyQueuedInAnotherPublishedSession() {
+        when(valueOperations.get("join:check-in:token:valid"))
+                .thenReturn("12:30");
+        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+                .thenReturn(openSession());
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        when(checkInMapper.countOtherSessionCheckIns(12L, 100L, 30L))
+                .thenReturn(1);
+
+        var result = service.checkIn("valid", "20240001");
+
+        assertEquals(
+                BizCode.CHECK_IN_OTHER_SESSION_EXISTS, result.error()
+        );
+        verify(checkInMapper, never()).insert(any());
+        verify(checkInMapper, never()).initializeSequence(any());
+    }
+
+    @Test
     void rejectsNewCheckInAfterSessionEndTime() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
@@ -431,7 +453,7 @@ class DepartmentCheckInServiceTest {
         verify(checkInMapper).deleteOwnedCheckIn(
                 200L, 12L, "20240001"
         );
-        verify(interviewSseService).publishQueueAfterCommit(12L);
+        verify(interviewSseService).publishQueueAfterCommit(12L, 30L);
     }
 
     @Test
@@ -450,7 +472,8 @@ class DepartmentCheckInServiceTest {
         verify(checkInMapper, never()).deleteOwnedCheckIn(
                 any(), any(), any()
         );
-        verify(interviewSseService, never()).publishQueueAfterCommit(any());
+        verify(interviewSseService, never())
+                .publishQueueAfterCommit(any(), any());
     }
 
     @Test

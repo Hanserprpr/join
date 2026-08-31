@@ -4,6 +4,7 @@ import java.util.List;
 
 public record InterviewRoomStateVO(
         Long roomId,
+        Long sessionId,
         String roomName,
         String roomStatus,
         DepartmentInterviewVO currentInterview,
@@ -13,7 +14,7 @@ public record InterviewRoomStateVO(
         List<InterviewRoomMemberStatusVO> pendingAdministrators,
         boolean currentUserSubmitted,
         boolean canForce
-) {
+) implements SessionScopedSnapshot {
     public boolean allSubmitted() {
         return currentInterview != null
                 && administratorCount > 0

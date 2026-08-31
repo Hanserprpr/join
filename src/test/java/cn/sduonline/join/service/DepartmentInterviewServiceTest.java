@@ -20,11 +20,13 @@ import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentInterview;
 import cn.sduonline.join.data.po.DepartmentInterviewRoom;
+import cn.sduonline.join.data.po.DepartmentInterviewSession;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.config.WeChatProperties;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewRoomMapper;
+import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import cn.sduonline.join.mapper.UserMapper;
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,6 +45,7 @@ class DepartmentInterviewServiceTest {
     @Mock AdminOrganizationMapper organizationMapper;
     @Mock DepartmentInterviewMapper interviewMapper;
     @Mock DepartmentInterviewRoomMapper roomMapper;
+    @Mock DepartmentInterviewSessionMapper sessionMapper;
     @Mock TransactionTemplate transactionTemplate;
     @Mock TransactionStatus transactionStatus;
     @Mock InterviewSseService interviewSseService;
@@ -59,10 +62,13 @@ class DepartmentInterviewServiceTest {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(transactionStatus);
         });
+        org.mockito.Mockito.lenient()
+                .when(sessionMapper.selectById(12L, 5L))
+                .thenReturn(new DepartmentInterviewSession());
         weChatProperties = new WeChatProperties();
         service = new DepartmentInterviewService(
                 organizationMapper, interviewMapper, roomMapper,
-                transactionTemplate,
+                sessionMapper, transactionTemplate,
                 interviewSseService, userMapper, templateMessageService,
                 weChatProperties, authorizationService
         );
@@ -205,11 +211,11 @@ class DepartmentInterviewServiceTest {
         InterviewQueueItemVO item = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三", 7, 7L, 0, null,
                 InterviewQueueStatus.INTERVIEWING_ELSEWHERE,
-                null, null, null, null, false
+                null, null, null, null, false, 5L
         );
-        when(interviewMapper.selectQueue(12L)).thenReturn(List.of(item));
+        when(interviewMapper.selectQueue(12L, 5L)).thenReturn(List.of(item));
 
-        var result = service.findQueue(12L);
+        var result = service.findQueue(12L, 5L);
 
         assertTrue(result.isSuccess());
         assertEquals(
@@ -227,13 +233,13 @@ class DepartmentInterviewServiceTest {
         InterviewQueueItemVO item = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三", 12, 12L, 0, null,
                 InterviewQueueStatus.WAITING,
-                null, null, null, null, false
+                null, null, null, null, false, 5L
         );
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(item);
-        when(interviewMapper.countPeopleAhead(12L, 12L, false))
+        when(interviewMapper.countPeopleAhead(12L, 5L, 12L, false))
                 .thenReturn(3);
-        when(interviewMapper.selectInterviewingQueueNumbers(12L))
+        when(interviewMapper.selectInterviewingQueueNumbers(12L, 5L))
                 .thenReturn(List.of(8, 9));
 
         var result = service.findMyQueueStatus(12L, "20240001");
@@ -255,7 +261,7 @@ class DepartmentInterviewServiceTest {
 
         assertEquals(BizCode.CHECK_IN_NOT_FOUND, result.error());
         verify(interviewMapper, never()).countPeopleAhead(
-                any(), any(), any()
+                any(), any(), any(), any()
         );
     }
 
@@ -281,7 +287,7 @@ class DepartmentInterviewServiceTest {
         InterviewQueueItemVO moved = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三",
                 7, 4L, 1, null, InterviewQueueStatus.WAITING,
-                null, null, null, null, false
+                null, null, null, null, false, 5L
         );
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(moved);
@@ -294,7 +300,7 @@ class DepartmentInterviewServiceTest {
         assertEquals(4L, target.getQueueOrder());
         verify(interviewMapper).deleteActive(300L);
         verify(interviewMapper).deleteInterview(300L);
-        verify(interviewSseService).publishQueue(12L);
+        verify(interviewSseService).publishQueue(12L, 5L);
         verify(interviewSseService).publishRoom(12L, 9L);
     }
 
@@ -354,7 +360,7 @@ class DepartmentInterviewServiceTest {
         InterviewQueueItemVO waiting = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三",
                 7, 1L, 0, null, InterviewQueueStatus.WAITING,
-                null, null, null, null, false
+                null, null, null, null, false, 5L
         );
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(waiting);
@@ -368,7 +374,7 @@ class DepartmentInterviewServiceTest {
         verify(interviewMapper).deleteActive(300L);
         verify(interviewMapper).deleteInterview(300L);
         verify(interviewMapper, never()).updateCheckInQueue(any());
-        verify(interviewSseService).publishQueue(12L);
+        verify(interviewSseService).publishQueue(12L, 5L);
         verify(interviewSseService).publishRoom(12L, 9L);
     }
 
@@ -382,7 +388,7 @@ class DepartmentInterviewServiceTest {
 
         assertEquals(BizCode.INTERVIEW_NOT_ACTIVE, result.error());
         verify(interviewMapper, never()).deleteActive(any());
-        verify(interviewSseService, never()).publishQueue(any());
+        verify(interviewSseService, never()).publishQueue(any(), any());
         verify(interviewSseService, never()).publishRoom(any(), any());
     }
 
@@ -625,6 +631,24 @@ class DepartmentInterviewServiceTest {
         checkIn.setQueueOrder(queueOrder);
         checkIn.setPassCount(passCount);
         return checkIn;
+    }
+
+    @Test
+    void callsNextWithoutConsultingSessionStatus() {
+        DepartmentInterview next = waitingCandidate();
+        next.setRoomId(9L);
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(openRoom());
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L)).thenReturn(null, next);
+        when(interviewMapper.selectNextWaitingForUpdate(12L, 5L))
+                .thenReturn(next);
+        when(roomMapper.selectById(12L, 9L)).thenReturn(openRoom());
+
+        var result = service.callNextInRoom(12L, 9L, "admin01");
+
+        // 场次结束只关签到，叫号必须继续，不该因为 status 变了就停。
+        assertTrue(result.isSuccess());
+        verify(sessionMapper, never()).selectPublishedById(any(), any());
     }
 
     private static DepartmentInterviewRoom openRoom() {
