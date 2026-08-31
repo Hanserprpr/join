@@ -2430,17 +2430,33 @@ components:
           minLength: 0
     DepartmentPosterRequest:
       type: object
+      description: >-
+        海报写入项，id 与 url 必须恰好提供其中之一。传 id 表示保留该已有海报，
+        服务端沿用库中地址，调用方无需回传详情接口返回的预签名 URL；
+        传 url 表示新增海报，取值必须是上传接口返回的白名单地址。
+        提交时未出现在数组中的已有海报会被删除，因此一次提交即可完成删除、
+        新增与调序。
       properties:
+        id:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+          description: 已有海报 ID，表示保留该海报
         url:
           type: string
           maxLength: 2048
           minLength: 0
+          description: 新增海报地址，取自上传接口返回值
         sortOrder:
           type: integer
           format: int32
           minimum: 0
-      required:
-      - url
+          description: 排序值，不传时按请求数组下标排序
+      oneOf:
+      - required:
+        - id
+      - required:
+        - url
     DepartmentPosterOrderUpdateRequest:
       type: object
       description: 海报调序的全量请求；posters 必须覆盖部门当前全部海报。
