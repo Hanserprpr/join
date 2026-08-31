@@ -649,10 +649,17 @@ paths:
     get:
       tags:
       - DepartmentInterviewRoomController
-      operationId: findAll
+      operationId: findBySession
       parameters:
       - name: departmentId
         in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
+        in: query
         required: true
         schema:
           type: integer
@@ -1319,6 +1326,7 @@ paths:
           maxLength: 32
           minLength: 0
           pattern: "^[A-Za-z0-9_-]{0,32}$"
+          default: ""
       responses:
         "200":
           description: OK
@@ -1884,6 +1892,13 @@ paths:
           type: integer
           format: int64
           exclusiveMinimum: 0
+      - name: sessionId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
       responses:
         "200":
           description: OK
@@ -1951,6 +1966,13 @@ paths:
       parameters:
       - name: departmentId
         in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
+        in: query
         required: true
         schema:
           type: integer
@@ -3192,6 +3214,9 @@ components:
     InterviewRoomStateVO:
       type: object
       properties:
+        sessionId:
+          type: integer
+          format: int64
         roomId:
           type: integer
           format: int64
@@ -3235,6 +3260,9 @@ components:
     InterviewQueueItemVO:
       type: object
       properties:
+        sessionId:
+          type: integer
+          format: int64
         checkInId:
           type: integer
           format: int64
@@ -4718,6 +4746,9 @@ components:
     MyInterviewQueueStatusVO:
       type: object
       properties:
+        sessionId:
+          type: integer
+          format: int64
         departmentId:
           type: integer
           format: int64
