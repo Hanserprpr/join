@@ -10,9 +10,13 @@ import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DepartmentInterviewSessionService {
@@ -21,6 +25,7 @@ public class DepartmentInterviewSessionService {
 
     private final AdminOrganizationMapper organizationMapper;
     private final DepartmentInterviewSessionMapper sessionMapper;
+    private final TransactionTemplate transactionTemplate;
 
     public ServiceResult<InterviewSessionVO> create(
             Long departmentId,
@@ -104,6 +109,33 @@ public class DepartmentInterviewSessionService {
         sessionMapper.cancelUnusedCarryovers(departmentId, sessionId);
         sessionMapper.createCarryovers(sessionId);
         return findById(departmentId, sessionId);
+    }
+
+    /**
+     * 到点自动关闭签到。
+     * <p>
+     * 只把 {@code status} 翻成 ENDED，面试不受影响——叫号、队列、个人状态都
+     * 不再依赖场次状态，排队的人继续面完。
+     */
+    @Scheduled(
+            fixedDelayString =
+                    "${app.interview-session.auto-end-poll-delay-ms:30000}"
+    )
+    public void autoEndExpiredSessions() {
+        LocalDateTime now = LocalDateTime.now();
+        for (DepartmentInterviewSession session :
+                sessionMapper.selectExpiredPublished(now)) {
+            try {
+                transactionTemplate.execute(status -> end(
+                        session.getDepartmentId(), session.getId()
+                ));
+            } catch (RuntimeException exception) {
+                log.error(
+                        "Failed to auto-end interview session {}",
+                        session.getId(), exception
+                );
+            }
+        }
     }
 
     public ServiceResult<List<InterviewSessionVO>> findPublished(
