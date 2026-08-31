@@ -649,10 +649,17 @@ paths:
     get:
       tags:
       - DepartmentInterviewRoomController
-      operationId: findAll
+      operationId: findBySession
       parameters:
       - name: departmentId
         in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
+        in: query
         required: true
         schema:
           type: integer
@@ -1319,6 +1326,7 @@ paths:
           maxLength: 32
           minLength: 0
           pattern: "^[A-Za-z0-9_-]{0,32}$"
+          default: ""
       responses:
         "200":
           description: OK
@@ -1326,6 +1334,97 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ResultListUserSearchVO"
+      security:
+      - sessionCookie: []
+  /api/admin/users/page:
+    get:
+      tags:
+      - 系统管理
+      summary: 分页查询平台用户
+      description: 返回全量用户，仅平台管理员可用；GET /api/admin/users 是角色授权页的学号联想，不分页。列表不返回微信 OpenID
+        与 OIDC sub，只给 wechatBound 标记。
+      operationId: findUsers
+      parameters:
+      - name: keyword
+        in: query
+        description: 关键词，模糊匹配姓名、学号、手机号、邮箱和 QQ
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 0
+      - name: college
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 64
+          minLength: 0
+      - name: major
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 64
+          minLength: 0
+      - name: grade
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          maximum: 2100
+          minimum: 2000
+      - name: profileCompleted
+        in: query
+        description: 报名必填资料是否完整；不传则不过滤
+        required: false
+        schema:
+          type: boolean
+      - name: wechatBound
+        in: query
+        description: 是否已绑定微信公众号；不传则不过滤
+        required: false
+        schema:
+          type: boolean
+      - name: sortBy
+        in: query
+        required: false
+        schema:
+          type: string
+          default: createdAt
+          pattern: createdAt|casId|grade
+      - name: sortOrder
+        in: query
+        required: false
+        schema:
+          type: string
+          default: desc
+          pattern: asc|desc
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultPageVOAdminUserVO"
       security:
       - sessionCookie: []
   /api/admin/departments:
@@ -1793,6 +1892,13 @@ paths:
           type: integer
           format: int64
           exclusiveMinimum: 0
+      - name: sessionId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
       responses:
         "200":
           description: OK
@@ -1860,6 +1966,13 @@ paths:
       parameters:
       - name: departmentId
         in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
+        in: query
         required: true
         schema:
           type: integer
@@ -3101,6 +3214,9 @@ components:
     InterviewRoomStateVO:
       type: object
       properties:
+        sessionId:
+          type: integer
+          format: int64
         roomId:
           type: integer
           format: int64
@@ -3144,6 +3260,9 @@ components:
     InterviewQueueItemVO:
       type: object
       properties:
+        sessionId:
+          type: integer
+          format: int64
         checkInId:
           type: integer
           format: int64
@@ -3543,6 +3662,70 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/UserSearchVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    AdminUserVO:
+      type: object
+      properties:
+        casId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        qq:
+          type: string
+        college:
+          type: string
+        major:
+          type: string
+        grade:
+          type: integer
+          format: int32
+        profileCompleted:
+          type: boolean
+        wechatBound:
+          type: boolean
+        avatarUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PageVOAdminUserVO:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUserVO"
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalPages:
+          type: integer
+          format: int32
+    ResultPageVOAdminUserVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/PageVOAdminUserVO"
         msg:
           type: string
         timestamp:
@@ -4563,6 +4746,9 @@ components:
     MyInterviewQueueStatusVO:
       type: object
       properties:
+        sessionId:
+          type: integer
+          format: int64
         departmentId:
           type: integer
           format: int64
