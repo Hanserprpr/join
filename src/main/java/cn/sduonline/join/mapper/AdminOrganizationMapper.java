@@ -218,6 +218,22 @@ public interface AdminOrganizationMapper {
     @Delete("DELETE FROM department_poster WHERE department_id = #{departmentId}")
     int deleteDepartmentPosters(@Param("departmentId") Long departmentId);
 
+    @Delete("""
+            <script>
+            DELETE FROM department_poster
+            WHERE department_id = #{departmentId}
+              AND id IN
+              <foreach item="posterId" collection="posterIds"
+                       open="(" separator="," close=")">
+                #{posterId}
+              </foreach>
+            </script>
+            """)
+    int deleteDepartmentPostersByIds(
+            @Param("departmentId") Long departmentId,
+            @Param("posterIds") List<Long> posterIds
+    );
+
     @Insert("""
             INSERT INTO department_poster (department_id, url, sort_order)
             VALUES (#{departmentId}, #{url}, #{sortOrder})

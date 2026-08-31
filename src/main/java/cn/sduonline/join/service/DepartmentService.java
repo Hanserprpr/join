@@ -74,6 +74,12 @@ public class DepartmentService {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         posterUrlPolicy.validateAll(request.posters());
+        BizCode posterConflict = validatePosterReferences(
+                departmentId, request.posters()
+        );
+        if (posterConflict != null) {
+            return ServiceResult.failure(posterConflict);
+        }
 
         department.setCampus(request.campus());
         department.setIntroduction(trimToNull(request.introduction()));
@@ -83,7 +89,7 @@ public class DepartmentService {
         department.setContact(trimToNull(request.contact()));
         department.setRecruitmentGroup(trimToNull(request.recruitmentGroup()));
         organizationMapper.updateDepartmentDetail(department);
-        replacePosters(departmentId, request.posters());
+        applyPosters(departmentId, request.posters());
         replaceAchievements(departmentId, request.achievements());
         return ServiceResult.success(toVO(department, casId));
     }
@@ -108,6 +114,12 @@ public class DepartmentService {
         }
         if (request.isPostersPresent()) {
             posterUrlPolicy.validateAll(request.getPosters());
+            BizCode posterConflict = validatePosterReferences(
+                    departmentId, request.getPosters()
+            );
+            if (posterConflict != null) {
+                return ServiceResult.failure(posterConflict);
+            }
         }
 
         if (request.isCampusPresent()) {
@@ -131,7 +143,7 @@ public class DepartmentService {
         }
         organizationMapper.updateDepartmentDetail(department);
         if (request.isPostersPresent()) {
-            replacePosters(departmentId, request.getPosters());
+            applyPosters(departmentId, request.getPosters());
         }
         if (request.isAchievementsPresent()) {
             replaceAchievements(departmentId, request.getAchievements());
@@ -221,22 +233,80 @@ public class DepartmentService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private void replacePosters(
+    /**
+     * 校验请求引用的海报 ID 都属于该部门且没有重复，并锁定当前海报行。
+     * 必须在任何写操作之前调用，避免冲突返回时留下已提交的部分更新。
+     *
+     * @return 校验失败的业务码，通过时返回 {@code null}
+     */
+    private BizCode validatePosterReferences(
             Long departmentId,
             List<DepartmentPosterRequest> requests
     ) {
-        organizationMapper.deleteDepartmentPosters(departmentId);
-        if (requests == null) {
+        if (requests == null || requests.isEmpty()) {
+            return null;
+        }
+        Set<Long> currentIds = new HashSet<>();
+        for (DepartmentPoster poster
+                : organizationMapper.selectDepartmentPostersForUpdate(departmentId)) {
+            currentIds.add(poster.getId());
+        }
+        Set<Long> referencedIds = new HashSet<>();
+        for (DepartmentPosterRequest request : requests) {
+            if (request == null || request.id() == null) {
+                continue;
+            }
+            if (!currentIds.contains(request.id())
+                    || !referencedIds.add(request.id())) {
+                return BizCode.POSTER_ORDER_CONFLICT;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 按目标列表增量更新海报：带 id 的保留并调整顺序，只带 url 的新增，
+     * 当前存在但未出现在目标列表中的删除。排序按请求数组下标，显式传入时以其为准。
+     */
+    private void applyPosters(
+            Long departmentId,
+            List<DepartmentPosterRequest> requests
+    ) {
+        if (requests == null || requests.isEmpty()) {
+            organizationMapper.deleteDepartmentPosters(departmentId);
             return;
+        }
+        Set<Long> keptIds = new HashSet<>();
+        for (DepartmentPosterRequest request : requests) {
+            if (request.id() != null) {
+                keptIds.add(request.id());
+            }
+        }
+        List<Long> removedIds = organizationMapper
+                .selectDepartmentPosters(departmentId)
+                .stream()
+                .map(DepartmentPoster::getId)
+                .filter(id -> !keptIds.contains(id))
+                .toList();
+        if (!removedIds.isEmpty()) {
+            organizationMapper.deleteDepartmentPostersByIds(
+                    departmentId, removedIds
+            );
         }
         for (int index = 0; index < requests.size(); index++) {
             DepartmentPosterRequest request = requests.get(index);
+            int sortOrder = request.sortOrder() == null
+                    ? index : request.sortOrder();
+            if (request.id() != null) {
+                organizationMapper.updateDepartmentPosterSortOrder(
+                        departmentId, request.id(), sortOrder
+                );
+                continue;
+            }
             DepartmentPoster poster = new DepartmentPoster();
             poster.setDepartmentId(departmentId);
             poster.setUrl(request.url().trim());
-            poster.setSortOrder(
-                    request.sortOrder() == null ? index : request.sortOrder()
-            );
+            poster.setSortOrder(sortOrder);
             organizationMapper.insertDepartmentPoster(poster);
         }
     }

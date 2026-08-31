@@ -196,10 +196,10 @@ class DepartmentServiceTest {
                 Campus.CENTRAL, " 介绍 ",
                 java.util.List.of(
                         new DepartmentPosterRequest(
-                                " https://example.com/poster-1.jpg ", null
+                                null, " https://example.com/poster-1.jpg ", null
                         ),
                         new DepartmentPosterRequest(
-                                "https://example.com/poster-2.jpg", 5
+                                null, "https://example.com/poster-2.jpg", 5
                         )
                 ),
                 java.util.List.of(
@@ -231,7 +231,9 @@ class DepartmentServiceTest {
         assertEquals("QQ：123", result.data().contact());
         assertEquals("456群", result.data().recruitmentGroup());
         verify(organizationMapper).updateDepartmentDetail(department);
-        verify(organizationMapper).deleteDepartmentPosters(12L);
+        // 请求全部是新增项，原有海报都不在目标列表里，按 id 删除。
+        verify(organizationMapper)
+                .deleteDepartmentPostersByIds(12L, List.of(1L, 2L));
         ArgumentCaptor<DepartmentPoster> posterCaptor =
                 ArgumentCaptor.forClass(DepartmentPoster.class);
         verify(organizationMapper, org.mockito.Mockito.times(2))
@@ -378,6 +380,129 @@ class DepartmentServiceTest {
         assertNull(result.data().contact());
         verify(posterUrlPolicy).validateAll(null);
         verify(organizationMapper).deleteDepartmentPosters(12L);
+    }
+
+    @Test
+    void patchDetailDeletesAddsAndReordersPostersInOneSave() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        DepartmentPoster keepA = poster(
+                1L, "https://files.example.com/join/posters/a.jpg", 0
+        );
+        DepartmentPoster removeB = poster(
+                2L, "https://files.example.com/join/posters/b.jpg", 1
+        );
+        DepartmentPoster keepC = poster(
+                3L, "https://files.example.com/join/posters/c.jpg", 2
+        );
+        when(organizationMapper.selectDepartmentPostersForUpdate(12L))
+                .thenReturn(List.of(keepA, removeB, keepC));
+        when(organizationMapper.selectDepartmentPosters(12L))
+                .thenReturn(List.of(keepA, removeB, keepC));
+
+        // 一次提交内：删掉 B、保留 C 和 A 并对调顺序、新增一张 D。
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setPosters(List.of(
+                new DepartmentPosterRequest(3L, null, null),
+                new DepartmentPosterRequest(1L, null, null),
+                new DepartmentPosterRequest(
+                        null, "https://files.example.com/join/posters/d.jpg", null
+                )
+        ));
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertTrue(result.isSuccess());
+        verify(organizationMapper)
+                .deleteDepartmentPostersByIds(12L, List.of(2L));
+        // 保留项只调整顺序，行 id 不变，不重新插入。
+        verify(organizationMapper).updateDepartmentPosterSortOrder(12L, 3L, 0);
+        verify(organizationMapper).updateDepartmentPosterSortOrder(12L, 1L, 1);
+        ArgumentCaptor<DepartmentPoster> inserted =
+                ArgumentCaptor.forClass(DepartmentPoster.class);
+        verify(organizationMapper).insertDepartmentPoster(inserted.capture());
+        assertEquals(
+                "https://files.example.com/join/posters/d.jpg",
+                inserted.getValue().getUrl()
+        );
+        assertEquals(2, inserted.getValue().getSortOrder());
+        verify(organizationMapper, never()).deleteDepartmentPosters(12L);
+    }
+
+    @Test
+    void patchDetailKeepsPostersReferencedByIdWithoutResendingSignedUrl() {
+        // S3 存储下详情返回的是预签名 URL，前端只能按 id 回传保留项。
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        DepartmentPoster existing = poster(
+                1L, "https://files.example.com/join/posters/a.jpg", 0
+        );
+        when(organizationMapper.selectDepartmentPostersForUpdate(12L))
+                .thenReturn(List.of(existing));
+        when(organizationMapper.selectDepartmentPosters(12L))
+                .thenReturn(List.of(existing));
+        when(posterStorage.accessUrl(existing.getUrl()))
+                .thenReturn(existing.getUrl() + "?X-Amz-Signature=abc");
+
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setPosters(List.of(new DepartmentPosterRequest(1L, null, null)));
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertTrue(result.isSuccess());
+        assertEquals(
+                "https://files.example.com/join/posters/a.jpg?X-Amz-Signature=abc",
+                result.data().posters().getFirst().url()
+        );
+        verify(organizationMapper, never()).deleteDepartmentPostersByIds(
+                anyLong(), org.mockito.ArgumentMatchers.anyList()
+        );
+        verify(organizationMapper, never()).insertDepartmentPoster(
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void patchDetailRejectsPosterIdThatDoesNotBelongToDepartment() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(organizationMapper.selectDepartmentPostersForUpdate(12L))
+                .thenReturn(List.of(poster(1L, "https://example.com/a.jpg", 0)));
+
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setIntroduction("新介绍");
+        request.setPosters(List.of(new DepartmentPosterRequest(99L, null, null)));
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertFalse(result.isSuccess());
+        assertEquals(BizCode.POSTER_ORDER_CONFLICT, result.error());
+        // 冲突在任何写操作之前返回，详情不会被部分提交。
+        verify(organizationMapper, never()).updateDepartmentDetail(
+                org.mockito.ArgumentMatchers.any()
+        );
+        verify(organizationMapper, never()).insertDepartmentPoster(
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void patchDetailRejectsDuplicatePosterIdReferences() {
+        Department department = department();
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
+        when(organizationMapper.selectDepartmentPostersForUpdate(12L))
+                .thenReturn(List.of(poster(1L, "https://example.com/a.jpg", 0)));
+
+        DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
+        request.setPosters(List.of(
+                new DepartmentPosterRequest(1L, null, null),
+                new DepartmentPosterRequest(1L, null, null)
+        ));
+
+        var result = service.patchDetail(12L, "20240001", request);
+
+        assertFalse(result.isSuccess());
+        assertEquals(BizCode.POSTER_ORDER_CONFLICT, result.error());
     }
 
     @Test
