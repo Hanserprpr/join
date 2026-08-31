@@ -58,9 +58,24 @@ public class DepartmentInterviewRoomService {
         return ServiceResult.success(toVO(room));
     }
 
-    public ServiceResult<List<InterviewRoomVO>> findAll(Long departmentId) {
-        return ServiceResult.success(roomMapper.selectByDepartment(departmentId)
-                .stream().map(this::toVO).toList());
+    /**
+     * 列出指定场次的面试室。
+     * <p>
+     * 面试室属于场次而不是部门，房间名的唯一性也只在场次内保证。不按场次过滤时
+     * 同名的新旧面试室会并排出现在同一个列表里，面试官很容易进错。
+     * 这里不筛状态：场次结束后房间会刻意留着把排队的人面完，
+     * 已关闭的房间也仍需要出现在本场次的记录里。
+     */
+    public ServiceResult<List<InterviewRoomVO>> findBySession(
+            Long departmentId, Long sessionId
+    ) {
+        if (sessionMapper.selectById(departmentId, sessionId) == null) {
+            return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_FOUND);
+        }
+        return ServiceResult.success(
+                roomMapper.selectBySession(departmentId, sessionId)
+                        .stream().map(this::toVO).toList()
+        );
     }
 
     @Transactional

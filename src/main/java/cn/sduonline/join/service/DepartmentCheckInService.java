@@ -166,6 +166,13 @@ public class DepartmentCheckInService {
                 > 0) {
             return ServiceResult.failure(BizCode.STATE_NOT_ALLOWED);
         }
+        // 同一部门同时只允许排一条队：已在其他已发布场次签到时，
+        // 必须先取消，避免同一人跨校区双排队并重复占用取号名额。
+        if (checkInMapper.countOtherSessionCheckIns(
+                departmentId, application.getId(), sessionId) > 0) {
+            return ServiceResult.failure(
+                    BizCode.CHECK_IN_OTHER_SESSION_EXISTS);
+        }
         DepartmentCheckIn existing =
                 checkInMapper.selectBySessionAndApplication(
                         sessionId, application.getId()
@@ -185,7 +192,8 @@ public class DepartmentCheckInService {
                 existing.setQueueOrder((long) queueNumber);
                 existing.setRequiresRecheckIn(false);
                 checkInMapper.reactivateAfterCheckIn(existing);
-                interviewSseService.publishQueueAfterCommit(departmentId);
+                interviewSseService.publishQueueAfterCommit(
+                        departmentId, sessionId);
                 return ServiceResult.success(CheckInVO.from(existing));
             }
             return ServiceResult.failure(BizCode.CHECK_IN_ALREADY_EXISTS);
@@ -232,7 +240,7 @@ public class DepartmentCheckInService {
         if (carryoverId != null) {
             sessionMapper.useCarryover(carryoverId, sessionId);
         }
-        interviewSseService.publishQueueAfterCommit(departmentId);
+        interviewSseService.publishQueueAfterCommit(departmentId, sessionId);
         return ServiceResult.success(CheckInVO.from(checkIn));
     }
 
@@ -292,7 +300,8 @@ public class DepartmentCheckInService {
         if (deleted != 1) {
             throw new IllegalStateException("Check-in changed while cancelling");
         }
-        interviewSseService.publishQueueAfterCommit(departmentId);
+        interviewSseService.publishQueueAfterCommit(
+                departmentId, checkIn.getSessionId());
         return ServiceResult.success(null);
     }
 

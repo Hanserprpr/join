@@ -72,6 +72,13 @@ public class DepartmentInterviewSessionService {
         return findById(departmentId, sessionId);
     }
 
+    /**
+     * 结束场次：只关闭签到，已经排队的人仍然继续叫号面试。
+     * <p>
+     * 不检查进行中的面试——按上述语义，面试本来就要跨过这个状态继续，
+     * 没有理由等面试做完才允许关签到。进行中的候选人已经有面试记录，
+     * {@link DepartmentInterviewSessionMapper#createCarryovers} 会把他们排除在顺延之外。
+     */
     @Transactional
     public ServiceResult<InterviewSessionVO> end(
             Long departmentId,
@@ -84,11 +91,6 @@ public class DepartmentInterviewSessionService {
                     BizCode.INTERVIEW_SESSION_STATE_INVALID
             );
         }
-        if (sessionMapper.countActiveInterviews(sessionId) > 0) {
-            return ServiceResult.failure(
-                    BizCode.INTERVIEW_SESSION_STATE_INVALID
-            );
-        }
         if (sessionMapper.end(
                 departmentId, sessionId, LocalDateTime.now()
         ) == 0) {
@@ -96,7 +98,10 @@ public class DepartmentInterviewSessionService {
                     BizCode.INTERVIEW_SESSION_STATE_INVALID
             );
         }
-        sessionMapper.cancelUnusedCarryovers(sessionId);
+        // 先作废再发放：顺延只对下一场有效，本场到场者没用掉的清零，
+        // 再按本场"签到了但没面上"重新发一轮。没来的人资格留着，
+        // 等他真正到场的那一场结束时再结算。
+        sessionMapper.cancelUnusedCarryovers(departmentId, sessionId);
         sessionMapper.createCarryovers(sessionId);
         return findById(departmentId, sessionId);
     }

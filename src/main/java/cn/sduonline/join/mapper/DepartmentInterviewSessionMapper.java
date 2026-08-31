@@ -135,14 +135,6 @@ public interface DepartmentInterviewSessionMapper {
             """)
     int countCheckIns(@Param("sessionId") Long sessionId);
 
-    @Select("""
-            SELECT COUNT(1)
-            FROM department_interview_active a
-            JOIN department_check_in c ON c.id = a.check_in_id
-            WHERE c.session_id = #{sessionId}
-            """)
-    int countActiveInterviews(@Param("sessionId") Long sessionId);
-
     @Insert("""
             INSERT IGNORE INTO department_interview_carryover
                 (department_id, application_id, source_session_id,
@@ -157,13 +149,35 @@ public interface DepartmentInterviewSessionMapper {
             """)
     int createCarryovers(@Param("sessionId") Long sessionId);
 
+    /**
+     * 作废本场到场者尚未使用的顺延资格。
+     * <p>
+     * 顺延只对紧接着的下一场有效：本场结束时先把到场者没用掉的清掉，再按
+     * 本场"签到了但没面上"重新发放，避免资格无限期累积。
+     * <p>
+     * 只清到场的人，是为了兼容同部门多场次并行（不同校区）。按整个部门清会
+     * 把还没轮到签到的另一校区考生的资格提前作废掉；没来的人保留资格，等他
+     * 真正到场的那一场结束时再结算。
+     * <p>
+     * 条件必须写在 {@code status} 上而不是 {@code target_session_id}——
+     * PENDING 的记录 target 恒为 NULL，只有 {@code useCarryover} 才会在写入
+     * target 的同时把状态改成 USED，因此按 target 过滤永远匹配不到任何行。
+     */
     @Update("""
             UPDATE department_interview_carryover
             SET status = 'CANCELLED'
-            WHERE target_session_id = #{sessionId}
+            WHERE department_id = #{departmentId}
               AND status = 'PENDING'
+              AND application_id IN (
+                  SELECT c.application_id
+                  FROM department_check_in c
+                  WHERE c.session_id = #{sessionId}
+              )
             """)
-    int cancelUnusedCarryovers(@Param("sessionId") Long sessionId);
+    int cancelUnusedCarryovers(
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
+    );
 
     @Select("""
             SELECT id

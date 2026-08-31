@@ -30,10 +30,12 @@ public interface DepartmentInterviewRoomMapper {
                    created_by, created_at
             FROM department_interview_room
             WHERE department_id = #{departmentId}
+              AND session_id = #{sessionId}
             ORDER BY id
             """)
-    List<DepartmentInterviewRoom> selectByDepartment(
-            @Param("departmentId") Long departmentId
+    List<DepartmentInterviewRoom> selectBySession(
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
     );
 
     @Select("""

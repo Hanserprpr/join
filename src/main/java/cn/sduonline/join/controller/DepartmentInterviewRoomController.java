@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,10 +60,11 @@ public class DepartmentInterviewRoomController {
 
     @GetMapping
     @DepartmentPermission(PermissionCode.INTERVIEW_EVALUATE)
-    public Result<List<InterviewRoomVO>> findAll(
-            @PathVariable @Positive Long departmentId
+    public Result<List<InterviewRoomVO>> findBySession(
+            @PathVariable @Positive Long departmentId,
+            @RequestParam @Positive Long sessionId
     ) {
-        return result(roomService.findAll(departmentId));
+        return result(roomService.findBySession(departmentId, sessionId));
     }
 
     @PostMapping("/{roomId}/join")
