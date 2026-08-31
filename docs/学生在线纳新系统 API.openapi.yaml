@@ -1148,7 +1148,7 @@ paths:
     post:
       tags:
       - 签到
-      summary: 签到（按部门设置决定是否需要扫码）
+      summary: 签到（普通签到需指定场次，扫码签到由令牌确定场次）
       operationId: checkIn
       requestBody:
         content:
@@ -1165,7 +1165,7 @@ paths:
                 $ref: "#/components/schemas/ResultCheckInVO"
       security:
       - sessionCookie: []
-  /api/departments/{departmentId}/check-ins/me:
+  /api/departments/{departmentId}/interviews/sessions/{sessionId}/check-ins/me:
     delete:
       tags:
       - 签到
@@ -1174,6 +1174,13 @@ paths:
       operationId: cancelCheckIn
       parameters:
       - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
         in: path
         required: true
         schema:
@@ -1752,7 +1759,7 @@ paths:
     get:
       tags:
       - 面试
-      summary: 查询当前已发布场次
+      summary: 查询当前全部已发布场次
       operationId: findPublishedSession
       parameters:
       - name: departmentId
@@ -1768,7 +1775,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/ResultInterviewSessionVO"
+                $ref: "#/components/schemas/ResultListInterviewSessionVO"
       security:
       - sessionCookie: []
   /api/departments/{departmentId}/interviews/queue:
@@ -1996,14 +2003,21 @@ paths:
                 $ref: "#/components/schemas/ResultDepartmentInterviewVO"
       security:
       - sessionCookie: []
-  /api/departments/{departmentId}/check-in/qr-code:
+  /api/departments/{departmentId}/interviews/sessions/{sessionId}/check-in/qr-code:
     get:
       tags:
       - 签到
-      summary: 生成部门签到二维码
+      summary: 生成指定场次签到二维码
       operationId: createQrCode
       parameters:
       - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      - name: sessionId
         in: path
         required: true
         schema:
@@ -2675,8 +2689,9 @@ components:
       type: object
       properties:
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
+          multipleOf: 0.5
           maximum: 5
           minimum: 1
         evaluation:
@@ -2696,8 +2711,8 @@ components:
         administratorName:
           type: string
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
         evaluation:
           type: string
         submittedAt:
@@ -2719,6 +2734,10 @@ components:
     InterviewSessionRequest:
       type: object
       properties:
+        name:
+          type: string
+          maxLength: 64
+          minLength: 1
         startsAt:
           type: string
           format: date-time
@@ -2747,6 +2766,7 @@ components:
       - checkInLimit
       - endsAt
       - location
+      - name
       - startsAt
     InterviewSessionVO:
       type: object
@@ -2757,6 +2777,8 @@ components:
         departmentId:
           type: integer
           format: int64
+        name:
+          type: string
         startsAt:
           type: string
           format: date-time
@@ -3224,6 +3246,10 @@ components:
       type: object
       properties:
         departmentId:
+          type: integer
+          format: int64
+          minimum: 1
+        sessionId:
           type: integer
           format: int64
           minimum: 1
@@ -4724,8 +4750,8 @@ components:
           type: integer
           format: int64
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
     PageVODepartmentApplicationSummaryVO:
       type: object
       properties:

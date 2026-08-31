@@ -42,11 +42,13 @@ public interface DepartmentCheckInMapper {
             JOIN department_interview_session s
               ON s.id = c.session_id AND s.status = 'PUBLISHED'
             WHERE c.department_id = #{departmentId}
+              AND c.session_id = #{sessionId}
               AND c.cas_id = #{casId}
             FOR UPDATE
             """)
     DepartmentCheckIn selectCurrentByDepartmentAndUserForUpdate(
             @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId,
             @Param("casId") String casId
     );
 

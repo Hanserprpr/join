@@ -259,6 +259,7 @@ public interface DepartmentInterviewMapper {
               ON s.id = c.session_id AND s.status = 'PUBLISHED'
             LEFT JOIN department_interview i ON i.check_in_id = c.id
             WHERE c.department_id = #{departmentId}
+              AND c.session_id = #{sessionId}
               AND i.id IS NULL
               AND c.requires_recheck_in = FALSE
             ORDER BY c.priority DESC, c.queue_order ASC
@@ -266,7 +267,8 @@ public interface DepartmentInterviewMapper {
             """)
     java.util.List<cn.sduonline.join.data.po.DepartmentCheckIn>
             selectReorderableQueueForUpdate(
-                    @Param("departmentId") Long departmentId
+                    @Param("departmentId") Long departmentId,
+                    @Param("sessionId") Long sessionId
             );
 
     @Update("""

@@ -1,6 +1,7 @@
 package cn.sduonline.join.data.po;
 
 import cn.sduonline.join.data.enums.ApplicationStatus;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -25,5 +26,5 @@ public class DepartmentApplication {
     private LocalDateTime submittedAt;
     private Long interviewId;
     private Boolean interviewed;
-    private Integer score;
+    private BigDecimal score;
 }

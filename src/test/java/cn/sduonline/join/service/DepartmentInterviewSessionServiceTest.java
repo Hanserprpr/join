@@ -43,6 +43,7 @@ class DepartmentInterviewSessionServiceTest {
         var result = service.create(12L, request());
 
         assertTrue(result.isSuccess());
+        assertEquals("中心校区上午场", result.data().name());
         assertEquals("中心校区 101", result.data().location());
         assertEquals(50, result.data().checkInLimit());
         assertTrue(result.data().qrCheckInEnabled());
@@ -59,6 +60,7 @@ class DepartmentInterviewSessionServiceTest {
                 .thenReturn(new Department());
         InterviewSessionRequest configured = request();
         InterviewSessionRequest withoutTtl = new InterviewSessionRequest(
+                configured.name(),
                 configured.startsAt(), configured.endsAt(),
                 configured.location(), configured.checkInLimit(),
                 configured.qrCheckInEnabled(), null
@@ -71,7 +73,7 @@ class DepartmentInterviewSessionServiceTest {
     }
 
     @Test
-    void publishingAssignsPendingCarryoversToThisNextSession() {
+    void publishingAllowsAnotherSessionToBeOpenAtTheSameTime() {
         DepartmentInterviewSession published = session();
         when(sessionMapper.publish(
                 org.mockito.ArgumentMatchers.eq(12L),
@@ -83,7 +85,6 @@ class DepartmentInterviewSessionServiceTest {
         var result = service.publish(12L, 30L);
 
         assertTrue(result.isSuccess());
-        verify(sessionMapper).assignPendingCarryovers(12L, 30L);
     }
 
     @Test
@@ -153,6 +154,7 @@ class DepartmentInterviewSessionServiceTest {
     private static InterviewSessionRequest request() {
         LocalDateTime startsAt = LocalDateTime.of(2026, 8, 1, 9, 0);
         return new InterviewSessionRequest(
+                " 中心校区上午场 ",
                 startsAt, startsAt.plusHours(3), " 中心校区 101 ",
                 50, true, 90
         );
@@ -163,6 +165,7 @@ class DepartmentInterviewSessionServiceTest {
                 new DepartmentInterviewSession();
         session.setId(30L);
         session.setDepartmentId(12L);
+        session.setName("中心校区上午场");
         session.setStartsAt(LocalDateTime.of(2026, 8, 1, 9, 0));
         session.setEndsAt(LocalDateTime.of(2026, 8, 1, 12, 0));
         session.setLocation("中心校区 101");

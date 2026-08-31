@@ -128,13 +128,17 @@ public class DepartmentInterviewController {
      * 查询当前已发布的面试场次
      *
      * @param departmentId 部门 ID
-     * @return 当前场次的时间、地点和取号上限
+     * @return 当前所有已发布场次
      */
     @GetMapping("/sessions/current")
-    public Result<InterviewSessionVO> findPublishedSession(
+    public Result<List<InterviewSessionVO>> findPublishedSession(
             @PathVariable @Positive Long departmentId
     ) {
-        return toSessionResult(sessionService.findPublished(departmentId));
+        ServiceResult<List<InterviewSessionVO>> result =
+                sessionService.findPublished(departmentId);
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
     }
 
     /**

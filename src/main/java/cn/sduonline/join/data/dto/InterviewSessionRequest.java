@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 /**
  * 面试场次创建或修改请求
  *
+ * @param name 场次名称
  * @param startsAt 面试开始时间
  * @param endsAt 面试结束时间
  * @param location 面试地点
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
  * @param qrCodeTtlSeconds 签到二维码有效秒数
  */
 public record InterviewSessionRequest(
+        @NotBlank @Size(max = 64) String name,
         @NotNull LocalDateTime startsAt,
         @NotNull LocalDateTime endsAt,
         @NotBlank @Size(max = 255) String location,

@@ -26,6 +26,8 @@ import cn.sduonline.join.mapper.AdminOrganizationMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewMapper;
 import cn.sduonline.join.mapper.DepartmentInterviewRoomMapper;
 import cn.sduonline.join.mapper.UserMapper;
+import java.math.BigDecimal;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +36,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
-import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class DepartmentInterviewServiceTest {
@@ -127,26 +128,31 @@ class DepartmentInterviewServiceTest {
                 .thenReturn(saved);
         when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
         InterviewEvaluationVO own = new InterviewEvaluationVO(
-                300L, "admin01", "管理员一", 4, "沟通清晰", null
+                300L, "admin01", "管理员一",
+                new BigDecimal("4.5"), "沟通清晰", null
         );
         when(roomMapper.selectEvaluation(300L, "admin01")).thenReturn(own);
 
         var result = service.updateEvaluation(
                 12L, 300L, "admin01",
-                new InterviewEvaluationRequest(4, " 沟通清晰 ")
+                new InterviewEvaluationRequest(
+                        new BigDecimal("4.5"), " 沟通清晰 "
+                )
         );
 
         assertTrue(result.isSuccess());
-        assertEquals(4, result.data().score());
+        assertEquals(new BigDecimal("4.5"), result.data().score());
         assertEquals("沟通清晰", result.data().evaluation());
-        verify(roomMapper).upsertEvaluation(300L, "admin01", 4, "沟通清晰");
+        verify(roomMapper).upsertEvaluation(
+                300L, "admin01", new BigDecimal("4.5"), "沟通清晰"
+        );
     }
 
     @Test
     void findsAllEvaluationsByUserIdWithoutRoomMembership() {
         List<InterviewEvaluationVO> evaluations = List.of(
                 new InterviewEvaluationVO(
-                        300L, "admin01", "管理员一", 5,
+                        300L, "admin01", "管理员一", new BigDecimal("5.0"),
                         "表现优秀", null
                 )
         );
@@ -183,7 +189,7 @@ class DepartmentInterviewServiceTest {
 
         var result = service.updateEvaluation(
                 12L, 300L, "someone-else",
-                new InterviewEvaluationRequest(5, "他人评价")
+                new InterviewEvaluationRequest(new BigDecimal("5.0"), "他人评价")
         );
 
         assertEquals(BizCode.NO_PERMISSION, result.error());
@@ -270,7 +276,7 @@ class DepartmentInterviewServiceTest {
         DepartmentCheckIn second = checkIn(201L, 2L, 0);
         DepartmentCheckIn third = checkIn(202L, 3L, 0);
         DepartmentCheckIn fourth = checkIn(203L, 4L, 0);
-        when(interviewMapper.selectReorderableQueueForUpdate(12L))
+        when(interviewMapper.selectReorderableQueueForUpdate(12L, 5L))
                 .thenReturn(List.of(target, second, third, fourth));
         InterviewQueueItemVO moved = new InterviewQueueItemVO(
                 200L, 100L, "20240001", "张三",
@@ -314,7 +320,8 @@ class DepartmentInterviewServiceTest {
         assertTrue(target.getRequiresRecheckIn());
         assertEquals(1, target.getPassCount());
         verify(interviewMapper).requireCheckInAgain(target);
-        verify(interviewMapper, never()).selectReorderableQueueForUpdate(any());
+        verify(interviewMapper, never())
+                .selectReorderableQueueForUpdate(any(), any());
     }
 
     @Test
@@ -502,7 +509,9 @@ class DepartmentInterviewServiceTest {
 
         var result = service.submitEvaluationInRoom(
                 12L, 9L, "admin01",
-                new InterviewEvaluationRequest(5, " 表现优秀 ")
+                new InterviewEvaluationRequest(
+                        new BigDecimal("5.0"), " 表现优秀 "
+                )
         );
 
         assertTrue(result.isSuccess());
@@ -510,7 +519,7 @@ class DepartmentInterviewServiceTest {
         assertEquals(2, result.data().administratorCount());
         assertEquals(true, result.data().currentUserSubmitted());
         verify(roomMapper).upsertEvaluation(
-                300L, "admin01", 5, "表现优秀"
+                300L, "admin01", new BigDecimal("5.0"), "表现优秀"
         );
         verify(interviewSseService).publishRoom(12L, 9L);
     }
@@ -609,6 +618,7 @@ class DepartmentInterviewServiceTest {
         DepartmentCheckIn checkIn = new DepartmentCheckIn();
         checkIn.setId(id);
         checkIn.setDepartmentId(12L);
+        checkIn.setSessionId(5L);
         checkIn.setApplicationId(100L);
         checkIn.setCasId(id.equals(200L) ? "20240001" : "user-" + id);
         checkIn.setQueueNumber(queueOrder.intValue());

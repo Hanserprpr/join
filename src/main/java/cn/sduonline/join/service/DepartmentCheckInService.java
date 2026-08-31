@@ -36,12 +36,14 @@ public class DepartmentCheckInService {
     private final AppProperties appProperties;
     private final InterviewSseService interviewSseService;
 
-    public ServiceResult<CheckInQrCodeVO> createQrCode(Long departmentId) {
+    public ServiceResult<CheckInQrCodeVO> createQrCode(
+            Long departmentId, Long sessionId
+    ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         DepartmentInterviewSession session =
-                sessionMapper.selectPublished(departmentId);
+                sessionMapper.selectPublishedById(departmentId, sessionId);
         if (session == null) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
         }
@@ -71,7 +73,8 @@ public class DepartmentCheckInService {
 
     @Transactional
     public ServiceResult<CheckInVO> checkIn(
-            Long requestedDepartmentId, String token, String casId
+            Long requestedDepartmentId, Long requestedSessionId,
+            String token, String casId
     ) {
         Long departmentId;
         Long sessionId;
@@ -87,17 +90,23 @@ public class DepartmentCheckInService {
                     && !requestedDepartmentId.equals(departmentId)) {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
+            if (requestedSessionId != null
+                    && !requestedSessionId.equals(sessionId)) {
+                return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
+            }
             // 令牌本身已绑定部门和场次，因此切换开关期间已展示的二维码
             // 仍可完成签到；仅开启二维码模式时才享有跨场次优先资格。
         } else {
-            if (requestedDepartmentId == null) {
+            if (requestedDepartmentId == null || requestedSessionId == null) {
                 return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
             }
             departmentId = requestedDepartmentId;
             if (organizationMapper.selectDepartmentById(departmentId) == null) {
                 return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
             }
-            DepartmentInterviewSession published = sessionMapper.selectPublished(departmentId);
+            DepartmentInterviewSession published =
+                    sessionMapper.selectPublishedById(
+                            departmentId, requestedSessionId);
             if (published == null) {
                 return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
             }
@@ -250,23 +259,25 @@ public class DepartmentCheckInService {
         }
     }
 
-    /** 兼容原有仅携带二维码令牌的调用。 */
+    /** 兼容仅携带二维码令牌的调用。 */
     public ServiceResult<CheckInVO> checkIn(String token, String casId) {
-        return checkIn(null, token, casId);
+        return checkIn(null, null, token, casId);
     }
 
     /**
-     * 取消当前用户在部门当前已发布场次的签到。
+     * 取消当前用户在指定已发布场次的签到。
      * 主动取消不会恢复已经使用的顺延优先资格。
      */
     @Transactional
-    public ServiceResult<Void> cancelCheckIn(Long departmentId, String casId) {
+    public ServiceResult<Void> cancelCheckIn(
+            Long departmentId, Long sessionId, String casId
+    ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         DepartmentCheckIn checkIn = checkInMapper
                 .selectCurrentByDepartmentAndUserForUpdate(
-                        departmentId, casId
+                        departmentId, sessionId, casId
                 );
         if (checkIn == null) {
             return ServiceResult.failure(BizCode.CHECK_IN_NOT_FOUND);

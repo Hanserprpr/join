@@ -124,7 +124,7 @@
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/api/departments/{departmentId}/check-in/qr-code` | 生成部门签到二维码 |
+| GET | `/api/departments/{departmentId}/interviews/sessions/{sessionId}/check-in/qr-code` | 生成指定场次签到二维码 |
 
 ### interview:manage — 面试安排
 
@@ -197,7 +197,7 @@
 | GET | `/api/departments/{departmentId}/applications` | 分页查询报名 | `application:read` |
 | GET | `/api/departments/{departmentId}/applications/{applicationId}` | 报名详情 | `application:read` |
 | GET | `/api/departments/{departmentId}/interviews/users/{userId}/evaluations` | 按用户查询面试评价 | `application:read` |
-| GET | `/api/departments/{departmentId}/check-in/qr-code` | 生成签到二维码 | `check-in:manage` |
+| GET | `/api/departments/{departmentId}/interviews/sessions/{sessionId}/check-in/qr-code` | 生成指定场次签到二维码 | `check-in:manage` |
 | GET | `/api/departments/{departmentId}/interviews/queue-config` | 查询过号配置 | `interview:evaluate` |
 | GET | `/api/departments/{departmentId}/interviews/queue` | 查询未完成的面试队列 | `interview:evaluate` |
 | GET | `/api/departments/{departmentId}/interviews/events` | SSE 订阅队列事件 | `interview:evaluate` |
@@ -239,9 +239,9 @@
 | DELETE | `/api/wechat/binding` | 解除微信绑定 |
 | POST | `/api/departments/{departmentId}/applications` | 提交报名(需资料完整) |
 | DELETE | `/api/departments/{departmentId}/applications/me` | 取消本人尚未进入面试或录取流程的报名 |
-| POST | `/api/check-ins` | 签到（部门启用二维码时扫码；否则传部门 ID 直接签到） |
-| DELETE | `/api/departments/{departmentId}/check-ins/me` | 取消本人当前场次尚未进入面试的签到；主动取消不恢复顺延优先资格 |
-| GET | `/api/departments/{departmentId}/interviews/sessions/current` | 查询当前已发布场次 |
+| POST | `/api/check-ins` | 签到（扫码时令牌自带场次；否则传部门 ID 和场次 ID） |
+| DELETE | `/api/departments/{departmentId}/interviews/sessions/{sessionId}/check-ins/me` | 取消本人指定场次尚未进入面试的签到；主动取消不恢复顺延优先资格 |
+| GET | `/api/departments/{departmentId}/interviews/sessions/current` | 查询当前全部已发布场次 |
 | GET | `/api/departments/{departmentId}/interviews/my-queue-status` | 我的排队状态 |
 | GET | `/api/departments/{departmentId}/interviews/my-events` | SSE 订阅我的排队状态 |
 
