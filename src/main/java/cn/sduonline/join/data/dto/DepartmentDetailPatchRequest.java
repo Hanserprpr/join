@@ -47,7 +47,6 @@ public class DepartmentDetailPatchRequest {
     private boolean contactPresent;
     @JsonIgnore
     private boolean recruitmentGroupPresent;
-    @JsonIgnore
 
     @JsonSetter
     public void setCampus(Campus campus) {
