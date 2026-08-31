@@ -3,12 +3,14 @@ package cn.sduonline.join.controller;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.sduonline.join.data.dto.AdminUserVO;
 import cn.sduonline.join.data.dto.BoardCreateRequest;
 import cn.sduonline.join.data.dto.BoardVO;
 import cn.sduonline.join.data.dto.DepartmentCreateRequest;
 import cn.sduonline.join.data.dto.DepartmentVO;
 import cn.sduonline.join.data.dto.OrganizationNameUpdateRequest;
 import cn.sduonline.join.data.dto.OrganizationNameVO;
+import cn.sduonline.join.data.dto.PageVO;
 import cn.sduonline.join.data.dto.RoleAssignmentRequest;
 import cn.sduonline.join.data.dto.RoleAssignmentMemberVO;
 import cn.sduonline.join.data.dto.RoleAssignmentVO;
@@ -18,11 +20,17 @@ import cn.sduonline.join.data.dto.WorkstationVO;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.service.AdminOrganizationService;
 import cn.sduonline.join.service.AdminRoleAssignmentService;
+import cn.sduonline.join.service.AdminUserService;
 import cn.sduonline.join.service.ServiceResult;
 import cn.sduonline.join.security.scope.OrgType;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -44,6 +52,7 @@ public class AdminController {
 
     private final AdminOrganizationService organizationService;
     private final AdminRoleAssignmentService roleAssignmentService;
+    private final AdminUserService userService;
 
     /**
      * 创建板块
@@ -175,6 +184,54 @@ public class AdminController {
                         StpUtil.getLoginIdAsString(), scopeType, scopeId
                 );
         return result.isSuccess() ? Result.ok(result.data()) : Result.fail(result.error());
+    }
+
+    /**
+     * 分页查询平台用户，支持关键词与资料字段筛选。
+     * <p>
+     * 与 {@code GET /api/admin/users} 的学号联想不同，本接口可返回全量用户，
+     * 因此只对平台管理员开放。
+     *
+     * @param keyword 关键词，模糊匹配姓名、学号、手机号、邮箱和 QQ
+     * @param college 学院筛选
+     * @param major 专业筛选
+     * @param grade 入学年级筛选
+     * @param profileCompleted 报名必填资料是否完整
+     * @param wechatBound 是否已绑定微信公众号
+     * @param sortBy 排序字段，支持注册时间、学号和年级
+     * @param sortOrder 排序方向，支持升序和降序
+     * @param page 页码，从 1 开始
+     * @param size 每页数量
+     * @return 分页用户列表
+     */
+    @GetMapping("/users/page")
+    @SaCheckRole("SYSTEM_ADMIN")
+    @Operation(description = "返回全量用户，仅平台管理员可用；"
+            + "GET /api/admin/users 是角色授权页的学号联想，不分页。"
+            + "列表不返回微信 OpenID 与 OIDC sub，只给 wechatBound 标记。")
+    public Result<PageVO<AdminUserVO>> findUsers(
+            @Parameter(description = "关键词，模糊匹配姓名、学号、手机号、邮箱和 QQ")
+            @RequestParam(required = false) @Size(max = 100) String keyword,
+            @RequestParam(required = false) @Size(max = 64) String college,
+            @RequestParam(required = false) @Size(max = 64) String major,
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer grade,
+            @Parameter(description = "报名必填资料是否完整；不传则不过滤")
+            @RequestParam(required = false) Boolean profileCompleted,
+            @Parameter(description = "是否已绑定微信公众号；不传则不过滤")
+            @RequestParam(required = false) Boolean wechatBound,
+            @RequestParam(defaultValue = "createdAt")
+            @Pattern(regexp = "createdAt|casId|grade") String sortBy,
+            @RequestParam(defaultValue = "desc")
+            @Pattern(regexp = "asc|desc") String sortOrder,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        ServiceResult<PageVO<AdminUserVO>> result = userService.findUsers(
+                keyword, college, major, grade, profileCompleted, wechatBound,
+                sortBy, sortOrder, page, size
+        );
+        return result.isSuccess()
+                ? Result.ok(result.data()) : Result.fail(result.error());
     }
 
     /**
