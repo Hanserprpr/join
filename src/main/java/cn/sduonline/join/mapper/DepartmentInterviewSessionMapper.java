@@ -129,6 +129,19 @@ public interface DepartmentInterviewSessionMapper {
     );
 
     @Select("""
+            SELECT id, department_id, name, starts_at, ends_at, location,
+                   check_in_limit, qr_check_in_enabled,
+                   qr_code_ttl_seconds, status,
+                   published_at, ended_at
+            FROM department_interview_session
+            WHERE status = 'PUBLISHED' AND ends_at <= #{now}
+            ORDER BY ends_at ASC, id ASC
+            """)
+    java.util.List<DepartmentInterviewSession> selectExpiredPublished(
+            @Param("now") java.time.LocalDateTime now
+    );
+
+    @Select("""
             SELECT COUNT(1)
             FROM department_check_in
             WHERE session_id = #{sessionId}
