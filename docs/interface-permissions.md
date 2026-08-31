@@ -38,6 +38,7 @@
 | DELETE | `/api/admin/boards/{boardId}` | 删除板块(级联删除其下所有工作站、部门及关联数据) |
 | DELETE | `/api/admin/workstations/{workstationId}` | 删除工作站(级联删除其下所有部门及关联数据) |
 | DELETE | `/api/admin/departments/{departmentId}` | 删除部门(级联删除报名、面试、签到等关联数据) |
+| GET | `/api/admin/users/page` | 分页查询平台用户,支持关键词与资料字段筛选 |
 | POST | `/api/admin/role-assignments` | 分配角色(所有可分配角色) |
 | DELETE | `/api/admin/role-assignments` | 撤销角色 |
 
@@ -73,6 +74,36 @@
 |---|---|---|
 | GET | `/api/admin/role-assignments?scopeType=BOARD|WORKSTATION|DEPARTMENT&scopeId={id}` | 查询与目标节点有关的有效成员授权；需要操作者作用域覆盖该节点 |
 | GET | `/api/admin/users?casId={keyword}` | 按学号模糊匹配本地用户，至少输入 6 位，最多 20 条；过短或空输入返回空数组 |
+
+`GET /api/admin/users` 只做学号联想、最多 20 条,刻意不支持翻页,避免下级管理员把
+用户表当全量名单枚举。需要完整用户名单的平台用户管理页走
+`GET /api/admin/users/page`,该接口仅 `SYSTEM_ADMIN` 可用。
+
+## 平台用户管理接口
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/users/page` | 分页查询平台用户;仅 `SYSTEM_ADMIN` |
+
+查询参数(全部可选,`page`/`size` 有默认值):
+
+| 参数 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `keyword` | string(≤100) | - | 模糊匹配姓名、学号、手机号、邮箱、QQ;`%` `_` 已转义 |
+| `college` | string(≤64) | - | 学院精确匹配 |
+| `major` | string(≤64) | - | 专业精确匹配 |
+| `grade` | int(2000~2100) | - | 入学年级 |
+| `profileCompleted` | boolean | - | 报名必填资料是否完整 |
+| `wechatBound` | boolean | - | 是否已绑定微信公众号 |
+| `sortBy` | `createdAt`\|`casId`\|`grade` | `createdAt` | 排序字段,白名单外的值会被参数校验拒绝 |
+| `sortOrder` | `asc`\|`desc` | `desc` | 排序方向 |
+| `page` | int ≥1 | `1` | 页码 |
+| `size` | int 1~100 | `20` | 每页数量 |
+
+返回 `PageVO`(`items`、`total`、`page`、`size`、`totalPages`),每项包含
+`casId`、`name`、`email`、`phone`、`qq`、`college`、`major`、`grade`、
+`profileCompleted`、`wechatBound`、`avatarUrl`、`createdAt`、`updatedAt`。
+微信 OpenID 与 OIDC `sub` 属于身份凭据,不在列表中返回。
 
 成员接口每一行对应一条原始 `user_role_scope` 授权，包含 `id`、`casId`、`name`、
 `roleCode`、`roleName`、`scopeType`、`scopeId`、`scopeName` 以及板块/工作站/部门路径。

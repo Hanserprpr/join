@@ -30,6 +30,7 @@ public class OpenApiConfig {
             Map.entry("AdminController.deleteDepartment", "删除部门"),
             Map.entry("AdminController.getRoleAssignments", "查询组织成员角色授权"),
             Map.entry("AdminController.searchUsers", "按学号模糊匹配授权用户"),
+            Map.entry("AdminController.findUsers", "分页查询平台用户"),
             Map.entry("AdminController.assignRole", "分配角色"),
             Map.entry("AdminController.revokeRole", "撤销角色分配"),
             Map.entry("AuthController.login", "获取 OIDC 登录地址"),

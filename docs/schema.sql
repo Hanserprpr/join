@@ -28,7 +28,8 @@ CREATE TABLE `user` (
   UNIQUE KEY `uk_email` (`email`),
   UNIQUE KEY `uk_wechat_openid` (`wechat_openid`),
   KEY `idx_college_major` (`college`, `major`),
-  KEY `idx_grade` (`grade`)
+  KEY `idx_grade` (`grade`),
+  KEY `idx_user_created_at` (`created_at`)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
