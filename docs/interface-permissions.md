@@ -100,6 +100,11 @@
 | PATCH | `/api/departments/{departmentId}` | 部分更新部门详情 |
 | POST | `/api/departments/{departmentId}/posters/upload` | 上传部门海报图片 |
 | PUT | `/api/departments/{departmentId}/posters/order` | 按海报 ID 全量更新展示顺序 |
+
+> 海报的删除、新增与调序在部门详情更新（`PUT`/`PATCH /api/departments/{departmentId}`）
+> 的 `posters` 字段里一次提交完成：保留项传 `id`，新增项传上传接口返回的 `url`，
+> 未出现在数组中的已有海报会被删除，顺序按数组下标。`/posters/order` 仅适用于
+> 全部海报都已入库、只调顺序的场景。
 | PUT | `/api/departments/{departmentId}/questionnaire` | 完整更新报名问卷 |
 | DELETE | `/api/departments/{departmentId}/questionnaire` | 清空报名问卷 |
 

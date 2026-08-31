@@ -25,7 +25,14 @@ public class PosterUrlPolicy {
         prefixes.add(posterStorage.publicUrlPrefix());
         prefixes.addAll(appProperties.getPoster().getAllowedUrlPrefixList());
         for (DepartmentPosterRequest poster : posters) {
-            if (poster == null || !isAllowed(poster.url(), prefixes)) {
+            if (poster == null) {
+                throw new PosterUrlValidationException();
+            }
+            if (poster.id() != null) {
+                // 引用已有海报，URL 由服务端保存，无需调用方回传
+                continue;
+            }
+            if (!isAllowed(poster.url(), prefixes)) {
                 throw new PosterUrlValidationException();
             }
         }
