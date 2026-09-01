@@ -114,6 +114,18 @@ sentry:
     minimum-event-level: ERROR
 
 app:
+  college-majors:
+    nacos:
+      enabled: ${NACOS_CONFIG_ENABLED:true}
+      server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      # 必须使用 namespace ID，不能使用“校区-专业列表”这个显示名称。
+      namespace: ${NACOS_NAMESPACE:}
+      data-id: ${NACOS_DATA_ID:college-majors}
+      group: ${NACOS_GROUP:DEFAULT_GROUP}
+      username: ${NACOS_USERNAME:}
+      password: ${NACOS_PASSWORD:}
+      timeout-ms: ${NACOS_TIMEOUT_MS:5000}
+      retry-delay-ms: ${NACOS_RETRY_DELAY_MS:30000}
   avatar:
     storage: ${AVATAR_STORAGE:local}
     local-directory: ${AVATAR_LOCAL_DIRECTORY:./data/avatars}

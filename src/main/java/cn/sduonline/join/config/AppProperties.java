@@ -29,6 +29,27 @@ public class AppProperties {
     private Avatar avatar = new Avatar();
     private Clamav clamav = new Clamav();
     private Poster poster = new Poster();
+    private CollegeMajors collegeMajors = new CollegeMajors();
+
+    @Data
+    public static class CollegeMajors {
+        private Nacos nacos = new Nacos();
+    }
+
+    @Data
+    public static class Nacos {
+        /** 关闭时只使用 classpath 中的降级字典。 */
+        private boolean enabled = true;
+        private String serverAddr = "127.0.0.1:8848";
+        /** Nacos 客户端需要命名空间 ID，不是显示名称。 */
+        private String namespace = "";
+        private String dataId = "college-majors";
+        private String group = "DEFAULT_GROUP";
+        private String username = "";
+        private String password = "";
+        private long timeoutMs = 5000;
+        private long retryDelayMs = 30000;
+    }
 
     @Data
     public static class Avatar {
