@@ -270,9 +270,11 @@
 | GET | `/api/user/profile` | 个人资料 |
 | PUT | `/api/user/profile` | 更新联系方式 |
 | GET | `/api/departments/{departmentId}/questionnaire` | 查看报名问卷 |
-| GET | `/api/wechat/binding/url` | 获取微信绑定地址 |
+| GET | `/api/wechat/binding/url` | 兼容获取一次性微信绑定链接（保留 `authorizationUrl` 字段） |
 | GET | `/api/wechat/binding/status` | 查询微信绑定状态 |
 | DELETE | `/api/wechat/binding` | 解除微信绑定 |
+| POST | `/api/wechat/bind/sessions` | 创建五分钟有效的一次性微信绑定链接 |
+| GET | `/api/wechat/bind/sessions/{sessionId}` | 在原浏览器轮询扫码绑定结果 |
 | POST | `/api/departments/{departmentId}/applications` | 提交报名(需资料完整) |
 | DELETE | `/api/departments/{departmentId}/applications/me` | 取消本人尚未进入面试或录取流程的报名 |
 | POST | `/api/check-ins` | 签到（扫码时令牌自带场次；否则传部门 ID 和场次 ID） |
@@ -295,6 +297,8 @@
 | GET | `/api/workstations/{workstationId}` | 工作站详情 |
 | GET | `/api/departments/{departmentId}` | 部门详情(可选登录,展示 `canManage`) |
 | GET | `/api/wechat/binding/callback` | 微信授权回调 |
+| GET | `/api/wechat/bind/start` | 复制到微信打开的扫码绑定 OAuth 入口 |
+| GET | `/api/wechat/bind/oauth/callback` | 扫码绑定 OAuth 回调 |
 | GET | `/api/wechat/login/url` | 获取微信内登录授权地址 |
 | GET | `/api/wechat/login/callback` | 已绑定微信登录回调 |
 | GET | `/api/wechat/check-in/entry` | 微信扫码登录并签到 |

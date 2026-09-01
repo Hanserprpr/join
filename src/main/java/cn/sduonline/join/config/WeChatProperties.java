@@ -20,6 +20,14 @@ public class WeChatProperties {
     private String bindingResultUrl =
             "http://localhost:5173/wechat-binding";
     private long bindingStateTtlSeconds = 600;
+    /** 普通浏览器一次性绑定链接的有效期。 */
+    private int bindingSessionTtlSeconds = 300;
+    /** 复制到微信中打开的后端 OAuth 入口。 */
+    private String bindingEntryUrl =
+            "http://localhost:8080/api/wechat/bind/start";
+    /** 扫码绑定会话从微信网页授权返回的地址。 */
+    private String bindingSessionOauthCallbackUrl =
+            "http://localhost:8080/api/wechat/bind/oauth/callback";
     private String loginOauthCallbackUrl =
             "http://localhost:8080/api/wechat/login/callback";
     private String loginResultUrl = "http://localhost:5173";
@@ -67,6 +75,21 @@ public class WeChatProperties {
             throw new IllegalStateException(
                     "微信绑定配置缺失，请设置 WECHAT_OAUTH_CALLBACK_URL 和 "
                             + "WECHAT_BINDING_RESULT_URL");
+        }
+    }
+
+    public void validateBindingSession() {
+        validateBinding();
+        if (bindingEntryUrl == null || bindingEntryUrl.isBlank()
+                || bindingSessionOauthCallbackUrl == null
+                || bindingSessionOauthCallbackUrl.isBlank()) {
+            throw new IllegalStateException(
+                    "微信扫码绑定入口未配置，请设置 WECHAT_BINDING_ENTRY_URL 和 "
+                            + "WECHAT_BINDING_SESSION_OAUTH_CALLBACK_URL");
+        }
+        if (bindingSessionTtlSeconds < 60 || bindingSessionTtlSeconds > 3600) {
+            throw new IllegalStateException(
+                    "微信绑定会话有效期必须在 60 到 3600 秒之间");
         }
     }
 

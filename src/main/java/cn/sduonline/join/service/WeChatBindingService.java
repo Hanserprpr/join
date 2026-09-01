@@ -100,9 +100,20 @@ public class WeChatBindingService {
             throw new IllegalArgumentException("绑定用户不存在");
         }
 
+        if (StringUtils.hasText(user.getWechatOpenid())) {
+            if (user.getWechatOpenid().equals(openid)) {
+                // 微信事件可能重复投递；已经是同一绑定时直接视为成功。
+                return;
+            }
+            throw new IllegalStateException("当前用户已经绑定其他微信");
+        }
+
         User owner = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getWechatOpenid, openid));
-        if (owner != null && !owner.getCasId().equals(casId)) {
+        if (owner != null) {
+            if (owner.getCasId().equals(casId)) {
+                return;
+            }
             throw new IllegalStateException("该微信已经绑定其他用户");
         }
 

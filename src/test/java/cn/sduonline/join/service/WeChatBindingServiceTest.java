@@ -117,6 +117,18 @@ class WeChatBindingServiceTest {
         verify(userMapper, never()).updateById(any(User.class));
     }
 
+    @Test
+    void duplicateWechatEventForSameBindingIsIdempotent() {
+        User user = user("20240001", "openid-1");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+
+        service.bindOpenId("20240001", "openid-1");
+
+        verify(userMapper, never()).updateById(any(User.class));
+        verify(templateMessageService, never()).send(
+                any(), any(), any());
+    }
+
     private User user(String casId, String openId) {
         User user = new User();
         user.setCasId(casId);

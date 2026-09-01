@@ -3,8 +3,11 @@ package cn.sduonline.join.controller;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.data.dto.WeChatBindingStatusVO;
+import cn.sduonline.join.data.dto.WeChatBindSessionCreatedVO;
 import cn.sduonline.join.data.vo.Result;
+import cn.sduonline.join.service.WeChatBindSessionService;
 import cn.sduonline.join.service.WeChatBindingService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,18 +25,32 @@ import org.springframework.web.servlet.view.RedirectView;
 public class WeChatBindingController {
 
     private final WeChatBindingService bindingService;
+    private final WeChatBindSessionService bindSessionService;
 
     /**
-     * 生成当前用户的微信授权绑定地址
+     * 兼容旧版“获取微信绑定地址”接口。
+     *
+     * <p>{@code authorizationUrl} 保留给旧前端，其值与新字段
+     * {@code bindingUrl} 相同。旧前端直接跳转、新前端生成二维码均可用。</p>
      *
      * @return 微信授权地址
      */
     @SaCheckLogin
     @GetMapping("/url")
-    public Result<Map<String, String>> authorizationUrl() {
-        String url = bindingService.createAuthorizationUrl(
-                StpUtil.getLoginIdAsString());
-        return Result.ok(Map.of("authorizationUrl", url));
+    public Result<Map<String, String>> authorizationUrl(
+            HttpServletRequest request
+    ) {
+        WeChatBindSessionCreatedVO session = bindSessionService.create(
+                StpUtil.getLoginIdAsString(),
+                request.getSession(true).getId()
+        );
+        return Result.ok(Map.of(
+                "authorizationUrl", session.bindingUrl(),
+                "bindingUrl", session.bindingUrl(),
+                "sessionId", session.sessionId(),
+                "expiresAt", session.expiresAt().toString(),
+                "expiresIn", String.valueOf(session.expiresIn())
+        ));
     }
 
     /**
