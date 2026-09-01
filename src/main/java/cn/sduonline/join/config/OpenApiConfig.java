@@ -51,6 +51,7 @@ public class OpenApiConfig {
             Map.entry("DepartmentCheckInController.cancelCheckIn", "取消当前用户的签到"),
             Map.entry("DepartmentController.getDepartment", "获取部门详情"),
             Map.entry("DepartmentController.uploadPoster", "上传部门海报图片"),
+            Map.entry("DepartmentController.uploadAchievementImage", "上传部门成果图片"),
             Map.entry("DepartmentController.updatePosterOrder", "更新部门海报顺序"),
             Map.entry("DepartmentController.updateDepartment", "完整更新部门详情"),
             Map.entry("DepartmentController.patchDepartment", "部分更新部门详情"),
