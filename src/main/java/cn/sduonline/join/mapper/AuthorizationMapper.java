@@ -123,6 +123,74 @@ public interface AuthorizationMapper {
     );
 
     /**
+     * 判断多条角色授权的并集是否覆盖板块下每个可见部门。
+     * 空板块不会被部门级授权误判为完整覆盖。
+     */
+    @Select("""
+            SELECT CASE
+              WHEN COUNT(d.id) > 0
+               AND SUM(CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM user_role_scope s
+                    JOIN `role` r ON r.id = s.role_id
+                    LEFT JOIN role_permission rp ON rp.role_id = r.id
+                    LEFT JOIN permission p ON p.id = rp.permission_id
+                    WHERE s.cas_id = #{casId}
+                      AND (r.code = 'SYSTEM_ADMIN' OR p.code = #{permission})
+                      AND (
+                        s.scope_type = 'ALL'
+                        OR (s.scope_type = 'BOARD' AND s.scope_id = b.id)
+                        OR (s.scope_type = 'WORKSTATION' AND s.scope_id = w.id)
+                        OR (s.scope_type = 'DEPARTMENT' AND s.scope_id = d.id)
+                      )
+               ) THEN 1 ELSE 0 END) = COUNT(d.id)
+              THEN 1 ELSE 0 END
+            FROM board b
+            JOIN workstation w
+              ON w.board_id = b.id AND w.enabled = 1
+            JOIN department d
+              ON d.workstation_id = w.id AND d.enabled = 1
+            WHERE b.id = #{boardId} AND b.enabled = 1
+            """)
+    long countCompleteBoardDepartmentCoverage(
+            @Param("casId") String casId,
+            @Param("permission") String permission,
+            @Param("boardId") Long boardId
+    );
+
+    /** 判断多条角色授权的并集是否覆盖工作站下每个可见部门。 */
+    @Select("""
+            SELECT CASE
+              WHEN COUNT(d.id) > 0
+               AND SUM(CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM user_role_scope s
+                    JOIN `role` r ON r.id = s.role_id
+                    LEFT JOIN role_permission rp ON rp.role_id = r.id
+                    LEFT JOIN permission p ON p.id = rp.permission_id
+                    WHERE s.cas_id = #{casId}
+                      AND (r.code = 'SYSTEM_ADMIN' OR p.code = #{permission})
+                      AND (
+                        s.scope_type = 'ALL'
+                        OR (s.scope_type = 'BOARD' AND s.scope_id = b.id)
+                        OR (s.scope_type = 'WORKSTATION' AND s.scope_id = w.id)
+                        OR (s.scope_type = 'DEPARTMENT' AND s.scope_id = d.id)
+                      )
+               ) THEN 1 ELSE 0 END) = COUNT(d.id)
+              THEN 1 ELSE 0 END
+            FROM workstation w
+            JOIN board b ON b.id = w.board_id AND b.enabled = 1
+            JOIN department d
+              ON d.workstation_id = w.id AND d.enabled = 1
+            WHERE w.id = #{workstationId} AND w.enabled = 1
+            """)
+    long countCompleteWorkstationDepartmentCoverage(
+            @Param("casId") String casId,
+            @Param("permission") String permission,
+            @Param("workstationId") Long workstationId
+    );
+
+    /**
      * 查询该用户按权限可管理的启用部门。
      * 作用域按 ALL → BOARD → WORKSTATION → DEPARTMENT 逐级展开；
      * SYSTEM_ADMIN 无角色权限关联，权限码统一映射为 {@code *}。

@@ -15,6 +15,54 @@ import org.junit.jupiter.api.Test;
 class MapperSqlContractTest {
 
     @Test
+    void dashboardStatisticsUseSetBasedFullDataQueries()
+            throws NoSuchMethodException {
+        Method byDepartment = DashboardStatisticsMapper.class.getMethod(
+                "selectApplicationCountsByDepartment", List.class
+        );
+        Method byCollege = DashboardStatisticsMapper.class.getMethod(
+                "selectApplicationCountsByCollege", List.class
+        );
+        Method interviews = DashboardStatisticsMapper.class.getMethod(
+                "selectInterviewAggregate", Long.class
+        );
+
+        String departmentSql = sql(byDepartment.getAnnotation(Select.class).value());
+        String collegeSql = sql(byCollege.getAnnotation(Select.class).value());
+        String interviewSql = sql(interviews.getAnnotation(Select.class).value());
+        assertTrue(departmentSql.contains("LEFT JOIN department_application"));
+        assertTrue(departmentSql.contains("GROUP BY"));
+        assertTrue(departmentSql.contains("collection=\"departmentIds\""));
+        assertTrue(collegeSql.contains("JOIN `user` u"));
+        assertTrue(collegeSql.contains("TRIM(u.college)"));
+        assertFalse(collegeSql.toUpperCase().contains("LIMIT"));
+        assertTrue(interviewSql.contains("COUNT(DISTINCT CASE"));
+        assertTrue(interviewSql.contains("'PUBLISHED', 'ENDED'"));
+        assertTrue(interviewSql.contains("requires_recheck_in = FALSE"));
+    }
+
+    @Test
+    void statisticsScopeCoverageSupportsRoleUnion()
+            throws NoSuchMethodException {
+        Method board = AuthorizationMapper.class.getMethod(
+                "countCompleteBoardDepartmentCoverage",
+                String.class, String.class, Long.class
+        );
+        Method workstation = AuthorizationMapper.class.getMethod(
+                "countCompleteWorkstationDepartmentCoverage",
+                String.class, String.class, Long.class
+        );
+
+        for (Method method : List.of(board, workstation)) {
+            String query = sql(method.getAnnotation(Select.class).value());
+            assertTrue(query.contains("COUNT(d.id) > 0"));
+            assertTrue(query.contains("SUM(CASE WHEN EXISTS"));
+            assertTrue(query.contains("p.code = #{permission}"));
+            assertTrue(query.contains("s.scope_type = 'DEPARTMENT'"));
+        }
+    }
+
+    @Test
     void interviewSessionPersistsAndLoadsQrConfiguration()
             throws NoSuchMethodException {
         Method insert = DepartmentInterviewSessionMapper.class.getMethod(

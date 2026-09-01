@@ -1,6 +1,7 @@
 package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -9,6 +10,7 @@ import cn.sduonline.join.data.dto.DepartmentIdentityVO;
 import cn.sduonline.join.data.dto.DepartmentRoleAccess;
 import cn.sduonline.join.data.dto.PermissionDepartmentAccess;
 import cn.sduonline.join.mapper.AuthorizationMapper;
+import cn.sduonline.join.security.scope.OrgType;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +45,34 @@ class AuthorizationServiceTest {
 
         assertEquals(List.of(1L, 2L), result.get("recruitment:manage"));
         assertEquals(List.of(1L), result.get("application:read"));
+    }
+
+    @Test
+    void completeScopeAcceptsUnionOfDepartmentAssignments() {
+        when(authorizationMapper.countWorkstationPermissionAccess(
+                "20240001", "statistics:read", 21L
+        )).thenReturn(0L);
+        when(authorizationMapper.countCompleteWorkstationDepartmentCoverage(
+                "20240001", "statistics:read", 21L
+        )).thenReturn(1L);
+
+        assertTrue(service.canAccessCompleteScopeWithPermission(
+                "20240001", "statistics:read", OrgType.WORKSTATION, 21L
+        ));
+    }
+
+    @Test
+    void completeScopeRejectsPartialDepartmentCoverage() {
+        when(authorizationMapper.countBoardPermissionAccess(
+                "20240001", "statistics:read", 8L
+        )).thenReturn(0L);
+        when(authorizationMapper.countCompleteBoardDepartmentCoverage(
+                "20240001", "statistics:read", 8L
+        )).thenReturn(0L);
+
+        assertFalse(service.canAccessCompleteScopeWithPermission(
+                "20240001", "statistics:read", OrgType.BOARD, 8L
+        ));
     }
 
     @Test

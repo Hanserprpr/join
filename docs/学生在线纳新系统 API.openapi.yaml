@@ -1340,6 +1340,54 @@ paths:
                 $ref: "#/components/schemas/ResultVoid"
       security:
       - sessionCookie: []
+  /api/statistics/overview:
+    get:
+      tags:
+      - 数据统计
+      summary: 获取管理员数据总览
+      description: |
+        按服务端解析的板块、工作站或部门范围返回全量报名聚合数据，不返回申请人或队列个人明细。
+        需要 statistics:read，且整个组织范围必须属于调用者的服务端授权范围。
+        报名按部门报名记录计数，学院分布基于全量报名；空学院归入“未知学院”。
+        仅 DEPARTMENT 范围返回面试摘要，等待人数统计 PUBLISHED/ENDED 场次中状态为 WAITING 的队列项。
+        业务码：成功 0，参数错误 40000，未登录 -4，登录失效 40101，越权 40103，组织不存在或已停用 140009。
+      operationId: getStatisticsOverview
+      parameters:
+      - name: scopeType
+        in: query
+        description: 统计范围类型，必须使用固定大写值
+        required: true
+        schema:
+          type: string
+          enum:
+          - BOARD
+          - WORKSTATION
+          - DEPARTMENT
+      - name: scopeId
+        in: query
+        description: 板块、工作站或部门 ID
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      responses:
+        "200":
+          description: 成功或已包装的业务错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultDashboardOverviewVO"
+        "400":
+          description: 请求参数无效
+        "401":
+          description: 未登录或登录状态失效
+        "403":
+          description: 没有统计权限或组织范围越权
+        "500":
+          description: 服务内部异常
+      security:
+      - sessionCookie: []
   /api/organizations:
     get:
       tags:
@@ -2427,6 +2475,189 @@ paths:
       - sessionCookie: []
 components:
   schemas:
+    DashboardScopeVO:
+      type: object
+      description: 统计所属的组织范围
+      required:
+      - type
+      - id
+      - name
+      - departmentCount
+      properties:
+        type:
+          type: string
+          enum: [BOARD, WORKSTATION, DEPARTMENT]
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        departmentCount:
+          type: integer
+          format: int32
+          minimum: 0
+    DashboardDepartmentApplicationVO:
+      type: object
+      description: 范围内部门报名数量，包含零报名部门
+      required:
+      - departmentId
+      - departmentName
+      - workstationId
+      - workstationName
+      - applicationCount
+      properties:
+        departmentId:
+          type: integer
+          format: int64
+        departmentName:
+          type: string
+        workstationId:
+          type: integer
+          format: int64
+        workstationName:
+          type: string
+        applicationCount:
+          type: integer
+          format: int64
+          minimum: 0
+    DashboardCollegeDistributionVO:
+      type: object
+      description: 全量报名的学院分布
+      required:
+      - college
+      - applicationCount
+      properties:
+        college:
+          type: string
+        applicationCount:
+          type: integer
+          format: int64
+          minimum: 0
+    DashboardApplicationStatisticsVO:
+      type: object
+      description: 报名聚合统计
+      required:
+      - total
+      - departmentsWithApplications
+      - averagePerDepartment
+      - byDepartment
+      - byCollege
+      properties:
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+          description: 范围内报名记录总数，不按学生去重
+        departmentsWithApplications:
+          type: integer
+          format: int32
+          minimum: 0
+        averagePerDepartment:
+          type: number
+          format: double
+          minimum: 0
+        byDepartment:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardDepartmentApplicationVO"
+        byCollege:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardCollegeDistributionVO"
+    DashboardHighlightedSessionVO:
+      type: object
+      description: 按 startsAt、sessionId 升序选中的第一个已发布场次
+      required:
+      - sessionId
+      - name
+      - location
+      - startsAt
+      - endsAt
+      - status
+      properties:
+        sessionId:
+          type: integer
+          format: int64
+        name:
+          type: [string, "null"]
+        location:
+          type: [string, "null"]
+        startsAt:
+          type: [string, "null"]
+          format: date-time
+        endsAt:
+          type: [string, "null"]
+          format: date-time
+        status:
+          type: string
+          const: PUBLISHED
+    DashboardInterviewStatisticsVO:
+      type: object
+      description: 部门面试现场运营摘要
+      required:
+      - publishedSessionCount
+      - operationalSessionCount
+      - highlightedSession
+      - waitingCount
+      properties:
+        publishedSessionCount:
+          type: integer
+          format: int32
+          minimum: 0
+        operationalSessionCount:
+          type: integer
+          format: int32
+          minimum: 0
+          description: PUBLISHED/ENDED 场次数
+        highlightedSession:
+          oneOf:
+          - $ref: "#/components/schemas/DashboardHighlightedSessionVO"
+          - type: "null"
+        waitingCount:
+          type: integer
+          format: int64
+          minimum: 0
+          description: PUBLISHED/ENDED 场次中 WAITING 队列项总数
+    DashboardOverviewVO:
+      type: object
+      description: 管理员数据总览聚合统计
+      required:
+      - scope
+      - applications
+      - interviews
+      - generatedAt
+      properties:
+        scope:
+          $ref: "#/components/schemas/DashboardScopeVO"
+        applications:
+          $ref: "#/components/schemas/DashboardApplicationStatisticsVO"
+        interviews:
+          description: 仅 DEPARTMENT 返回对象，其他范围固定为 null
+          oneOf:
+          - $ref: "#/components/schemas/DashboardInterviewStatisticsVO"
+          - type: "null"
+        generatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 时间，包含时区偏移
+    ResultDashboardOverviewVO:
+      type: object
+      required:
+      - code
+      - data
+      - msg
+      - timestamp
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/DashboardOverviewVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
     ContactUpdateRequest:
       type: object
       description: |

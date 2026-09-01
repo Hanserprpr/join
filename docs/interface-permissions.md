@@ -123,6 +123,12 @@
 
 可访问接口(除登录即可的通用接口外):
 
+### statistics:read — 管理员数据总览
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/statistics/overview?scopeType={scopeType}&scopeId={scopeId}` | 按完整授权范围聚合报名、学院分布及部门面试摘要 |
+
 ### recruitment:manage — 部门纳新信息及活动
 
 | 方法 | 路径 | 说明 |
@@ -200,7 +206,7 @@
 | GET | `/api/departments/{departmentId}/interview-rooms/{roomId}/interviews/{interviewId}/evaluations` | 面试评价列表 |
 | GET | `/api/departments/{departmentId}/interview-rooms/{roomId}/events` | SSE 订阅房间事件 |
 
-> `notification:manage`、`statistics:read` 已授予本身份,但当前还没有对应的接口
+> `notification:manage` 已授予本身份,但当前还没有对应的接口
 > (见文末"未接线权限"章节)。`DEPARTMENT_ASSISTANT` 没有 `admission:manage`,
 > 因此上面的录取接口对辅助管理员一律 403。
 
@@ -254,7 +260,7 @@
 | GET | `/api/departments/{departmentId}/interview-rooms/{roomId}/interviews/{interviewId}/evaluations` | 面试评价列表 | `interview:evaluate` |
 | GET | `/api/departments/{departmentId}/interview-rooms/{roomId}/events` | SSE 订阅房间事件 | `interview:evaluate` |
 
-> `statistics:read` 已授予本身份,暂无对应接口。
+`DEPARTMENT_ASSISTANT` 可使用 `GET /api/statistics/overview`查询其被授权部门的数据总览。
 
 ---
 
@@ -314,7 +320,6 @@
 | 权限码 | 说明 | 已授予的角色 |
 |---|---|---|
 | `notification:manage` | 发布纳新通知 | BOARD/WORKSTATION/DEPARTMENT_ADMIN |
-| `statistics:read` | 查看纳新统计 | BOARD/WORKSTATION/DEPARTMENT_ADMIN、DEPARTMENT_ASSISTANT |
 | `system:user:manage` | 管理平台用户 | 仅 `SYSTEM_ADMIN` |
 | `system:organization:manage` | 管理板块/工作站/部门 | 仅 `SYSTEM_ADMIN` |
 | `system:config:manage` | 管理系统配置 | 仅 `SYSTEM_ADMIN` |

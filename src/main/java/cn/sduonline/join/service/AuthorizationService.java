@@ -56,6 +56,31 @@ public class AuthorizationService {
     }
 
     /**
+     * 校验一次聚合请求的整个组织范围。除直接或上级授权外，
+     * 板块和工作站还允许多条下级授权的并集覆盖其全部启用部门。
+     */
+    public boolean canAccessCompleteScopeWithPermission(
+            String casId,
+            String permission,
+            OrgType type,
+            Long targetId
+    ) {
+        if (canAccessWithPermission(casId, permission, type, targetId)) {
+            return true;
+        }
+        return switch (type) {
+            case BOARD -> authorizationMapper.countCompleteBoardDepartmentCoverage(
+                    casId, permission, targetId
+            ) > 0;
+            case WORKSTATION ->
+                    authorizationMapper.countCompleteWorkstationDepartmentCoverage(
+                            casId, permission, targetId
+                    ) > 0;
+            case DEPARTMENT -> false;
+        };
+    }
+
+    /**
      * 查询该用户按权限分组可管理的启用部门 ID 列表，
      * 作用域按 ALL → BOARD → WORKSTATION → DEPARTMENT 逐级展开。
      * 平台管理员（SYSTEM_ADMIN）无具体权限关联，统一映射为 {@code *} 权限。
