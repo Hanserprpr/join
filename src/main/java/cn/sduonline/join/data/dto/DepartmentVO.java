@@ -10,7 +10,7 @@ import java.util.List;
  * @param id 部门 ID
  * @param workstationId 所属工作站 ID
  * @param name 部门名称
- * @param campus 所在校区
+ * @param campuses 所在校区（可多个）
  * @param introduction 组织介绍
  * @param posters 部门海报
  * @param achievements 部门成果列表
@@ -26,7 +26,7 @@ public record DepartmentVO(
         Long id,
         Long workstationId,
         String name,
-        Campus campus,
+        List<Campus> campuses,
         String introduction,
         List<DepartmentPosterVO> posters,
         List<DepartmentAchievementVO> achievements,
@@ -59,7 +59,7 @@ public record DepartmentVO(
                 department.getId(),
                 department.getWorkstationId(),
                 department.getName(),
-                department.getCampus(),
+                department.getCampuses() == null ? List.of() : department.getCampuses(),
                 department.getIntroduction(),
                 posters,
                 achievements,

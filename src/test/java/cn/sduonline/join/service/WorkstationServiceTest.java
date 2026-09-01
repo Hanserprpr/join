@@ -41,7 +41,7 @@ class WorkstationServiceTest {
         Department department = new Department();
         department.setId(12L);
         department.setName("后端部门");
-        department.setCampus(Campus.SOFTWARE_PARK);
+        department.setCampuses(List.of(Campus.SOFTWARE_PARK));
         department.setAssetId(88L);
         when(organizationMapper.selectEnabledWorkstationById(5L))
                 .thenReturn(workstation);
@@ -54,8 +54,8 @@ class WorkstationServiceTest {
         assertEquals("开发工作站", result.data().name());
         assertEquals(12L, result.data().departments().getFirst().id());
         assertEquals(
-                Campus.SOFTWARE_PARK,
-                result.data().departments().getFirst().campus()
+                List.of(Campus.SOFTWARE_PARK),
+                result.data().departments().getFirst().campuses()
         );
         assertEquals(88L, result.data().departments().getFirst().assetId());
     }

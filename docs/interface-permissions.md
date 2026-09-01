@@ -61,7 +61,7 @@
 
 `GET /api/organizations` 无需登录，返回全部启用的板块 → 工作站 → 部门三级组织树。
 板块、工作站包含 `id`、`name`；部门仅包含卡片展示所需的 `id`、`name`、
-`campus`、`assetId`、`introduction`。该接口不按角色或管理员作用域过滤，也不会返回
+`campuses`、`assetId`、`introduction`。该接口不按角色或管理员作用域过滤，也不会返回
 联系方式、纳新群、纳新要求、签到配置或成员身份信息。
 
 ## 角色授权页面读取接口

@@ -66,7 +66,7 @@
 | `id` | BIGINT | PK，自增 | 部门 ID |
 | `workstation_id` | BIGINT | FK，非空 | 所属工作站 |
 | `name` | VARCHAR(64) | 非空 | 部门名称 |
-| `campus` | ENUM | 可空 | 部门所在校区 |
+| `campus` | VARCHAR(255) | 可空 | 部门所在校区，可多个，逗号分隔存储 |
 | `asset_id` | BIGINT | 可空 | 部门素材 ID，指向外部素材系统 |
 | `introduction` | TEXT | 可空 | 组织介绍 |
 | `recruitment_requirements` | TEXT | 可空 | 纳新要求 |
@@ -78,7 +78,7 @@
 | `sort_order` | INT | 非空，默认 0 | 展示顺序 |
 | `enabled` | TINYINT(1) | 非空，默认 1 | 是否启用 |
 
-`campus` 可选值：
+`campus` 存储为逗号分隔字符串（如 `CENTRAL,QIANFOSHAN`），接口层序列化为字符串数组。可选值：
 
 | 数据库存储值 | 接口中文值 |
 |---|---|

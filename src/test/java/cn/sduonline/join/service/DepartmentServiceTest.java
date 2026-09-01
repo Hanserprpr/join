@@ -68,7 +68,7 @@ class DepartmentServiceTest {
     @Test
     void findByIdReturnsCompleteDepartmentDetail() {
         Department department = department();
-        department.setCampus(Campus.CENTRAL);
+        department.setCampuses(List.of(Campus.CENTRAL));
         department.setIntroduction("组织介绍");
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         when(questionnaireMapper.countQuestions(12L)).thenReturn(1L);
@@ -76,7 +76,7 @@ class DepartmentServiceTest {
         var result = service.findById(12L, "20240001");
 
         assertTrue(result.isSuccess());
-        assertEquals(Campus.CENTRAL, result.data().campus());
+        assertEquals(List.of(Campus.CENTRAL), result.data().campuses());
         assertEquals("组织介绍", result.data().introduction());
         assertTrue(result.data().hasQuestionnaire());
     }
@@ -193,7 +193,7 @@ class DepartmentServiceTest {
         when(organizationMapper.selectDepartmentPosters(12L))
                 .thenReturn(java.util.List.of(firstPoster, secondPoster));
         DepartmentDetailUpdateRequest request = new DepartmentDetailUpdateRequest(
-                Campus.CENTRAL, " 介绍 ",
+                List.of(Campus.CENTRAL), " 介绍 ",
                 java.util.List.of(
                         new DepartmentPosterRequest(
                                 null, " https://example.com/poster-1.jpg ", null
@@ -217,7 +217,7 @@ class DepartmentServiceTest {
         var result = service.updateDetail(12L, "20240001", request);
 
         assertTrue(result.isSuccess());
-        assertEquals(Campus.CENTRAL, result.data().campus());
+        assertEquals(List.of(Campus.CENTRAL), result.data().campuses());
         assertEquals("介绍", result.data().introduction());
         assertEquals(2, result.data().posters().size());
         assertEquals(

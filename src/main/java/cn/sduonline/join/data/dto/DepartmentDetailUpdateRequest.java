@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * 部门详情完整更新请求
  *
- * @param campus 所在校区
+ * @param campuses 所在校区（可多个）
  * @param introduction 组织介绍
  * @param posters 部门海报
  * @param achievements 部门成果列表
@@ -17,7 +17,8 @@ import java.util.List;
  * @param recruitmentGroup 纳新群信息
  */
 public record DepartmentDetailUpdateRequest(
-        Campus campus,
+        @Size(max = 6)
+        List<Campus> campuses,
 
         @Size(max = 10000)
         String introduction,

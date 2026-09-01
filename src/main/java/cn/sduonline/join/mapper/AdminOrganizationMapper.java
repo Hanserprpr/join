@@ -12,6 +12,8 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Result;
+import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -69,7 +71,7 @@ public interface AdminOrganizationMapper {
                    w.name AS workstation_name,
                    d.id AS department_id,
                    d.name AS department_name,
-                   d.campus AS department_campus,
+                   d.campus AS department_campuses,
                    d.asset_id AS department_asset_id,
                    d.introduction AS department_introduction
             FROM board b
@@ -95,7 +97,7 @@ public interface AdminOrganizationMapper {
     Workstation selectEnabledWorkstationById(@Param("id") Long id);
 
     @Select("""
-            SELECT id, workstation_id, name, campus, asset_id,
+            SELECT id, workstation_id, name, campus AS campuses, asset_id,
                    sort_order, enabled
             FROM department
             WHERE workstation_id = #{workstationId}
@@ -141,7 +143,7 @@ public interface AdminOrganizationMapper {
     );
 
     @Select("""
-            SELECT id, workstation_id, name, campus, introduction,
+            SELECT id, workstation_id, name, campus AS campuses, introduction,
                    recruitment_requirements, contact,
                    recruitment_group, sort_order, enabled
             FROM department
@@ -151,7 +153,7 @@ public interface AdminOrganizationMapper {
     Department selectDepartmentById(@Param("id") Long id);
 
     @Select("""
-            SELECT id, workstation_id, name, campus, introduction,
+            SELECT id, workstation_id, name, campus AS campuses, introduction,
                    recruitment_requirements, contact,
                    recruitment_group, sort_order, enabled
             FROM department
@@ -163,7 +165,7 @@ public interface AdminOrganizationMapper {
 
     @Update("""
             UPDATE department
-            SET campus = #{campus},
+            SET campus = #{campuses},
                 introduction = #{introduction},
                 recruitment_requirements = #{recruitmentRequirements},
                 contact = #{contact},
