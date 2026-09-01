@@ -95,7 +95,7 @@ public class OpenApiConfig {
             Map.entry("WeChatBindingController.unbind", "解除微信绑定"),
             Map.entry("WeChatCheckInController.entry", "微信扫码登录并签到"),
             Map.entry("WeChatLoginController.authorizationUrl", "获取微信内登录授权地址"),
-            Map.entry("WeChatLoginController.callback", "处理已绑定微信登录回调"),
+            Map.entry("WeChatLoginController.callback", "处理微信登录回调（未绑定转统一认证）"),
             Map.entry("WorkstationController.getWorkstation", "获取工作站详情")
     );
 
