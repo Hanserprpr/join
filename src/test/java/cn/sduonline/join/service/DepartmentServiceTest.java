@@ -203,15 +203,27 @@ class DepartmentServiceTest {
                         )
                 ),
                 java.util.List.of(
-                        new DepartmentAchievementRequest(" 获奖 ", " 国一 "),
-                        new DepartmentAchievementRequest("立项", null)
+                        new DepartmentAchievementRequest(
+                                " 获奖 ", " 国一 ",
+                                java.util.List.of(
+                                        " https://example.com/achievement-1.jpg ",
+                                        "https://example.com/achievement-2.jpg"
+                                )
+                        ),
+                        new DepartmentAchievementRequest("立项", null, null)
                 ),
                 " 要求 ", " QQ：123 ", " 456群 "
         );
         when(organizationMapper.selectDepartmentAchievements(12L))
                 .thenReturn(java.util.List.of(
-                        achievement("获奖", "国一", 0),
-                        achievement("立项", null, 1)
+                        achievement(
+                                "获奖", "国一",
+                                java.util.List.of(
+                                        "https://example.com/achievement-1.jpg",
+                                        "https://example.com/achievement-2.jpg"
+                                ), 0
+                        ),
+                        achievement("立项", null, null, 1)
                 ));
 
         var result = service.updateDetail(12L, "20240001", request);
@@ -227,6 +239,13 @@ class DepartmentServiceTest {
         assertEquals(2, result.data().achievements().size());
         assertEquals("获奖", result.data().achievements().getFirst().title());
         assertEquals("国一", result.data().achievements().getFirst().content());
+        assertEquals(
+                java.util.List.of(
+                        "https://example.com/achievement-1.jpg",
+                        "https://example.com/achievement-2.jpg"
+                ),
+                result.data().achievements().getFirst().imageUrls()
+        );
         assertEquals("要求", result.data().recruitmentRequirements());
         assertEquals("QQ：123", result.data().contact());
         assertEquals("456群", result.data().recruitmentGroup());
@@ -248,6 +267,13 @@ class DepartmentServiceTest {
         DepartmentAchievement first = achievementCaptor.getAllValues().getFirst();
         assertEquals("获奖", first.getTitle());
         assertEquals("国一", first.getContent());
+        assertEquals(
+                java.util.List.of(
+                        "https://example.com/achievement-1.jpg",
+                        "https://example.com/achievement-2.jpg"
+                ),
+                first.getImageUrls()
+        );
         // 排序取请求数组下标，前端传什么顺序就按什么顺序展示。
         assertEquals(0, first.getSortOrder());
         assertEquals(1, achievementCaptor.getAllValues().get(1).getSortOrder());
@@ -260,7 +286,9 @@ class DepartmentServiceTest {
         Department department = department();
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         when(organizationMapper.selectDepartmentAchievements(12L))
-                .thenReturn(java.util.List.of(achievement("原成果", "原内容", 0)));
+                .thenReturn(java.util.List.of(
+                        achievement("原成果", "原内容", java.util.List.of(), 0)
+                ));
         DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
         request.setContact("新联系方式");
 
@@ -278,7 +306,10 @@ class DepartmentServiceTest {
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         DepartmentDetailPatchRequest request = new DepartmentDetailPatchRequest();
         request.setAchievements(java.util.List.of(
-                new DepartmentAchievementRequest("新成果", "新内容")
+                new DepartmentAchievementRequest(
+                        "新成果", "新内容",
+                        java.util.List.of(" https://example.com/new.png ")
+                )
         ));
 
         var result = service.patchDetail(12L, "20240001", request);
@@ -289,6 +320,10 @@ class DepartmentServiceTest {
                 ArgumentCaptor.forClass(DepartmentAchievement.class);
         verify(organizationMapper).insertDepartmentAchievement(captor.capture());
         assertEquals("新成果", captor.getValue().getTitle());
+        assertEquals(
+                java.util.List.of("https://example.com/new.png"),
+                captor.getValue().getImageUrls()
+        );
     }
 
     @Test
@@ -790,12 +825,14 @@ class DepartmentServiceTest {
     }
 
     private static DepartmentAchievement achievement(
-            String title, String content, Integer sortOrder
+            String title, String content, java.util.List<String> imageUrls,
+            Integer sortOrder
     ) {
         DepartmentAchievement achievement = new DepartmentAchievement();
         achievement.setDepartmentId(12L);
         achievement.setTitle(title);
         achievement.setContent(content);
+        achievement.setImageUrls(imageUrls);
         achievement.setSortOrder(sortOrder);
         return achievement;
     }

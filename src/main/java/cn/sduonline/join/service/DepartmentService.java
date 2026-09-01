@@ -325,9 +325,19 @@ public class DepartmentService {
             achievement.setDepartmentId(departmentId);
             achievement.setTitle(request.title().trim());
             achievement.setContent(trimToNull(request.content()));
+            achievement.setImageUrls(trimImageUrls(request.imageUrls()));
             achievement.setSortOrder(index);
             organizationMapper.insertDepartmentAchievement(achievement);
         }
+    }
+
+    private List<String> trimImageUrls(List<String> imageUrls) {
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return List.of();
+        }
+        return imageUrls.stream()
+                .map(String::trim)
+                .toList();
     }
 
     private DepartmentVO toVO(Department department, String casId) {

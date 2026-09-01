@@ -1,5 +1,6 @@
 package cn.sduonline.join.data.po;
 
+import java.util.List;
 import lombok.Data;
 
 /**
@@ -12,5 +13,6 @@ public class DepartmentAchievement {
     private Long departmentId;
     private String title;
     private String content;
+    private List<String> imageUrls;
     private Integer sortOrder;
 }

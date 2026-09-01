@@ -2609,6 +2609,15 @@ components:
           type: string
           maxLength: 5000
           minLength: 0
+        imageUrls:
+          type: array
+          description: 成果图片 URL 列表，按展示顺序排列
+          maxItems: 10
+          minItems: 0
+          items:
+            type: string
+            maxLength: 2048
+            minLength: 1
       required:
       - title
     DepartmentPosterVO:
@@ -2644,6 +2653,11 @@ components:
           type: string
         content:
           type: string
+        imageUrls:
+          type: array
+          description: 成果图片 URL 列表，按展示顺序排列
+          items:
+            type: string
     DepartmentVO:
       type: object
       properties:

@@ -397,6 +397,25 @@ class MapperSqlContractTest {
     }
 
     @Test
+    void departmentAchievementsReadAndWriteImageUrls()
+            throws NoSuchMethodException {
+        Method select = AdminOrganizationMapper.class.getMethod(
+                "selectDepartmentAchievements", Long.class
+        );
+        Method insert = AdminOrganizationMapper.class.getMethod(
+                "insertDepartmentAchievement",
+                cn.sduonline.join.data.po.DepartmentAchievement.class
+        );
+
+        String selectSql = sql(select.getAnnotation(Select.class).value());
+        String insertSql = sql(insert.getAnnotation(Insert.class).value());
+
+        assertTrue(selectSql.contains("image_urls"));
+        assertTrue(insertSql.contains("image_urls"));
+        assertTrue(insertSql.contains("#{imageUrls,typeHandler="));
+    }
+
+    @Test
     void posterReorderingLocksDepartmentAndPostersAndScopesEveryUpdate()
             throws NoSuchMethodException {
         Method departmentLock = AdminOrganizationMapper.class.getMethod(
