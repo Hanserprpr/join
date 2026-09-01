@@ -175,11 +175,25 @@ public interface AdminOrganizationMapper {
     int updateDepartmentDetail(Department department);
 
     @Select("""
-            SELECT id, department_id, title, content, sort_order
+            SELECT id, department_id, title, content,
+                   image_urls AS image_urls,
+                   sort_order
             FROM department_achievement
             WHERE department_id = #{departmentId}
             ORDER BY sort_order ASC, id ASC
             """)
+    @Results({
+            @Result(column = "id", property = "id"),
+            @Result(column = "department_id", property = "departmentId"),
+            @Result(column = "title", property = "title"),
+            @Result(column = "content", property = "content"),
+            @Result(
+                    column = "image_urls",
+                    property = "imageUrls",
+                    typeHandler = StringListJsonTypeHandler.class
+            ),
+            @Result(column = "sort_order", property = "sortOrder")
+    })
     List<DepartmentAchievement> selectDepartmentAchievements(
             @Param("departmentId") Long departmentId
     );
@@ -189,9 +203,11 @@ public interface AdminOrganizationMapper {
 
     @Insert("""
             INSERT INTO department_achievement
-                (department_id, title, content, sort_order)
+                (department_id, title, content, image_urls, sort_order)
             VALUES
-                (#{departmentId}, #{title}, #{content}, #{sortOrder})
+                (#{departmentId}, #{title}, #{content},
+                 #{imageUrls,typeHandler=cn.sduonline.join.mapper.StringListJsonTypeHandler},
+                 #{sortOrder})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insertDepartmentAchievement(DepartmentAchievement achievement);
