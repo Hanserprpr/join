@@ -1774,7 +1774,7 @@ paths:
     get:
       tags:
       - 微信登录
-      summary: 处理已绑定微信登录回调
+      summary: 处理微信登录回调（未绑定转统一认证）
       operationId: weChatLoginCallback
       parameters:
       - name: code

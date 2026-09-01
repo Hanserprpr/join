@@ -17,12 +17,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/** 已绑定用户的微信网页授权登录。 */
+/** 微信网页授权登录：已绑定直接建立登录态，未绑定转统一认证。 */
 @Service
 @RequiredArgsConstructor
 public class WeChatLoginService {
 
     private static final String STATE_KEY_PREFIX = "join:wechat:login:state:";
+    private static final String UNIFIED_AUTH_PATH =
+            "/api/oauth2/authorization/sdu";
     private static final String LOGIN_STATE = "login";
     private static final String CHECK_IN_STATE_PREFIX = "check-in:";
 
@@ -69,7 +71,19 @@ public class WeChatLoginService {
                 .toUriString();
     }
 
-    /** 消费一次性 state，并返回该 OpenID 已绑定的本地用户。 */
+    /**
+     * 统一认证登录地址。微信授权后发现 OpenID 未绑定时跳到这里补登录。
+     *
+     * @param contextPath 反代还原后的应用上下文路径
+     */
+    public String unifiedAuthUrl(String contextPath) {
+        return (contextPath == null ? "" : contextPath) + UNIFIED_AUTH_PATH;
+    }
+
+    /**
+     * 消费一次性 state，并解析该 OpenID 对应的本地用户。
+     * OpenID 尚未绑定时 {@code user} 为空，由调用方转统一认证。
+     */
     public AuthenticationResult authenticate(String code, String state) {
         if (!StringUtils.hasText(code) || !StringUtils.hasText(state)) {
             throw new IllegalArgumentException("微信回调参数不完整");
@@ -94,10 +108,8 @@ public class WeChatLoginService {
 
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getWechatOpenid, response.openid()));
-        if (user == null) {
-            throw new IllegalStateException("该微信尚未绑定用户");
-        }
-        return new AuthenticationResult(user, parseCheckInGrant(stateValue));
+        return new AuthenticationResult(
+                user, response.openid(), parseCheckInGrant(stateValue));
     }
 
     public String loginResultUrl(boolean success) {
@@ -142,8 +154,12 @@ public class WeChatLoginService {
         }
     }
 
+    /**
+     * @param user 已绑定该 OpenID 的本地用户，未绑定时为 {@code null}
+     */
     public record AuthenticationResult(
             User user,
+            String openid,
             CheckInQrGrant checkInGrant
     ) {
     }

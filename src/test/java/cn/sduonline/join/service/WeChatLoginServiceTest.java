@@ -85,13 +85,14 @@ class WeChatLoginServiceTest {
                 service.authenticate("code-1", "state-1");
 
         assertThat(result.user().getCasId()).isEqualTo("20240001");
+        assertThat(result.openid()).isEqualTo("openid-1");
         assertThat(result.checkInGrant()).isNull();
         verify(valueOperations).getAndDelete(
                 "join:wechat:login:state:state-1");
     }
 
     @Test
-    void rejectsOpenIdThatHasNotBeenBound() {
+    void reportsUnboundOpenIdWithoutUserSoCallerCanFallBackToUnifiedAuth() {
         when(valueOperations.getAndDelete("join:wechat:login:state:state-1"))
                 .thenReturn("login");
         when(apiClient.exchangeOAuthCode("wx-app-id", "app-secret", "code-1"))
@@ -100,9 +101,19 @@ class WeChatLoginServiceTest {
                         "openid-1", "snsapi_base", null, null));
         when(userMapper.selectOne(any())).thenReturn(null);
 
-        assertThatThrownBy(() -> service.authenticate("code-1", "state-1"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("尚未绑定");
+        WeChatLoginService.AuthenticationResult result =
+                service.authenticate("code-1", "state-1");
+
+        assertThat(result.user()).isNull();
+        assertThat(result.openid()).isEqualTo("openid-1");
+    }
+
+    @Test
+    void buildsUnifiedAuthUrlUnderReverseProxyContextPath() {
+        assertThat(service.unifiedAuthUrl(""))
+                .isEqualTo("/api/oauth2/authorization/sdu");
+        assertThat(service.unifiedAuthUrl("/recruit"))
+                .isEqualTo("/recruit/api/oauth2/authorization/sdu");
     }
 
     @Test

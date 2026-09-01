@@ -82,18 +82,31 @@ public class WeChatBindingService {
                     errorCode, "获取微信用户 OpenID 失败：" + errorMessage);
         }
 
+        bindOpenId(casId, response.openid());
+    }
+
+    /**
+     * 把 OpenID 绑定到指定用户。微信授权已在别处完成时（例如未绑定用户
+     * 走完统一认证后的自动补绑）直接调用。
+     */
+    @Transactional
+    public void bindOpenId(String casId, String openid) {
+        if (!StringUtils.hasText(openid)) {
+            throw new IllegalArgumentException("微信 OpenID 为空");
+        }
+
         User user = userMapper.selectById(casId);
         if (user == null) {
             throw new IllegalArgumentException("绑定用户不存在");
         }
 
         User owner = userMapper.selectOne(new LambdaQueryWrapper<User>()
-                .eq(User::getWechatOpenid, response.openid()));
+                .eq(User::getWechatOpenid, openid));
         if (owner != null && !owner.getCasId().equals(casId)) {
             throw new IllegalStateException("该微信已经绑定其他用户");
         }
 
-        user.setWechatOpenid(response.openid());
+        user.setWechatOpenid(openid);
         try {
             userMapper.updateById(user);
         } catch (DuplicateKeyException exception) {
@@ -101,7 +114,6 @@ public class WeChatBindingService {
         }
 
         sendBindingSuccessMessage(user);
-        
     }
 
     public boolean isBound(String casId) {
