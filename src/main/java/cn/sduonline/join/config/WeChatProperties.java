@@ -22,9 +22,9 @@ public class WeChatProperties {
     private long bindingStateTtlSeconds = 600;
     /** 普通浏览器一次性绑定链接的有效期。 */
     private int bindingSessionTtlSeconds = 300;
-    /** 复制到微信中打开的后端 OAuth 入口。 */
+    /** 复制到微信中打开的绑定入口，默认基于前端地址拼接（需反向代理转发 /api）。 */
     private String bindingEntryUrl =
-            "http://localhost:8080/api/wechat/bind/start";
+            "http://localhost:5173/api/wechat/bind/start";
     /** 扫码绑定会话从微信网页授权返回的地址。 */
     private String bindingSessionOauthCallbackUrl =
             "http://localhost:8080/api/wechat/bind/oauth/callback";

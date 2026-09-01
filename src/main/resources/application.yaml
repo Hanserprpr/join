@@ -176,7 +176,7 @@ app:
     # 普通浏览器绑定链接默认 5 分钟有效；二维码由前端根据链接生成
     binding-session-ttl-seconds: ${WECHAT_BINDING_SESSION_TTL_SECONDS:300}
     # 前端生成二维码和“复制链接，前往微信打开”共同使用的后端入口
-    binding-entry-url: ${WECHAT_BINDING_ENTRY_URL:http://localhost:8080/api/wechat/bind/start}
+    binding-entry-url: ${WECHAT_BINDING_ENTRY_URL:${FRONTEND_URL:http://localhost:5173}/api/wechat/bind/start}
     binding-session-oauth-callback-url: ${WECHAT_BINDING_SESSION_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/bind/oauth/callback}
     login-oauth-callback-url: ${WECHAT_LOGIN_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/login/callback}
     login-result-url: ${WECHAT_LOGIN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}}
