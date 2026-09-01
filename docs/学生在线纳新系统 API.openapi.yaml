@@ -211,6 +211,50 @@ paths:
           description: ClamAV 或对象存储暂时不可用
       security:
       - sessionCookie: []
+  /api/departments/{departmentId}/achievements/images/upload:
+    post:
+      tags:
+      - 部门
+      summary: 上传部门成果图片
+      description: 需要当前用户对该部门拥有 RECRUITMENT_MANAGE 权限。上传成功后返回可写入成果 imageUrls 数组的 URL。
+      operationId: uploadAchievementImage
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: 上传成功
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultPosterUploadVO"
+        "400":
+          description: 图片格式或内容无效
+        "403":
+          description: 无部门管理权限
+        "413":
+          description: 文件超过大小限制
+        "503":
+          description: ClamAV 或对象存储暂时不可用
+      security:
+      - sessionCookie: []
   /api/departments/{departmentId}/posters/order:
     put:
       tags:

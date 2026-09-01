@@ -67,6 +67,24 @@ public class DepartmentController {
     }
 
     /**
+     * 上传部门成果图片，返回可写入成果 imageUrls 字段的 URL。
+     */
+    @PostMapping(value = "/{departmentId}/achievements/images/upload",
+            consumes = "multipart/form-data")
+    @DepartmentPermission(PermissionCode.RECRUITMENT_MANAGE)
+    public Result<PosterUploadVO> uploadAchievementImage(
+            @PathVariable @Positive Long departmentId,
+            @RequestPart("file") MultipartFile file
+    ) throws IOException {
+        ServiceResult<PosterUploadVO> result = posterUploadService.upload(
+                departmentId, file
+        );
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    /**
      * 原子更新部门全部海报的展示顺序。
      */
     @PutMapping("/{departmentId}/posters/order")
