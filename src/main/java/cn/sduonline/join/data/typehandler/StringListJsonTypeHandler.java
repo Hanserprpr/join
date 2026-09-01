@@ -1,4 +1,4 @@
-package cn.sduonline.join.mapper;
+package cn.sduonline.join.data.typehandler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

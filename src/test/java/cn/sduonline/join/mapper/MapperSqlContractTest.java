@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cn.sduonline.join.data.po.DepartmentInterviewSession;
+import cn.sduonline.join.data.typehandler.StringListJsonTypeHandler;
 import java.lang.reflect.Method;
 import java.util.List;
 import org.apache.ibatis.annotations.Insert;
@@ -413,6 +414,8 @@ class MapperSqlContractTest {
         assertTrue(selectSql.contains("image_urls"));
         assertTrue(insertSql.contains("image_urls"));
         assertTrue(insertSql.contains("#{imageUrls,typeHandler="));
+        assertFalse(StringListJsonTypeHandler.class.getPackageName()
+                .startsWith("cn.sduonline.join.mapper"));
     }
 
     @Test

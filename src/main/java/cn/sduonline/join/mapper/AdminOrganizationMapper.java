@@ -6,6 +6,7 @@ import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentAchievement;
 import cn.sduonline.join.data.po.DepartmentPoster;
 import cn.sduonline.join.data.po.Workstation;
+import cn.sduonline.join.data.typehandler.StringListJsonTypeHandler;
 import java.util.List;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
@@ -206,7 +207,7 @@ public interface AdminOrganizationMapper {
                 (department_id, title, content, image_urls, sort_order)
             VALUES
                 (#{departmentId}, #{title}, #{content},
-                 #{imageUrls,typeHandler=cn.sduonline.join.mapper.StringListJsonTypeHandler},
+                 #{imageUrls,typeHandler=cn.sduonline.join.data.typehandler.StringListJsonTypeHandler},
                  #{sortOrder})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
