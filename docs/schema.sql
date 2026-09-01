@@ -59,10 +59,8 @@ CREATE TABLE `department` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `workstation_id` BIGINT NOT NULL,
   `name` VARCHAR(64) NOT NULL,
-  `campus` ENUM(
-    'SOFTWARE_PARK', 'CENTRAL', 'QIANFOSHAN',
-    'XINGLONGSHAN', 'HONGJIALOU', 'BAOTUQUAN'
-  ) NULL COMMENT '部门所在校区',
+  `campus` VARCHAR(255) NULL
+    COMMENT '部门所在校区（可多个，逗号分隔，取值同原 ENUM：SOFTWARE_PARK/CENTRAL/QIANFOSHAN/XINGLONGSHAN/HONGJIALOU/BAOTUQUAN）',
   `asset_id` BIGINT NULL COMMENT '部门素材 ID',
   `introduction` TEXT NULL COMMENT '组织介绍',
   `recruitment_requirements` TEXT NULL COMMENT '纳新要求',

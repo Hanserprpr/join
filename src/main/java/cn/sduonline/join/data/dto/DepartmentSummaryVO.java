@@ -2,19 +2,20 @@ package cn.sduonline.join.data.dto;
 
 import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.po.Department;
+import java.util.List;
 
 /**
  * 工作站详情中的部门摘要信息
  *
  * @param id 部门 ID
  * @param name 部门名称
- * @param campus 所在校区
+ * @param campuses 所在校区（可多个）
  * @param assetId 部门素材 ID
  */
 public record DepartmentSummaryVO(
         Long id,
         String name,
-        Campus campus,
+        List<Campus> campuses,
         Long assetId
 ) {
     /**
@@ -27,7 +28,7 @@ public record DepartmentSummaryVO(
         return new DepartmentSummaryVO(
                 department.getId(),
                 department.getName(),
-                department.getCampus(),
+                department.getCampuses() == null ? List.of() : department.getCampuses(),
                 department.getAssetId()
         );
     }

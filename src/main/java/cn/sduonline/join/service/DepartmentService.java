@@ -81,7 +81,7 @@ public class DepartmentService {
             return ServiceResult.failure(posterConflict);
         }
 
-        department.setCampus(request.campus());
+        department.setCampuses(request.campuses());
         department.setIntroduction(trimToNull(request.introduction()));
         department.setRecruitmentRequirements(
                 trimToNull(request.recruitmentRequirements())
@@ -122,8 +122,8 @@ public class DepartmentService {
             }
         }
 
-        if (request.isCampusPresent()) {
-            department.setCampus(request.getCampus());
+        if (request.isCampusesPresent()) {
+            department.setCampuses(request.getCampuses());
         }
         if (request.isIntroductionPresent()) {
             department.setIntroduction(trimToNull(request.getIntroduction()));

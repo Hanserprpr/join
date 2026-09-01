@@ -13,7 +13,8 @@ import java.util.List;
  */
 public class DepartmentDetailPatchRequest {
 
-    private Campus campus;
+    @Size(max = 6)
+    private List<Campus> campuses;
 
     @Size(max = 10000)
     private String introduction;
@@ -34,7 +35,7 @@ public class DepartmentDetailPatchRequest {
     private String recruitmentGroup;
 
     @JsonIgnore
-    private boolean campusPresent;
+    private boolean campusesPresent;
     @JsonIgnore
     private boolean introductionPresent;
     @JsonIgnore
@@ -49,9 +50,9 @@ public class DepartmentDetailPatchRequest {
     private boolean recruitmentGroupPresent;
 
     @JsonSetter
-    public void setCampus(Campus campus) {
-        this.campusPresent = true;
-        this.campus = campus;
+    public void setCampuses(List<Campus> campuses) {
+        this.campusesPresent = true;
+        this.campuses = campuses;
     }
 
     @JsonSetter
@@ -90,8 +91,8 @@ public class DepartmentDetailPatchRequest {
         this.recruitmentGroup = recruitmentGroup;
     }
 
-    public Campus getCampus() {
-        return campus;
+    public List<Campus> getCampuses() {
+        return campuses;
     }
 
     public String getIntroduction() {
@@ -119,8 +120,8 @@ public class DepartmentDetailPatchRequest {
     }
 
     @JsonIgnore
-    public boolean isCampusPresent() {
-        return campusPresent;
+    public boolean isCampusesPresent() {
+        return campusesPresent;
     }
 
     @JsonIgnore

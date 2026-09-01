@@ -62,12 +62,12 @@ class BoardServiceTest {
         when(organizationMapper.selectEnabledOrganizationTree()).thenReturn(List.of(
                 new OrganizationTreeRow(
                         1L, "技术板块", 5L, "开发工作站",
-                        12L, "后端部门", Campus.SOFTWARE_PARK, 88L,
+                        12L, "后端部门", List.of(Campus.SOFTWARE_PARK), 88L,
                         "负责学生在线服务端架构与开发"
                 ),
                 new OrganizationTreeRow(
                         1L, "技术板块", 5L, "开发工作站",
-                        13L, "前端部门", Campus.CENTRAL, null,
+                        13L, "前端部门", List.of(Campus.CENTRAL), null,
                         "负责学生在线前端产品开发"
                 ),
                 new OrganizationTreeRow(
@@ -85,8 +85,8 @@ class BoardServiceTest {
                 .getFirst().departments().size());
         assertEquals("后端部门", result.getFirst().workstations()
                 .getFirst().departments().getFirst().name());
-        assertEquals(Campus.SOFTWARE_PARK, result.getFirst().workstations()
-                .getFirst().departments().getFirst().campus());
+        assertEquals(List.of(Campus.SOFTWARE_PARK), result.getFirst().workstations()
+                .getFirst().departments().getFirst().campuses());
         assertEquals(88L, result.getFirst().workstations()
                 .getFirst().departments().getFirst().assetId());
         assertEquals("负责学生在线服务端架构与开发", result.getFirst()

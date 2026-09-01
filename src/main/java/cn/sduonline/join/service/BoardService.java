@@ -74,7 +74,8 @@ public class BoardService {
                         new OrganizationDepartmentVO(
                                 row.departmentId(),
                                 row.departmentName(),
-                                row.departmentCampus(),
+                                row.departmentCampuses() == null
+                                        ? List.of() : row.departmentCampuses(),
                                 row.departmentAssetId(),
                                 row.departmentIntroduction()
                         )

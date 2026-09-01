@@ -65,6 +65,7 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
+  type-handlers-package: cn.sduonline.join.mapper
   global-config:
     db-config:
       id-type: input

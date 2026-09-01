@@ -376,7 +376,7 @@ class MapperSqlContractTest {
         assertTrue(memberSql.contains("JOIN workstation w ON w.id = d.workstation_id"));
         assertTrue(treeSql.contains("WHERE b.enabled = 1"));
         assertFalse(treeSql.contains("user_role_scope"));
-        assertTrue(treeSql.contains("d.campus AS department_campus"));
+        assertTrue(treeSql.contains("d.campus AS department_campuses"));
         assertTrue(treeSql.contains("d.asset_id AS department_asset_id"));
         assertTrue(treeSql.contains("d.introduction AS department_introduction"));
         assertFalse(treeSql.contains("d.contact"));

@@ -2504,15 +2504,17 @@ components:
     DepartmentDetailUpdateRequest:
       type: object
       properties:
-        campus:
-          type: string
-          enum:
-          - SOFTWARE_PARK
-          - CENTRAL
-          - QIANFOSHAN
-          - XINGLONGSHAN
-          - HONGJIALOU
-          - BAOTUQUAN
+        campuses:
+          type: array
+          items:
+            type: string
+            enum:
+            - SOFTWARE_PARK
+            - CENTRAL
+            - QIANFOSHAN
+            - XINGLONGSHAN
+            - HONGJIALOU
+            - BAOTUQUAN
         introduction:
           type: string
           maxLength: 10000
@@ -2653,15 +2655,17 @@ components:
           format: int64
         name:
           type: string
-        campus:
-          type: string
-          enum:
-          - SOFTWARE_PARK
-          - CENTRAL
-          - QIANFOSHAN
-          - XINGLONGSHAN
-          - HONGJIALOU
-          - BAOTUQUAN
+        campuses:
+          type: array
+          items:
+            type: string
+            enum:
+            - SOFTWARE_PARK
+            - CENTRAL
+            - QIANFOSHAN
+            - XINGLONGSHAN
+            - HONGJIALOU
+            - BAOTUQUAN
         introduction:
           type: string
         posters:
@@ -3616,15 +3620,17 @@ components:
           format: int64
         name:
           type: string
-        campus:
-          type: string
-          enum:
-          - SOFTWARE_PARK
-          - CENTRAL
-          - QIANFOSHAN
-          - XINGLONGSHAN
-          - HONGJIALOU
-          - BAOTUQUAN
+        campuses:
+          type: array
+          items:
+            type: string
+            enum:
+            - SOFTWARE_PARK
+            - CENTRAL
+            - QIANFOSHAN
+            - XINGLONGSHAN
+            - HONGJIALOU
+            - BAOTUQUAN
         assetId:
           type: integer
           format: int64
@@ -3824,15 +3830,17 @@ components:
     DepartmentDetailPatchRequest:
       type: object
       properties:
-        campus:
-          type: string
-          enum:
-          - SOFTWARE_PARK
-          - CENTRAL
-          - QIANFOSHAN
-          - XINGLONGSHAN
-          - HONGJIALOU
-          - BAOTUQUAN
+        campuses:
+          type: array
+          items:
+            type: string
+            enum:
+            - SOFTWARE_PARK
+            - CENTRAL
+            - QIANFOSHAN
+            - XINGLONGSHAN
+            - HONGJIALOU
+            - BAOTUQUAN
         introduction:
           type: string
           maxLength: 10000
@@ -3891,15 +3899,17 @@ components:
           format: int64
         name:
           type: string
-        campus:
-          type: string
-          enum:
-          - SOFTWARE_PARK
-          - CENTRAL
-          - QIANFOSHAN
-          - XINGLONGSHAN
-          - HONGJIALOU
-          - BAOTUQUAN
+        campuses:
+          type: array
+          items:
+            type: string
+            enum:
+            - SOFTWARE_PARK
+            - CENTRAL
+            - QIANFOSHAN
+            - XINGLONGSHAN
+            - HONGJIALOU
+            - BAOTUQUAN
         assetId:
           type: integer
           format: int64
