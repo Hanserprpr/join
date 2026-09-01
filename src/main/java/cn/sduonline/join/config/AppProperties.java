@@ -78,7 +78,7 @@ public class AppProperties {
         /** MinIO 等服务通常需要 path-style。 */
         private boolean pathStyleAccess = true;
         /** 头像预签名读取 URL 的有效秒数，最长 7 天。 */
-        private long presignedUrlTtlSeconds = 3600;
+        private long presignedUrlTtlSeconds = 86400;
     }
 
     @Data
@@ -100,7 +100,7 @@ public class AppProperties {
         /** 单张海报最大字节数，默认 10 MiB。 */
         private long maxSizeBytes = 10 * 1024 * 1024;
         /** S3 海报预签名读取 URL 的有效秒数，最长 7 天。 */
-        private long presignedUrlTtlSeconds = 3600;
+        private long presignedUrlTtlSeconds = 86400;
         /** 额外允许保存的海报 URL 前缀，多个用英文逗号分隔。 */
         private String allowedUrlPrefixes = "";
 

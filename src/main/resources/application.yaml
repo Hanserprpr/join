@@ -139,7 +139,7 @@ app:
       bucket: ${AVATAR_S3_BUCKET:}
       public-base-url: ${AVATAR_S3_PUBLIC_BASE_URL:}
       path-style-access: ${AVATAR_S3_PATH_STYLE_ACCESS:true}
-      presigned-url-ttl-seconds: ${AVATAR_S3_PRESIGNED_URL_TTL_SECONDS:3600}
+      presigned-url-ttl-seconds: ${AVATAR_S3_PRESIGNED_URL_TTL_SECONDS:86400}
   clamav:
     enabled: ${CLAMAV_ENABLED:false}
     host: ${CLAMAV_HOST:127.0.0.1}
@@ -150,7 +150,7 @@ app:
     local-directory: ${POSTER_LOCAL_DIRECTORY:./data/posters}
     public-base-url: ${POSTER_PUBLIC_BASE_URL:}
     max-size-bytes: ${POSTER_MAX_SIZE_BYTES:10485760}
-    presigned-url-ttl-seconds: ${POSTER_S3_PRESIGNED_URL_TTL_SECONDS:3600}
+    presigned-url-ttl-seconds: ${POSTER_S3_PRESIGNED_URL_TTL_SECONDS:86400}
     allowed-url-prefixes: ${POSTER_ALLOWED_URL_PREFIXES:}
   admission-email:
     enabled: ${ADMISSION_EMAIL_ENABLED:false}
