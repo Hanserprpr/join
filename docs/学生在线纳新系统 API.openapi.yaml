@@ -1732,6 +1732,19 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ResultWorkstationDetailVO"
+  /api/wechat/profile-url:
+    get:
+      tags:
+      - 微信服务号
+      summary: 获取服务号主页链接
+      operationId: profileUrl
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ResultWeChatProfileUrlVO"
   /api/wechat/binding/url:
     get:
       tags:
@@ -4245,6 +4258,24 @@ components:
         timestamp:
           type: integer
           format: int64
+    ResultWeChatProfileUrlVO:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        data:
+          $ref: "#/components/schemas/WeChatProfileUrlVO"
+        msg:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+    WeChatProfileUrlVO:
+      type: object
+      properties:
+        url:
+          type: string
     ResultWeChatBindingStatusVO:
       type: object
       properties:
