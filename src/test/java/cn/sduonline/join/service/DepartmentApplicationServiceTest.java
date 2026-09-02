@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import cn.sduonline.join.data.dto.ApplicationAnswerRequest;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishRequest;
+import cn.sduonline.join.data.dto.AdmissionWeChatRecipient;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.ApplicationStatus;
 import cn.sduonline.join.data.enums.ApplicantApplicationStatus;
@@ -30,6 +31,7 @@ import cn.sduonline.join.mapper.DepartmentQuestionnaireMapper;
 import cn.sduonline.join.mapper.UserMapper;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,13 +48,15 @@ class DepartmentApplicationServiceTest {
     @Mock DepartmentApplicationMapper applicationMapper;
     @Mock UserMapper userMapper;
     @Mock AdmissionEmailService admissionEmailService;
+    @Mock AdmissionWeChatNotificationService admissionWeChatNotificationService;
     private DepartmentApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new DepartmentApplicationService(
                 organizationMapper, questionnaireMapper,
-                applicationMapper, userMapper, admissionEmailService
+                applicationMapper, userMapper, admissionEmailService,
+                admissionWeChatNotificationService
         );
     }
 
@@ -347,8 +351,10 @@ class DepartmentApplicationServiceTest {
 
     @Test
     void publishesDraftAdmissionsAndSendsPersonalizedEmails() {
+        Department department = new Department();
+        department.setName("技术部");
         when(organizationMapper.selectDepartmentById(12L))
-                .thenReturn(new Department());
+                .thenReturn(department);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
         application.setApplicantName("张三");
@@ -358,6 +364,16 @@ class DepartmentApplicationServiceTest {
         when(applicationMapper.publishAdmissionDraftsByIds(
                 12L, List.of(100L)
         )).thenReturn(1);
+        List<AdmissionWeChatRecipient> weChatRecipients = List.of(
+                new AdmissionWeChatRecipient(
+                        100L, "张三", "openid-admitted",
+                        ApplicationStatus.ADMISSION_DRAFT),
+                new AdmissionWeChatRecipient(
+                        101L, "李四", "openid-rejected",
+                        ApplicationStatus.SUBMITTED)
+        );
+        when(applicationMapper.selectAdmissionWeChatRecipients(12L))
+                .thenReturn(weChatRecipients);
         AdmissionPublishRequest request =
                 new AdmissionPublishRequest("录取通知", "恭喜你被录取。");
 
@@ -367,6 +383,9 @@ class DepartmentApplicationServiceTest {
         assertEquals(1, result.data().publishedCount());
         verify(admissionEmailService).enqueue(
                 List.of(application), "录取通知", "恭喜你被录取。"
+        );
+        verify(admissionWeChatNotificationService).sendAfterCommit(
+                "技术部", weChatRecipients, Set.of(100L)
         );
     }
 
@@ -421,6 +440,9 @@ class DepartmentApplicationServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(1, result.data().publishedCount());
         verify(admissionEmailService, never()).enqueue(any(), any(), any());
+        verify(admissionWeChatNotificationService).sendAfterCommit(
+                null, List.of(), Set.of(100L)
+        );
     }
 
     @Test
@@ -445,6 +467,8 @@ class DepartmentApplicationServiceTest {
                 )
         );
         verify(admissionEmailService, never()).enqueue(any(), any(), any());
+        verify(admissionWeChatNotificationService, never())
+                .sendAfterCommit(any(), any(), any());
     }
 
     @Test

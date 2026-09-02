@@ -39,6 +39,9 @@ public class WeChatProperties {
             "";
     private String interviewCallTemplateId =
             "";
+    /** 发布录取结果时向全部已绑定微信的报名者发送。 */
+    private String admissionResultTemplateId =
+            "";
     /**
      * 前端一次发起订阅时展示的订阅通知模板 ID。
      *

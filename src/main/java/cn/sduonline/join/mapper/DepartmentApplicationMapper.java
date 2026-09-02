@@ -1,5 +1,6 @@
 package cn.sduonline.join.mapper;
 
+import cn.sduonline.join.data.dto.AdmissionWeChatRecipient;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswer;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswerOption;
@@ -292,6 +293,28 @@ public interface DepartmentApplicationMapper {
     java.util.List<DepartmentApplication> selectAdmissionDraftsForUpdate(
             @Param("departmentId") Long departmentId
     );
+
+    /**
+     * 取本次发布需要通知的微信用户：拟录取草稿发送“录取”，其余尚未发布结果的
+     * 报名发送“未录取”。已正式录取的历史记录不会重复通知。
+     */
+    @Select("""
+            SELECT a.id AS application_id,
+                   u.name AS applicant_name,
+                   u.wechat_openid,
+                   a.status
+            FROM department_application a
+            JOIN `user` u ON u.cas_id = a.cas_id
+            WHERE a.department_id = #{departmentId}
+              AND a.status IN ('SUBMITTED', 'ADMISSION_DRAFT')
+              AND u.wechat_openid IS NOT NULL
+              AND u.wechat_openid != ''
+            ORDER BY a.id ASC
+            """)
+    java.util.List<AdmissionWeChatRecipient>
+            selectAdmissionWeChatRecipients(
+                    @Param("departmentId") Long departmentId
+            );
 
     @Update("""
             <script>

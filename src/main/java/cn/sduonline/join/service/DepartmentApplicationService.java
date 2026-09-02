@@ -3,6 +3,7 @@ package cn.sduonline.join.service;
 import cn.sduonline.join.data.dto.ApplicationAnswerRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishVO;
+import cn.sduonline.join.data.dto.AdmissionWeChatRecipient;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
@@ -15,6 +16,7 @@ import cn.sduonline.join.data.dto.ApplicationAnswerOptionVO;
 import cn.sduonline.join.data.enums.ApplicationStatus;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.QuestionType;
+import cn.sduonline.join.data.po.Department;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswer;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswerOption;
@@ -46,6 +48,8 @@ public class DepartmentApplicationService {
     private final DepartmentApplicationMapper applicationMapper;
     private final UserMapper userMapper;
     private final AdmissionEmailService admissionEmailService;
+    private final AdmissionWeChatNotificationService
+            admissionWeChatNotificationService;
 
     public ServiceResult<PageVO<DepartmentApplicationSummaryVO>> findApplications(
             Long departmentId,
@@ -156,7 +160,9 @@ public class DepartmentApplicationService {
             Long departmentId,
             AdmissionPublishRequest request
     ) {
-        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+        Department department = organizationMapper.selectDepartmentById(
+                departmentId);
+        if (department == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
         List<DepartmentApplication> drafts =
@@ -171,6 +177,9 @@ public class DepartmentApplicationService {
         List<Long> applicationIds = drafts.stream()
                 .map(DepartmentApplication::getId)
                 .toList();
+        List<AdmissionWeChatRecipient> weChatRecipients =
+                applicationMapper.selectAdmissionWeChatRecipients(
+                        departmentId);
         int published = applicationMapper.publishAdmissionDraftsByIds(
                 departmentId, applicationIds
         );
@@ -184,6 +193,10 @@ public class DepartmentApplicationService {
                     emailRecipients, request.subject(), request.content()
             );
         }
+        admissionWeChatNotificationService.sendAfterCommit(
+                department.getName(), weChatRecipients,
+                Set.copyOf(applicationIds)
+        );
         return ServiceResult.success(new AdmissionPublishVO(published));
     }
 

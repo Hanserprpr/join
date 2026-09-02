@@ -160,7 +160,11 @@
 |---|---|---|
 | PUT | `/api/departments/{departmentId}/applications/{applicationId}/admission` | 标记为拟录取(草稿) |
 | DELETE | `/api/departments/{departmentId}/applications/{applicationId}/admission` | 撤销拟录取草稿 |
-| POST | `/api/departments/{departmentId}/applications/admissions/publish` | 发布本部门全部录取草稿 |
+| POST | `/api/departments/{departmentId}/applications/admissions/publish` | 发布本部门全部录取草稿，并向已绑定微信的报名者发送录取或未录取通知 |
+
+录取发布事务提交后，拟录取草稿对应的报名者收到“录取”通知，其余仍为
+`SUBMITTED` 的报名者收到“未录取”通知。通知使用姓名、面试结果和部门三个
+模板字段；单条微信通知发送失败不会回滚录取发布。
 
 ### check-in:manage — 签到
 

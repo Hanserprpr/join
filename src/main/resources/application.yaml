@@ -185,6 +185,7 @@ app:
     login-state-ttl-seconds: ${WECHAT_LOGIN_STATE_TTL_SECONDS:300}
     binding-template-id: ${WECHAT_BINDING_TEMPLATE_ID:}
     interview-call-template-id: ${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:}
+    admission-result-template-id: ${WECHAT_ADMISSION_RESULT_TEMPLATE_ID:}
     # 已废弃：叫号通知已改用普通模板消息；仅为兼容旧前端保留
     subscribe-template-ids: ${WECHAT_SUBSCRIBE_TEMPLATE_IDS:}
     # 仅为这些前端 Origin 生成 JS-SDK 签名，多个用逗号分隔
