@@ -31,6 +31,8 @@ public class WeChatProperties {
     /** 用户未关注公众号时，扫码/复制链接绑定跳转到的公众号主页。 */
     private String officialAccountProfileUrl =
             "https://mp.weixin.qq.com";
+    /** 公众号「服务器配置」里的 Token，用于校验消息推送签名。 */
+    private String serverToken = "";
     private String loginOauthCallbackUrl =
             "https://i.sdu.edu.cn/recruit/api/wechat/login/callback";
     private String loginResultUrl = "https://i.sdu.edu.cn/recruit";
@@ -97,6 +99,13 @@ public class WeChatProperties {
         if (bindingSessionTtlSeconds < 60 || bindingSessionTtlSeconds > 3600) {
             throw new IllegalStateException(
                     "微信绑定会话有效期必须在 60 到 3600 秒之间");
+        }
+    }
+
+    public void validateServerMessage() {
+        if (serverToken == null || serverToken.isBlank()) {
+            throw new IllegalStateException(
+                    "微信服务器消息推送 Token 未配置，请设置 WECHAT_SERVER_TOKEN");
         }
     }
 

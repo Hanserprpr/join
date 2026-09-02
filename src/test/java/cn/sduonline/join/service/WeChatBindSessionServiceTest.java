@@ -166,6 +166,53 @@ class WeChatBindSessionServiceTest {
                 .isInstanceOf(WeChatNotSubscribedException.class);
 
         verify(bindingService, never()).bindOpenId(any(), any());
+        verify(valueOperations).set(
+                "join:wechat:bind:pending-subscribe:openid-1",
+                token, Duration.ofSeconds(300));
+    }
+
+    @Test
+    void followUpEventCompletesBindingRecordedWhileUnsubscribed() {
+        String token = "wb_scene-token";
+        String sessionKey = "join:wechat:bind:session:" + token;
+        Map<String, String> waiting = Map.of(
+                "casId", "20240001",
+                "browserSessionId", "browser-session-1",
+                "status", "WAITING",
+                "expiresAt", String.valueOf(
+                        NOW.plusSeconds(300).getEpochSecond())
+        );
+        Map<String, String> bound = Map.of(
+                "casId", "20240001",
+                "browserSessionId", "browser-session-1",
+                "status", "BOUND",
+                "expiresAt", String.valueOf(
+                        NOW.plusSeconds(300).getEpochSecond())
+        );
+        when(valueOperations.getAndDelete(
+                "join:wechat:bind:pending-subscribe:openid-1"))
+                .thenReturn(token);
+        when(hashOperations.entries(sessionKey))
+                .thenReturn(waiting, waiting, bound);
+        when(valueOperations.setIfAbsent(
+                "join:wechat:bind:claim:" + token,
+                "openid-1", Duration.ofSeconds(30)))
+                .thenReturn(true);
+
+        service.completeFollowUp("openid-1");
+
+        verify(bindingService).bindOpenId("20240001", "openid-1");
+    }
+
+    @Test
+    void followUpEventWithNoPendingSessionIsNoop() {
+        when(valueOperations.getAndDelete(
+                "join:wechat:bind:pending-subscribe:openid-1"))
+                .thenReturn(null);
+
+        service.completeFollowUp("openid-1");
+
+        verify(bindingService, never()).bindOpenId(any(), any());
     }
 
     @Test

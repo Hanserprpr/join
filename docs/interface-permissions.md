@@ -305,6 +305,8 @@
 | GET | `/api/wechat/binding/callback` | 微信授权回调 |
 | GET | `/api/wechat/bind/start` | 复制到微信打开的扫码绑定 OAuth 入口 |
 | GET | `/api/wechat/bind/oauth/callback` | 扫码绑定 OAuth 回调 |
+| GET | `/api/wechat/mp/callback` | 公众号服务器配置接入校验 |
+| POST | `/api/wechat/mp/callback` | 公众号消息/事件推送（用于关注后自动完成绑定） |
 | GET | `/api/wechat/login/url` | 获取微信内登录授权地址 |
 | GET | `/api/wechat/login/callback` | 已绑定微信登录回调 |
 | GET | `/api/wechat/check-in/entry` | 微信扫码登录并签到 |

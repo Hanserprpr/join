@@ -180,6 +180,8 @@ app:
     binding-session-oauth-callback-url: ${WECHAT_BINDING_SESSION_OAUTH_CALLBACK_URL:https://i.sdu.edu.cn/recruit/api/wechat/bind/oauth/callback}
     # 未关注公众号时，扫码/复制链接绑定跳转到的公众号主页
     official-account-profile-url: "${WECHAT_OFFICIAL_ACCOUNT_PROFILE_URL:https://mp.weixin.qq.com}"
+    # 公众号「设置与开发 → 基本配置 → 服务器配置」里填写的 Token（明文模式）
+    server-token: ${WECHAT_SERVER_TOKEN:}
     login-oauth-callback-url: ${WECHAT_LOGIN_OAUTH_CALLBACK_URL:https://i.sdu.edu.cn/recruit/api/wechat/login/callback}
     login-result-url: ${WECHAT_LOGIN_RESULT_URL:${FRONTEND_URL:https://i.sdu.edu.cn/recruit}}
     login-state-ttl-seconds: ${WECHAT_LOGIN_STATE_TTL_SECONDS:300}

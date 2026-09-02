@@ -38,6 +38,8 @@ public class WeChatBindSessionService {
             "join:wechat:bind:claim:";
     private static final String OAUTH_STATE_KEY_PREFIX =
             "join:wechat:bind:oauth-state:";
+    private static final String PENDING_SUBSCRIBE_KEY_PREFIX =
+            "join:wechat:bind:pending-subscribe:";
     private static final String SCENE_PREFIX = "wb_";
     private static final String STATUS_WAITING = "WAITING";
     private static final String STATUS_BOUND = "BOUND";
@@ -193,6 +195,7 @@ public class WeChatBindSessionService {
                     errorCode, "获取微信用户 OpenID 失败：" + errorMessage);
         }
         if (!bindingService.isSubscribed(response.openid())) {
+            rememberPendingSubscription(token, response.openid());
             throw new WeChatNotSubscribedException("用户尚未关注公众号");
         }
         complete(token, response.openid());
@@ -200,6 +203,39 @@ public class WeChatBindSessionService {
         if (completed == null || !STATUS_BOUND.equals(completed.status())) {
             throw new IllegalStateException("微信绑定会话未能完成");
         }
+    }
+
+    /**
+     * 公众号「关注」事件推送到达时，若该 OpenID 有等待关注的绑定会话，
+     * 直接完成绑定，用户无需重新扫码。
+     */
+    public void completeFollowUp(String openid) {
+        if (!StringUtils.hasText(openid)) {
+            return;
+        }
+        String token = redisTemplate.opsForValue()
+                .getAndDelete(PENDING_SUBSCRIBE_KEY_PREFIX + openid);
+        if (!StringUtils.hasText(token)) {
+            return;
+        }
+        complete(token, openid);
+    }
+
+    /** 记录“已换到 OpenID 但尚未关注”的会话，供关注事件推送到达时续完绑定。 */
+    private void rememberPendingSubscription(String token, String openid) {
+        BindSession session = findSession(token);
+        if (session == null) {
+            return;
+        }
+        long remainingSeconds = session.expiresAt().getEpochSecond()
+                - clock.instant().getEpochSecond();
+        if (remainingSeconds <= 0) {
+            return;
+        }
+        redisTemplate.opsForValue().set(
+                PENDING_SUBSCRIBE_KEY_PREFIX + openid,
+                token,
+                Duration.ofSeconds(remainingSeconds));
     }
 
     /** 一次性 OAuth state 消费后的幂等绑定出口。 */
