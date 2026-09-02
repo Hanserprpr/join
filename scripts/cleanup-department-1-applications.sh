@@ -16,8 +16,8 @@ usage() {
   cat <<'EOF'
 用法: scripts/cleanup-department-1-applications.sh [--env PATH] [--yes]
 
-删除部门 1 的报名、录取邮件、签到、面试和评价数据。
-保留用户、组织、部门、问卷、面试场次和管理员数据。
+删除部门 1 的报名、录取邮件、签到、面试、评价、面试室和面试场次数据。
+保留用户、组织、部门、部门展示资料、问卷和管理员数据，不影响其他部门。
 
 选项:
   --env PATH  从指定的 env 文件读取 DB_URL/DB_USERNAME/DB_PASSWORD
@@ -137,12 +137,21 @@ WHERE department_id = ${department_id};
 SELECT CONCAT('  面试: ', COUNT(*))
 FROM department_interview
 WHERE department_id = ${department_id};
+SELECT CONCAT('  顺延资格: ', COUNT(*))
+FROM department_interview_carryover
+WHERE department_id = ${department_id};
+SELECT CONCAT('  面试室: ', COUNT(*))
+FROM department_interview_room
+WHERE department_id = ${department_id};
+SELECT CONCAT('  面试场次: ', COUNT(*))
+FROM department_interview_session
+WHERE department_id = ${department_id};
 SQL
 
 if [[ "$skip_confirmation" != true ]]; then
   echo
-  read -r -p "此操作会永久删除部门 ${department_id} 的上述数据。请输入 DELETE DEPARTMENT ${department_id} 继续: " confirmation
-  if [[ "$confirmation" != "DELETE DEPARTMENT ${department_id}" ]]; then
+  read -r -p "此操作会永久清理部门 ${department_id} 的上述业务数据（保留部门）。请输入 CLEAN DEPARTMENT ${department_id} 继续: " confirmation
+  if [[ "$confirmation" != "CLEAN DEPARTMENT ${department_id}" ]]; then
     echo "已取消，数据库未修改。"
     exit 0
   fi
@@ -176,11 +185,26 @@ JOIN target_application_ids target ON target.id = i.application_id;
 
 DELETE carryover
 FROM department_interview_carryover carryover
-JOIN target_application_ids target ON target.id = carryover.application_id;
+WHERE carryover.department_id = ${department_id};
 
 DELETE check_in
 FROM department_check_in check_in
-JOIN target_application_ids target ON target.id = check_in.application_id;
+WHERE check_in.department_id = ${department_id};
+
+DELETE room_member
+FROM department_interview_room_member room_member
+JOIN department_interview_room room ON room.id = room_member.room_id
+WHERE room.department_id = ${department_id};
+
+DELETE check_in_sequence
+FROM department_check_in_sequence check_in_sequence
+JOIN department_interview_session session
+  ON session.id = check_in_sequence.session_id
+WHERE session.department_id = ${department_id};
+
+DELETE room
+FROM department_interview_room room
+WHERE room.department_id = ${department_id};
 
 DELETE outbox
 FROM admission_email_outbox outbox
@@ -190,10 +214,14 @@ DELETE application
 FROM department_application application
 JOIN target_application_ids target ON target.id = application.id;
 
+DELETE session
+FROM department_interview_session session
+WHERE session.department_id = ${department_id};
+
 DROP TEMPORARY TABLE target_application_ids;
 
 COMMIT;
 SQL
 
 echo
-echo "清理完成。部门 ${department_id} 的报名、录取及关联流程数据已删除。"
+echo "清理完成。部门 ${department_id} 的报名、录取、面试及场次数据已删除。"

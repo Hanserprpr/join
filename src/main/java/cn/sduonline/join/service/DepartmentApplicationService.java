@@ -204,7 +204,7 @@ public class DepartmentApplicationService {
 
     /**
      * 删除当前用户尚未进入后续流程的报名。
-     * 问卷答案由数据库外键级联删除。
+     * 顺延资格先显式删除，问卷答案由数据库外键级联删除。
      */
     @Transactional
     public ServiceResult<Void> cancelMyApplication(
@@ -224,6 +224,9 @@ public class DepartmentApplicationService {
                         application.getId()) > 0) {
             return ServiceResult.failure(BizCode.APPLICATION_CANNOT_CANCEL);
         }
+        applicationMapper.deleteInterviewCarryoversByApplicationId(
+                application.getId()
+        );
         int deleted = applicationMapper.deleteSubmittedApplication(
                 application.getId(), departmentId, casId);
         if (deleted != 1) {

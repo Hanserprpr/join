@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.InOrder;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -147,7 +149,10 @@ class DepartmentApplicationServiceTest {
         var result = service.cancelMyApplication(12L, "20240001");
 
         assertTrue(result.isSuccess());
-        verify(applicationMapper).deleteSubmittedApplication(
+        InOrder deletionOrder = inOrder(applicationMapper);
+        deletionOrder.verify(applicationMapper)
+                .deleteInterviewCarryoversByApplicationId(100L);
+        deletionOrder.verify(applicationMapper).deleteSubmittedApplication(
                 100L, 12L, "20240001"
         );
     }
@@ -171,6 +176,8 @@ class DepartmentApplicationServiceTest {
         verify(applicationMapper, never()).deleteSubmittedApplication(
                 any(), any(), any()
         );
+        verify(applicationMapper, never())
+                .deleteInterviewCarryoversByApplicationId(any());
     }
 
     @Test
@@ -190,6 +197,8 @@ class DepartmentApplicationServiceTest {
         verify(applicationMapper, never()).deleteSubmittedApplication(
                 any(), any(), any()
         );
+        verify(applicationMapper, never())
+                .deleteInterviewCarryoversByApplicationId(any());
         verify(applicationMapper, never()).countCheckInsByApplicationId(any());
     }
 

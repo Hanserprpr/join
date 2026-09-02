@@ -215,6 +215,14 @@ public interface DepartmentApplicationMapper {
     );
 
     @Delete("""
+            DELETE FROM department_interview_carryover
+            WHERE application_id = #{applicationId}
+            """)
+    int deleteInterviewCarryoversByApplicationId(
+            @Param("applicationId") Long applicationId
+    );
+
+    @Delete("""
             DELETE FROM department_application
             WHERE id = #{applicationId}
               AND department_id = #{departmentId}
