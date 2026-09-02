@@ -3,6 +3,7 @@ package cn.sduonline.join.service;
 import cn.sduonline.join.client.WeChatApiClient;
 import cn.sduonline.join.client.WeChatApiClient.OAuthTokenResponse;
 import cn.sduonline.join.client.WeChatApiException;
+import cn.sduonline.join.client.WeChatNotSubscribedException;
 import cn.sduonline.join.config.WeChatProperties;
 import cn.sduonline.join.data.dto.WeChatBindSessionCreatedVO;
 import cn.sduonline.join.data.dto.WeChatBindSessionStatusVO;
@@ -190,6 +191,9 @@ public class WeChatBindSessionService {
                     ? "微信接口返回空响应" : response.errmsg();
             throw new WeChatApiException(
                     errorCode, "获取微信用户 OpenID 失败：" + errorMessage);
+        }
+        if (!bindingService.isSubscribed(response.openid())) {
+            throw new WeChatNotSubscribedException("用户尚未关注公众号");
         }
         complete(token, response.openid());
         BindSession completed = findSession(token);

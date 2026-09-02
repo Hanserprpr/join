@@ -48,10 +48,16 @@ GET /api/wechat/bind/sessions/{sessionId}
 
 该接口同时校验当前登录用户和创建会话时的浏览器 Session。返回状态：
 
-- `WAITING`：继续轮询。
-- `BOUND`：绑定成功。网页 OAuth 只能确认 OpenID，不能据此确认用户是否关注公众号，
-  因此接口不返回关注状态。
+- `WAITING`：继续轮询。用户扫码/打开链接后若尚未关注公众号，后端会用公众号
+  access_token 查询 `/cgi-bin/user/info` 的 `subscribe` 字段拦截绑定，此时会话
+  仍保持 `WAITING`（不消耗一次性令牌），前端可继续轮询，等待用户关注后重新
+  扫码/打开同一链接即可。
+- `BOUND`：绑定成功（隐含用户已关注公众号）。
 - `FAILED`：微信已绑定其他平台用户等确定性冲突，停止轮询并提示重新操作。
+
+“复制链接，前往微信打开”这条快捷路径（`GET /api/wechat/bind/oauth/callback`）
+在未关注时会直接把浏览器重定向到 `app.wechat.official-account-profile-url`
+配置的公众号主页，引导用户先关注。
 
 页面也应使用本地 `expiresAt` 倒计时；会话过期后接口返回参数错误，此时停止轮询。
 

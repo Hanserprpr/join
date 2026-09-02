@@ -2,6 +2,7 @@ package cn.sduonline.join.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.sduonline.join.client.WeChatNotSubscribedException;
 import cn.sduonline.join.data.dto.WeChatBindSessionCreatedVO;
 import cn.sduonline.join.data.dto.WeChatBindSessionStatusVO;
 import cn.sduonline.join.data.vo.Result;
@@ -68,15 +69,17 @@ public class WeChatBindController {
             @RequestParam String code,
             @RequestParam String state
     ) {
-        boolean success = false;
         try {
             sessionService.completeOAuth(code, state);
-            success = true;
+            return new RedirectView(bindingService.bindingResultUrl(true));
+        } catch (WeChatNotSubscribedException exception) {
+            log.info("WeChat QR binding blocked: user has not followed the official account");
+            return new RedirectView(bindingService.officialAccountProfileUrl());
         } catch (RuntimeException exception) {
             log.warn(
                     "WeChat QR binding OAuth callback failed: {}",
                     exception.getMessage());
+            return new RedirectView(bindingService.bindingResultUrl(false));
         }
-        return new RedirectView(bindingService.bindingResultUrl(success));
     }
 }

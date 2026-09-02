@@ -29,12 +29,15 @@ public class WeChatBindingService {
     private static final String STATE_KEY_PREFIX = "join:wechat:binding:state:";
     private static final DateTimeFormatter BINDING_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final int INVALID_ACCESS_TOKEN = 40014;
+    private static final int EXPIRED_ACCESS_TOKEN = 42001;
 
     private final WeChatApiClient apiClient;
     private final WeChatProperties properties;
     private final StringRedisTemplate redisTemplate;
     private final UserMapper userMapper;
     private final WeChatTemplateMessageService templateMessageService;
+    private final WeChatAccessTokenService accessTokenService;
 
     public String createAuthorizationUrl(String casId) {
         properties.validateBinding();
@@ -147,6 +150,35 @@ public class WeChatBindingService {
                 .build()
                 .encode()
                 .toUriString();
+    }
+
+    public String officialAccountProfileUrl() {
+        return properties.getOfficialAccountProfileUrl();
+    }
+
+    /** 查询该 OpenID 当前是否已关注公众号。 */
+    public boolean isSubscribed(String openid) {
+        if (!StringUtils.hasText(openid)) {
+            throw new IllegalArgumentException("微信 OpenID 为空");
+        }
+
+        WeChatApiClient.UserInfoResponse response =
+                apiClient.getUserInfo(accessTokenService.getAccessToken(), openid);
+        if (hasTokenError(response)) {
+            response = apiClient.getUserInfo(accessTokenService.forceRefresh(), openid);
+        }
+        if (response == null || (response.errcode() != null && response.errcode() != 0)) {
+            Integer code = response == null ? null : response.errcode();
+            String message = response == null ? "微信接口返回空响应" : response.errmsg();
+            throw new WeChatApiException(code, "查询微信关注状态失败：" + message);
+        }
+        return Integer.valueOf(1).equals(response.subscribe());
+    }
+
+    private boolean hasTokenError(WeChatApiClient.UserInfoResponse response) {
+        return response != null && response.errcode() != null
+                && (response.errcode() == INVALID_ACCESS_TOKEN
+                || response.errcode() == EXPIRED_ACCESS_TOKEN);
     }
 
     /**

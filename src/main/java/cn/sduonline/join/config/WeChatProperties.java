@@ -28,6 +28,8 @@ public class WeChatProperties {
     /** 扫码绑定会话从微信网页授权返回的地址。 */
     private String bindingSessionOauthCallbackUrl =
             "https://i.sdu.edu.cn/recruit/api/wechat/bind/oauth/callback";
+    /** 用户未关注公众号时，扫码/复制链接绑定跳转到的公众号主页。 */
+    private String officialAccountProfileUrl = "";
     private String loginOauthCallbackUrl =
             "https://i.sdu.edu.cn/recruit/api/wechat/login/callback";
     private String loginResultUrl = "https://i.sdu.edu.cn/recruit";
@@ -86,6 +88,10 @@ public class WeChatProperties {
             throw new IllegalStateException(
                     "微信扫码绑定入口未配置，请设置 WECHAT_BINDING_ENTRY_URL 和 "
                             + "WECHAT_BINDING_SESSION_OAUTH_CALLBACK_URL");
+        }
+        if (officialAccountProfileUrl == null || officialAccountProfileUrl.isBlank()) {
+            throw new IllegalStateException(
+                    "微信公众号主页地址未配置，请设置 WECHAT_OFFICIAL_ACCOUNT_PROFILE_URL");
         }
         if (bindingSessionTtlSeconds < 60 || bindingSessionTtlSeconds > 3600) {
             throw new IllegalStateException(

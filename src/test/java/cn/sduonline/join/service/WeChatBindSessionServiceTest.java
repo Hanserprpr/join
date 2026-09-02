@@ -2,11 +2,14 @@ package cn.sduonline.join.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.client.WeChatApiClient;
+import cn.sduonline.join.client.WeChatNotSubscribedException;
 import cn.sduonline.join.config.WeChatProperties;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.mapper.UserMapper;
@@ -122,6 +125,7 @@ class WeChatBindSessionServiceTest {
                 .thenReturn(new WeChatApiClient.OAuthTokenResponse(
                         "oauth-token", 7200L, "refresh-token",
                         "openid-1", "snsapi_base", null, null));
+        when(bindingService.isSubscribed("openid-1")).thenReturn(true);
         when(hashOperations.entries(sessionKey))
                 .thenReturn(waiting, waiting, bound);
         when(valueOperations.setIfAbsent(
@@ -134,6 +138,34 @@ class WeChatBindSessionServiceTest {
         verify(bindingService).bindOpenId("20240001", "openid-1");
         verify(valueOperations).getAndDelete(
                 "join:wechat:bind:oauth-state:state-1");
+    }
+
+    @Test
+    void oauthCompletionRejectsUserWhoHasNotFollowedOfficialAccount() {
+        String token = "wb_scene-token";
+        String sessionKey = "join:wechat:bind:session:" + token;
+        Map<String, String> waiting = Map.of(
+                "casId", "20240001",
+                "browserSessionId", "browser-session-1",
+                "status", "WAITING",
+                "expiresAt", String.valueOf(
+                        NOW.plusSeconds(300).getEpochSecond())
+        );
+        when(valueOperations.getAndDelete(
+                "join:wechat:bind:oauth-state:state-1"))
+                .thenReturn(token);
+        when(apiClient.exchangeOAuthCode(
+                "wx-app-id", "app-secret", "code-1"))
+                .thenReturn(new WeChatApiClient.OAuthTokenResponse(
+                        "oauth-token", 7200L, "refresh-token",
+                        "openid-1", "snsapi_base", null, null));
+        when(bindingService.isSubscribed("openid-1")).thenReturn(false);
+        when(hashOperations.entries(sessionKey)).thenReturn(waiting);
+
+        assertThatThrownBy(() -> service.completeOAuth("code-1", "qr_state-1"))
+                .isInstanceOf(WeChatNotSubscribedException.class);
+
+        verify(bindingService, never()).bindOpenId(any(), any());
     }
 
     @Test
@@ -159,6 +191,8 @@ class WeChatBindSessionServiceTest {
                 "https://api.example.com/api/wechat/bind/start");
         properties.setBindingSessionOauthCallbackUrl(
                 "https://api.example.com/api/wechat/bind/oauth/callback");
+        properties.setOfficialAccountProfileUrl(
+                "https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=abc");
         properties.setBindingSessionTtlSeconds(300);
         return properties;
     }

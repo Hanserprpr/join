@@ -83,6 +83,19 @@ public class WeChatApiClient {
         return readJson(responseBody, TemplateSendResponse.class, "发送订阅通知");
     }
 
+    public UserInfoResponse getUserInfo(String accessToken, String openid) {
+        String responseBody = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/cgi-bin/user/info")
+                        .queryParam("access_token", accessToken)
+                        .queryParam("openid", openid)
+                        .queryParam("lang", "zh_CN")
+                        .build())
+                .retrieve()
+                .body(String.class);
+        return readJson(responseBody, UserInfoResponse.class, "查询用户信息");
+    }
+
     public OAuthTokenResponse exchangeOAuthCode(
             String appId, String appSecret, String code) {
         String responseBody = restClient.get()
@@ -167,6 +180,13 @@ public class WeChatApiClient {
             Integer errcode,
             String errmsg,
             @JsonProperty("msgid") Long messageId) {
+    }
+
+    public record UserInfoResponse(
+            Integer subscribe,
+            String openid,
+            Integer errcode,
+            String errmsg) {
     }
 
     public record OAuthTokenResponse(

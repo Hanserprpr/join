@@ -27,6 +27,7 @@ class WeChatBindingServiceTest {
     private ValueOperations<String, String> valueOperations;
     private UserMapper userMapper;
     private WeChatTemplateMessageService templateMessageService;
+    private WeChatAccessTokenService accessTokenService;
     private WeChatBindingService service;
     private WeChatProperties properties;
 
@@ -38,6 +39,7 @@ class WeChatBindingServiceTest {
         valueOperations = mock(ValueOperations.class);
         userMapper = mock(UserMapper.class);
         templateMessageService = mock(WeChatTemplateMessageService.class);
+        accessTokenService = mock(WeChatAccessTokenService.class);
         properties = new WeChatProperties();
         properties.setAppId("wx-app-id");
         properties.setAppSecret("app-secret");
@@ -48,7 +50,7 @@ class WeChatBindingServiceTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         service = new WeChatBindingService(
                 apiClient, properties, redisTemplate, userMapper,
-                templateMessageService);
+                templateMessageService, accessTokenService);
     }
 
     @Test
@@ -127,6 +129,33 @@ class WeChatBindingServiceTest {
         verify(userMapper, never()).updateById(any(User.class));
         verify(templateMessageService, never()).send(
                 any(), any(), any());
+    }
+
+    @Test
+    void reportsFollowStatusFromWeChatUserInfo() {
+        when(accessTokenService.getAccessToken()).thenReturn("global-token");
+        when(apiClient.getUserInfo("global-token", "openid-1"))
+                .thenReturn(new WeChatApiClient.UserInfoResponse(1, "openid-1", 0, "ok"));
+
+        assertThat(service.isSubscribed("openid-1")).isTrue();
+
+        when(apiClient.getUserInfo("global-token", "openid-2"))
+                .thenReturn(new WeChatApiClient.UserInfoResponse(0, "openid-2", 0, "ok"));
+
+        assertThat(service.isSubscribed("openid-2")).isFalse();
+    }
+
+    @Test
+    void retriesFollowStatusLookupOnExpiredAccessToken() {
+        when(accessTokenService.getAccessToken()).thenReturn("stale-token");
+        when(accessTokenService.forceRefresh()).thenReturn("fresh-token");
+        when(apiClient.getUserInfo("stale-token", "openid-1"))
+                .thenReturn(new WeChatApiClient.UserInfoResponse(
+                        null, null, 42001, "access_token expired"));
+        when(apiClient.getUserInfo("fresh-token", "openid-1"))
+                .thenReturn(new WeChatApiClient.UserInfoResponse(1, "openid-1", 0, "ok"));
+
+        assertThat(service.isSubscribed("openid-1")).isTrue();
     }
 
     private User user(String casId, String openId) {
