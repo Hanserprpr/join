@@ -54,7 +54,7 @@ public class UserService {
     }
 
     /**
-     * 根据 OIDC claims 创建本地用户；学号已存在时不修改数据库。
+     * 根据 OIDC claims 创建本地用户。
      * <p>
      * 身份字段来自 IdP：{@code sub}、{@code name}、{@code casID}。
      * 资料字段（邮箱、手机、学院等）不由 IdP 提供，留给用户后续补全。
@@ -71,16 +71,19 @@ public class UserService {
         LocalDateTime now = LocalDateTime.now();
         User existing = userMapper.selectById(casId);
         if (existing != null) {
+            normalizeRestrictedAccount(existing, now);
             return existing;
         }
 
         User created = new User();
         created.setSub(sub);
-        created.setName(name);
+        created.setName(StudentAccountPolicy.requiresPrimaryAccount(casId)
+                ? StudentAccountPolicy.PRIMARY_ACCOUNT_REQUIRED_NAME
+                : name);
         created.setCasId(casId);
-            created.setEmail(null);
-            created.setPhone(null);
-            created.setProfileCompleted(false);
+        created.setEmail(null);
+        created.setPhone(null);
+        created.setProfileCompleted(false);
         created.setCreatedAt(now);
         created.setUpdatedAt(now);
         userMapper.insert(created);
@@ -89,7 +92,7 @@ public class UserService {
     }
 
     /**
-     * 根据可信外部系统身份按学号创建用户；已存在时不修改数据库。
+     * 根据可信外部系统身份按学号创建用户。
      */
     @Transactional
     public User syncFromExternal(ExternalStudentIdentity identity) {
@@ -98,12 +101,15 @@ public class UserService {
         User existing = userMapper.selectById(casId);
 
         if (existing != null) {
+            normalizeRestrictedAccount(existing, now);
             return existing;
         }
 
         User created = new User();
         created.setCasId(casId);
-        created.setName(identity.name().trim());
+        created.setName(StudentAccountPolicy.requiresPrimaryAccount(casId)
+                ? StudentAccountPolicy.PRIMARY_ACCOUNT_REQUIRED_NAME
+                : identity.name().trim());
         created.setCollege(identity.college().trim());
         created.setMajor(identity.major().trim());
         created.setEmail(null);
@@ -145,6 +151,9 @@ public class UserService {
         if (user == null) {
             return ServiceResult.failure(BizCode.USER_NOT_FOUND);
         }
+        if (StudentAccountPolicy.requiresPrimaryAccount(casId)) {
+            return ServiceResult.failure(BizCode.PROFILE_UPDATE_FORBIDDEN);
+        }
         ServiceResult<User> validation = validateCollegeMajor(user, request);
         if (validation != null) {
             return validation;
@@ -173,6 +182,18 @@ public class UserService {
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
         return ServiceResult.success(user);
+    }
+
+    /** 登录时同步修正历史非主修账号的展示姓名。 */
+    private void normalizeRestrictedAccount(User user, LocalDateTime now) {
+        if (!StudentAccountPolicy.requiresPrimaryAccount(user.getCasId())
+                || StudentAccountPolicy.PRIMARY_ACCOUNT_REQUIRED_NAME.equals(
+                        user.getName())) {
+            return;
+        }
+        user.setName(StudentAccountPolicy.PRIMARY_ACCOUNT_REQUIRED_NAME);
+        user.setUpdatedAt(now);
+        userMapper.updateById(user);
     }
 
     /**

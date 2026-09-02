@@ -31,6 +31,9 @@ public class AvatarService {
         if (user == null) {
             return ServiceResult.failure(BizCode.USER_NOT_FOUND);
         }
+        if (StudentAccountPolicy.requiresPrimaryAccount(casId)) {
+            return ServiceResult.failure(BizCode.PROFILE_UPDATE_FORBIDDEN);
+        }
 
         AvatarFileType fileType = avatarFileValidator.validate(file);
         clamAvScanner.scan(file);

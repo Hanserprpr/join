@@ -91,6 +91,32 @@ class UserServiceTest {
     }
 
     @Test
+    void syncFromOidc_marksNewAccountContainingLettersAsRestricted() {
+        when(userMapper.selectById("2024A001")).thenReturn(null);
+
+        User result = userService.syncFromOidc(
+                oidcUser("sub-001", "张三", "2024A001"));
+
+        assertEquals("请使用主修账号进入", result.getName());
+        verify(userMapper).insert(result);
+    }
+
+    @Test
+    void syncFromOidc_correctsPreviouslyRegisteredAccountContainingLetters() {
+        User existing = new User();
+        existing.setCasId("2024a001");
+        existing.setName("历史姓名");
+        when(userMapper.selectById("2024a001")).thenReturn(existing);
+
+        User result = userService.syncFromOidc(
+                oidcUser("sub-001", "新姓名", "2024a001"));
+
+        assertEquals("请使用主修账号进入", result.getName());
+        assertNotNull(result.getUpdatedAt());
+        verify(userMapper).updateById(existing);
+    }
+
+    @Test
     void syncFromOidc_requiresCasIdClaim() {
         Map<String, Object> claims = baseClaims("sub-001", "张三");
         // no casID
@@ -113,6 +139,18 @@ class UserServiceTest {
         assertEquals("软件学院", result.getCollege());
         assertEquals("软件工程", result.getMajor());
         verify(userMapper).insert(any(User.class));
+    }
+
+    @Test
+    void syncFromExternal_marksAccountContainingLettersAsRestricted() {
+        when(userMapper.selectById("fx20240001")).thenReturn(null);
+
+        User result = userService.syncFromExternal(new ExternalStudentIdentity(
+                "fx20240001", "张三", "软件学院", "软件工程"
+        ));
+
+        assertEquals("请使用主修账号进入", result.getName());
+        verify(userMapper).insert(result);
     }
 
     @Test
@@ -141,6 +179,22 @@ class UserServiceTest {
         assertEquals(null, result.getQq());
         assertEquals(true, result.getProfileCompleted());
         verify(userMapper).updateById(user);
+    }
+
+    @Test
+    void updateContactRejectsAccountContainingLetters() {
+        User user = new User();
+        user.setCasId("2024A001");
+        when(userMapper.selectById("2024A001")).thenReturn(user);
+
+        ServiceResult<User> outcome = userService.updateContact(
+                "2024A001",
+                new ContactUpdateRequest(
+                        null, "13900000000", null, null, null, null)
+        );
+
+        assertEquals(BizCode.PROFILE_UPDATE_FORBIDDEN, outcome.error());
+        verify(userMapper, never()).updateById(any(User.class));
     }
 
     @Test

@@ -62,6 +62,8 @@ public enum BizCode {
     AVATAR_TOO_LARGE(130013, "图片文件过大"),
     /** 头像文件被病毒扫描服务判定为恶意文件。 */
     AVATAR_MALWARE_DETECTED(130014, "头像文件未通过安全扫描"),
+    /** 当前账号不允许修改个人资料。 */
+    PROFILE_UPDATE_FORBIDDEN(130015, "请使用主修账号进入"),
 
     // ---------- 14xxxx 纳新业务错误 ----------
     /** 操作失败。 */
