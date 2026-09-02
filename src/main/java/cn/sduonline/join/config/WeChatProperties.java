@@ -29,7 +29,8 @@ public class WeChatProperties {
     private String bindingSessionOauthCallbackUrl =
             "https://i.sdu.edu.cn/recruit/api/wechat/bind/oauth/callback";
     /** 用户未关注公众号时，扫码/复制链接绑定跳转到的公众号主页。 */
-    private String officialAccountProfileUrl = "";
+    private String officialAccountProfileUrl =
+            "https://mp.weixin.qq.com";
     private String loginOauthCallbackUrl =
             "https://i.sdu.edu.cn/recruit/api/wechat/login/callback";
     private String loginResultUrl = "https://i.sdu.edu.cn/recruit";
