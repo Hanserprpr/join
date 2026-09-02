@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,7 +111,15 @@ public class UserService {
         created.setProfileCompleted(false);
         created.setCreatedAt(now);
         created.setUpdatedAt(now);
-        userMapper.insert(created);
+        try {
+            userMapper.insert(created);
+        } catch (DuplicateKeyException e) {
+            User concurrentlyCreated = userMapper.selectById(casId);
+            if (concurrentlyCreated == null) {
+                throw e;
+            }
+            return concurrentlyCreated;
+        }
         log.info("Created local user from external identity, casId={}", casId);
         return created;
     }
