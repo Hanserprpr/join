@@ -82,7 +82,7 @@ class DepartmentCheckInServiceTest {
 
         assertTrue(result.isSuccess());
         assertTrue(result.data().content().startsWith(
-                "http://localhost:8080/api/wechat/check-in/entry?token="));
+                "https://i.sdu.edu.cn/recruit/api/wechat/check-in/entry?token="));
         assertEquals(89, result.data().refreshAfterSeconds());
         verify(valueOperations).set(
                 any(), eq("12:30"), eq(Duration.ofSeconds(90))

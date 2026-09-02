@@ -156,13 +156,13 @@ app:
     enabled: ${ADMISSION_EMAIL_ENABLED:false}
     poll-delay-ms: ${ADMISSION_EMAIL_POLL_DELAY_MS:5000}
   # 登录成功后回跳的前端地址
-  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  frontend-url: ${FRONTEND_URL:https://i.sdu.edu.cn/recruit}
   # 允许的跨域来源，多个用逗号分隔
-  cors-allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  cors-allowed-origins: ${CORS_ORIGINS:https://i.sdu.edu.cn}
   check-in:
     token-ttl-seconds: ${CHECK_IN_TOKEN_TTL_SECONDS:8}
-    entry-url: ${CHECK_IN_ENTRY_URL:http://localhost:8080/api/wechat/check-in/entry}
-    result-url: ${CHECK_IN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}/check-in}
+    entry-url: ${CHECK_IN_ENTRY_URL:https://i.sdu.edu.cn/recruit/api/wechat/check-in/entry}
+    result-url: ${CHECK_IN_RESULT_URL:${FRONTEND_URL:https://i.sdu.edu.cn/recruit}/check-in}
     oauth-state-ttl-seconds: ${CHECK_IN_OAUTH_STATE_TTL_SECONDS:120}
   external-identity:
     base-url: ${EXTERNAL_IDENTITY_BASE_URL:https://i.sdu.edu.cn}
@@ -170,23 +170,23 @@ app:
   wechat:
     app-id: ${WECHAT_APP_ID:}
     app-secret: ${WECHAT_APP_SECRET:}
-    oauth-callback-url: ${WECHAT_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/binding/callback}
-    binding-result-url: ${WECHAT_BINDING_RESULT_URL:http://localhost:5173/wechat-binding}
+    oauth-callback-url: ${WECHAT_OAUTH_CALLBACK_URL:https://i.sdu.edu.cn/recruit/api/wechat/binding/callback}
+    binding-result-url: ${WECHAT_BINDING_RESULT_URL:https://i.sdu.edu.cn/recruit/wechat-binding}
     binding-state-ttl-seconds: ${WECHAT_BINDING_STATE_TTL_SECONDS:600}
     # 普通浏览器绑定链接默认 5 分钟有效；二维码由前端根据链接生成
     binding-session-ttl-seconds: ${WECHAT_BINDING_SESSION_TTL_SECONDS:300}
     # 前端生成二维码和“复制链接，前往微信打开”共同使用的后端入口
-    binding-entry-url: ${WECHAT_BINDING_ENTRY_URL:${FRONTEND_URL:http://localhost:5173}/api/wechat/bind/start}
-    binding-session-oauth-callback-url: ${WECHAT_BINDING_SESSION_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/bind/oauth/callback}
-    login-oauth-callback-url: ${WECHAT_LOGIN_OAUTH_CALLBACK_URL:http://localhost:8080/api/wechat/login/callback}
-    login-result-url: ${WECHAT_LOGIN_RESULT_URL:${FRONTEND_URL:http://localhost:5173}}
+    binding-entry-url: ${WECHAT_BINDING_ENTRY_URL:${FRONTEND_URL:https://i.sdu.edu.cn/recruit}/api/wechat/bind/start}
+    binding-session-oauth-callback-url: ${WECHAT_BINDING_SESSION_OAUTH_CALLBACK_URL:https://i.sdu.edu.cn/recruit/api/wechat/bind/oauth/callback}
+    login-oauth-callback-url: ${WECHAT_LOGIN_OAUTH_CALLBACK_URL:https://i.sdu.edu.cn/recruit/api/wechat/login/callback}
+    login-result-url: ${WECHAT_LOGIN_RESULT_URL:${FRONTEND_URL:https://i.sdu.edu.cn/recruit}}
     login-state-ttl-seconds: ${WECHAT_LOGIN_STATE_TTL_SECONDS:300}
     binding-template-id: ${WECHAT_BINDING_TEMPLATE_ID:}
     interview-call-template-id: ${WECHAT_INTERVIEW_CALL_TEMPLATE_ID:}
     # 已废弃：叫号通知已改用普通模板消息；仅为兼容旧前端保留
     subscribe-template-ids: ${WECHAT_SUBSCRIBE_TEMPLATE_IDS:}
     # 仅为这些前端 Origin 生成 JS-SDK 签名，多个用逗号分隔
-    js-sdk-allowed-origins: ${WECHAT_JS_SDK_ALLOWED_ORIGINS:${FRONTEND_URL:http://localhost:5173}}
+    js-sdk-allowed-origins: ${WECHAT_JS_SDK_ALLOWED_ORIGINS:${FRONTEND_URL:https://i.sdu.edu.cn/recruit}}
     ticket-refresh-ahead-seconds: ${WECHAT_TICKET_REFRESH_AHEAD_SECONDS:300}
     system-name: ${WECHAT_SYSTEM_NAME:学生在线纳新系统}
     # access_token 默认有效 7200 秒，提前刷新以避免临界时间请求失败

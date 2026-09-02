@@ -17,12 +17,12 @@ public class AppProperties {
     /**
      * OIDC 登录成功后回跳的前端地址。
      */
-    private String frontendUrl = "http://localhost:5173";
+    private String frontendUrl = "https://i.sdu.edu.cn/recruit";
 
     /**
      * 允许的跨域来源，多个用英文逗号分隔。
      */
-    private String corsAllowedOrigins = "http://localhost:5173";
+    private String corsAllowedOrigins = "https://i.sdu.edu.cn";
 
     private ExternalIdentity externalIdentity = new ExternalIdentity();
     private CheckIn checkIn = new CheckIn();
@@ -118,9 +118,9 @@ public class AppProperties {
         private long tokenTtlSeconds = 8;
         /** 微信扫码时先进入的后端公网地址。 */
         private String entryUrl =
-                "http://localhost:8080/api/wechat/check-in/entry";
+                "https://i.sdu.edu.cn/recruit/api/wechat/check-in/entry";
         /** 签到或微信登录完成后的前端结果页。 */
-        private String resultUrl = "http://localhost:5173/check-in";
+        private String resultUrl = "https://i.sdu.edu.cn/recruit/check-in";
         /** 扫码后允许完成微信 OAuth 的最长时间。 */
         private long oauthStateTtlSeconds = 120;
     }

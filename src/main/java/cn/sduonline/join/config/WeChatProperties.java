@@ -16,21 +16,21 @@ public class WeChatProperties {
     private String appId = "";
     private String appSecret = "";
     private String oauthCallbackUrl =
-            "http://localhost:8080/api/wechat/binding/callback";
+            "https://i.sdu.edu.cn/recruit/api/wechat/binding/callback";
     private String bindingResultUrl =
-            "http://localhost:5173/wechat-binding";
+            "https://i.sdu.edu.cn/recruit/wechat-binding";
     private long bindingStateTtlSeconds = 600;
     /** 普通浏览器一次性绑定链接的有效期。 */
     private int bindingSessionTtlSeconds = 300;
     /** 复制到微信中打开的绑定入口，默认基于前端地址拼接（需反向代理转发 /api）。 */
     private String bindingEntryUrl =
-            "http://localhost:5173/api/wechat/bind/start";
+            "https://i.sdu.edu.cn/recruit/api/wechat/bind/start";
     /** 扫码绑定会话从微信网页授权返回的地址。 */
     private String bindingSessionOauthCallbackUrl =
-            "http://localhost:8080/api/wechat/bind/oauth/callback";
+            "https://i.sdu.edu.cn/recruit/api/wechat/bind/oauth/callback";
     private String loginOauthCallbackUrl =
-            "http://localhost:8080/api/wechat/login/callback";
-    private String loginResultUrl = "http://localhost:5173";
+            "https://i.sdu.edu.cn/recruit/api/wechat/login/callback";
+    private String loginResultUrl = "https://i.sdu.edu.cn/recruit";
     private long loginStateTtlSeconds = 300;
     private String bindingTemplateId =
             "";
