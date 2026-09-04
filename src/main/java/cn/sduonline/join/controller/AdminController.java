@@ -171,7 +171,8 @@ public class AdminController {
 
     /**
      * 查询一个组织节点的有效角色授权成员。
-     * 返回记录保留原始作用域，包含直接授权、上下级继承授权和 ALL 授权。
+     * 返回记录保留原始作用域，包含直接授权和上下级继承授权，
+     * 不包含平台管理员。
      */
     @GetMapping("/role-assignments")
     @SaCheckLogin

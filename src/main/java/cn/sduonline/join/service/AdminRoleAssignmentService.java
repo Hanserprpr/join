@@ -34,7 +34,7 @@ public class AdminRoleAssignmentService {
      * 查询与目标组织有关的角色授权成员。
      * <p>
      * 返回的每一条数据保留原始身份作用域；成员既可能是该节点或下级的直接授权，
-     * 也可能是覆盖该节点的上级或 ALL 授权。
+     * 也可能是覆盖该节点的上级授权。平台管理员不作为成员返回。
      *
      * @param operatorCasId 当前操作人学号
      * @param scopeType 要查看的组织类型

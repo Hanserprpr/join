@@ -72,7 +72,7 @@
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/api/admin/role-assignments?scopeType=BOARD|WORKSTATION|DEPARTMENT&scopeId={id}` | 查询与目标节点有关的有效成员授权；需要操作者作用域覆盖该节点 |
+| GET | `/api/admin/role-assignments?scopeType=BOARD|WORKSTATION|DEPARTMENT&scopeId={id}` | 查询与目标节点有关的有效成员授权；需要操作者作用域覆盖该节点。不返回 `SYSTEM_ADMIN`，结果按角色等级从高到低排序 |
 | GET | `/api/admin/users?casId={keyword}` | 按学号模糊匹配本地用户，至少输入 6 位，最多 20 条；过短或空输入返回空数组 |
 
 `GET /api/admin/users` 只做学号联想、最多 20 条,刻意不支持翻页,避免下级管理员把

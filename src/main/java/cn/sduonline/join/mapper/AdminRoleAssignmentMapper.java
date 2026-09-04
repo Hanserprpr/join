@@ -137,9 +137,10 @@ public interface AdminRoleAssignmentMapper {
     );
 
     /**
-     * 查询与目标组织有关的有效成员授权：包括该节点及下级的直接授权、
-     * 覆盖该节点的上级授权，以及平台全局授权。响应保留原始作用域，
-     * 使调用方能区分继承授权和直接授权。
+     * 查询与目标组织有关的有效成员授权：包括该节点及下级的直接授权和
+     * 覆盖该节点的上级授权。响应保留原始作用域，使调用方能区分继承授权
+     * 和直接授权。平台管理员（{@code SYSTEM_ADMIN}）不在成员列表中出现。
+     * 结果按角色等级从高到低排序，同一等级内按姓名、学号排列。
      */
     @Select("""
             SELECT s.id AS id,
@@ -194,80 +195,90 @@ public interface AdminRoleAssignmentMapper {
               ON department_workstation.id = scope_department.workstation_id
             LEFT JOIN board department_board
               ON department_board.id = department_workstation.board_id
-            WHERE s.scope_type = 'ALL'
-               OR (
-                    #{targetScopeType} = 'BOARD'
-                    AND (
-                        (s.scope_type = 'BOARD' AND s.scope_id = #{targetScopeId})
-                        OR (
-                            s.scope_type = 'WORKSTATION'
-                            AND EXISTS (
-                                SELECT 1 FROM workstation w
-                                WHERE w.id = s.scope_id
-                                  AND w.board_id = #{targetScopeId}
-                            )
-                        )
-                        OR (
-                            s.scope_type = 'DEPARTMENT'
-                            AND EXISTS (
-                                SELECT 1
-                                FROM department d
-                                JOIN workstation w ON w.id = d.workstation_id
-                                WHERE d.id = s.scope_id
-                                  AND w.board_id = #{targetScopeId}
-                            )
-                        )
+            WHERE r.code <> 'SYSTEM_ADMIN'
+              AND (
+                    s.scope_type = 'ALL'
+                    OR (
+                         #{targetScopeType} = 'BOARD'
+                         AND (
+                             (s.scope_type = 'BOARD' AND s.scope_id = #{targetScopeId})
+                             OR (
+                                 s.scope_type = 'WORKSTATION'
+                                 AND EXISTS (
+                                     SELECT 1 FROM workstation w
+                                     WHERE w.id = s.scope_id
+                                       AND w.board_id = #{targetScopeId}
+                                 )
+                             )
+                             OR (
+                                 s.scope_type = 'DEPARTMENT'
+                                 AND EXISTS (
+                                     SELECT 1
+                                     FROM department d
+                                     JOIN workstation w ON w.id = d.workstation_id
+                                     WHERE d.id = s.scope_id
+                                       AND w.board_id = #{targetScopeId}
+                                 )
+                             )
+                         )
                     )
-               )
-               OR (
-                    #{targetScopeType} = 'WORKSTATION'
-                    AND (
-                        (s.scope_type = 'WORKSTATION'
-                            AND s.scope_id = #{targetScopeId})
-                        OR (
-                            s.scope_type = 'BOARD'
-                            AND EXISTS (
-                                SELECT 1 FROM workstation w
-                                WHERE w.id = #{targetScopeId}
-                                  AND w.board_id = s.scope_id
-                            )
-                        )
-                        OR (
-                            s.scope_type = 'DEPARTMENT'
-                            AND EXISTS (
-                                SELECT 1 FROM department d
-                                WHERE d.id = s.scope_id
-                                  AND d.workstation_id = #{targetScopeId}
-                            )
-                        )
+                    OR (
+                         #{targetScopeType} = 'WORKSTATION'
+                         AND (
+                             (s.scope_type = 'WORKSTATION'
+                                 AND s.scope_id = #{targetScopeId})
+                             OR (
+                                 s.scope_type = 'BOARD'
+                                 AND EXISTS (
+                                     SELECT 1 FROM workstation w
+                                     WHERE w.id = #{targetScopeId}
+                                       AND w.board_id = s.scope_id
+                                 )
+                             )
+                             OR (
+                                 s.scope_type = 'DEPARTMENT'
+                                 AND EXISTS (
+                                     SELECT 1 FROM department d
+                                     WHERE d.id = s.scope_id
+                                       AND d.workstation_id = #{targetScopeId}
+                                 )
+                             )
+                         )
                     )
-               )
-               OR (
-                    #{targetScopeType} = 'DEPARTMENT'
-                    AND (
-                        (s.scope_type = 'DEPARTMENT'
-                            AND s.scope_id = #{targetScopeId})
-                        OR (
-                            s.scope_type = 'WORKSTATION'
-                            AND EXISTS (
-                                SELECT 1 FROM department d
-                                WHERE d.id = #{targetScopeId}
-                                  AND d.workstation_id = s.scope_id
-                            )
-                        )
-                        OR (
-                            s.scope_type = 'BOARD'
-                            AND EXISTS (
-                                SELECT 1
-                                FROM department d
-                                JOIN workstation w ON w.id = d.workstation_id
-                                WHERE d.id = #{targetScopeId}
-                                  AND w.board_id = s.scope_id
-                            )
-                        )
+                    OR (
+                         #{targetScopeType} = 'DEPARTMENT'
+                         AND (
+                             (s.scope_type = 'DEPARTMENT'
+                                 AND s.scope_id = #{targetScopeId})
+                             OR (
+                                 s.scope_type = 'WORKSTATION'
+                                 AND EXISTS (
+                                     SELECT 1 FROM department d
+                                     WHERE d.id = #{targetScopeId}
+                                       AND d.workstation_id = s.scope_id
+                                 )
+                             )
+                             OR (
+                                 s.scope_type = 'BOARD'
+                                 AND EXISTS (
+                                     SELECT 1
+                                     FROM department d
+                                     JOIN workstation w ON w.id = d.workstation_id
+                                     WHERE d.id = #{targetScopeId}
+                                       AND w.board_id = s.scope_id
+                                 )
+                             )
+                         )
                     )
-               )
-            ORDER BY u.name ASC, u.cas_id ASC, r.code ASC,
+              )
+            ORDER BY CASE r.code
+                       WHEN 'BOARD_ADMIN' THEN 40
+                       WHEN 'WORKSTATION_ADMIN' THEN 30
+                       WHEN 'DEPARTMENT_ADMIN' THEN 20
+                       WHEN 'DEPARTMENT_ASSISTANT' THEN 10
+                       ELSE 0
+                     END DESC,
+                     u.name ASC, u.cas_id ASC, r.code ASC,
                      s.scope_type ASC, s.scope_id ASC, s.id ASC
             """)
     List<RoleAssignmentMemberVO> selectMembersByScope(

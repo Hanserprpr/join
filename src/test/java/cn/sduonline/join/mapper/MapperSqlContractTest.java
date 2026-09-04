@@ -420,7 +420,7 @@ class MapperSqlContractTest {
     }
 
     @Test
-    void roleAssignmentMemberLookupKeepsInheritedAndGlobalAssignments()
+    void roleAssignmentMemberLookupKeepsInheritedAndExcludesSystemAdmin()
             throws NoSuchMethodException {
         Method members = AdminRoleAssignmentMapper.class.getMethod(
                 "selectMembersByScope", String.class, Long.class
@@ -435,6 +435,10 @@ class MapperSqlContractTest {
         String searchSql = sql(search.getAnnotation(Select.class).value());
         String treeSql = sql(tree.getAnnotation(Select.class).value());
 
+        assertTrue(memberSql.contains("WHERE r.code <> 'SYSTEM_ADMIN'"));
+        assertTrue(memberSql.contains("ORDER BY CASE r.code"));
+        assertTrue(memberSql.contains("WHEN 'BOARD_ADMIN' THEN 40"));
+        assertTrue(memberSql.contains("END DESC,"));
         assertTrue(memberSql.contains("s.scope_type = 'ALL'"));
         assertTrue(memberSql.contains("#{targetScopeType} = 'DEPARTMENT'"));
         assertTrue(memberSql.contains("JOIN workstation w ON w.id = d.workstation_id"));
