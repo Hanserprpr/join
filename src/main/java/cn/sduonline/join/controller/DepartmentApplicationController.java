@@ -230,10 +230,12 @@ public class DepartmentApplicationController {
     }
 
     /**
-     * 提交部门报名及问卷答案
+     * 提交部门报名及问卷答案。
+     * <p>
+     * 部门未配置报名问卷时不允许报名。
      *
      * @param departmentId 部门 ID
-     * @param request 问卷答案，无问卷时可为空
+     * @param request 问卷答案，问卷全部为选填时可为空
      * @return 创建后的报名记录
      */
     @PostMapping("/{departmentId}/applications")

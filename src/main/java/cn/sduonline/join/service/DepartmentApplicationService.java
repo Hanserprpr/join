@@ -307,6 +307,9 @@ public class DepartmentApplicationService {
 
         List<DepartmentQuestion> questions =
                 questionnaireMapper.selectQuestions(departmentId);
+        if (questions.isEmpty()) {
+            return ServiceResult.failure(BizCode.QUESTIONNAIRE_NOT_CONFIGURED);
+        }
         List<ApplicationAnswerRequest> answers =
                 request.answers() == null ? List.of() : request.answers();
         if (!answersAreValid(questions, answers)) {
@@ -341,9 +344,6 @@ public class DepartmentApplicationService {
             List<DepartmentQuestion> questions,
             List<ApplicationAnswerRequest> answers
     ) {
-        if (questions.isEmpty()) {
-            return answers.isEmpty();
-        }
         Map<Long, ApplicationAnswerRequest> answersByQuestion = new HashMap<>();
         for (ApplicationAnswerRequest answer : answers) {
             if (answer.questionId() == null

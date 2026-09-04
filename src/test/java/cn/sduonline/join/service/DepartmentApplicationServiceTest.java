@@ -61,9 +61,23 @@ class DepartmentApplicationServiceTest {
     }
 
     @Test
-    void submitsDirectlyWhenDepartmentHasNoQuestionnaire() {
+    void rejectsSubmitWhenDepartmentHasNoQuestionnaire() {
         prepareEligibleUser();
         when(questionnaireMapper.selectQuestions(12L)).thenReturn(List.of());
+
+        var result = service.submit(
+                12L, "20240001", new DepartmentApplicationRequest(null)
+        );
+
+        assertEquals(BizCode.QUESTIONNAIRE_NOT_CONFIGURED, result.error());
+        verify(applicationMapper, never()).insertApplication(any());
+    }
+
+    @Test
+    void submitsWithoutAnswersWhenAllQuestionsAreOptional() {
+        prepareEligibleUser();
+        when(questionnaireMapper.selectQuestions(12L))
+                .thenReturn(List.of(question(1L, QuestionType.LONG_TEXT, false)));
         assignApplicationId();
 
         var result = service.submit(
