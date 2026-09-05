@@ -2,6 +2,7 @@ package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -139,6 +141,38 @@ class UserServiceTest {
         assertEquals("软件学院", result.getCollege());
         assertEquals("软件工程", result.getMajor());
         verify(userMapper).insert(any(User.class));
+    }
+
+    @Test
+    void syncFromExternal_returnsConcurrentlyCreatedUserAfterDuplicateKey() {
+        User existing = new User();
+        existing.setCasId("20240001");
+        existing.setName("已保存的姓名");
+        existing.setProfileCompleted(true);
+        when(userMapper.selectById("20240001")).thenReturn(null, existing);
+        when(userMapper.insert(any(User.class)))
+                .thenThrow(new DuplicateKeyException("duplicate primary key"));
+
+        User result = userService.syncFromExternal(new ExternalStudentIdentity(
+                "20240001", "张三", "软件学院", "软件工程"));
+
+        assertSame(existing, result);
+        assertEquals("已保存的姓名", result.getName());
+        assertTrue(result.getProfileCompleted());
+        verify(userMapper, never()).updateById(any(User.class));
+    }
+
+    @Test
+    void syncFromExternal_rethrowsDuplicateKeyWhenUserStillMissing() {
+        DuplicateKeyException failure = new DuplicateKeyException("other unique constraint");
+        when(userMapper.selectById("20240001")).thenReturn(null);
+        when(userMapper.insert(any(User.class))).thenThrow(failure);
+
+        DuplicateKeyException thrown = assertThrows(DuplicateKeyException.class,
+                () -> userService.syncFromExternal(new ExternalStudentIdentity(
+                        "20240001", "张三", "软件学院", "软件工程")));
+
+        assertSame(failure, thrown);
     }
 
     @Test

@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -93,8 +94,9 @@ public class UserService {
 
     /**
      * 根据可信外部系统身份按学号创建用户。
+     * 使用读已提交，确保主键冲突后的查询能看到其他事务刚创建的用户。
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public User syncFromExternal(ExternalStudentIdentity identity) {
         String casId = identity.studentNumber().trim();
         LocalDateTime now = LocalDateTime.now();
