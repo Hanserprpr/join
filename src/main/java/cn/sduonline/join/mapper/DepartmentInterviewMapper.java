@@ -2,6 +2,7 @@ package cn.sduonline.join.mapper;
 
 import cn.sduonline.join.data.po.DepartmentInterview;
 import cn.sduonline.join.data.dto.InterviewQueueItemVO;
+import cn.sduonline.join.data.dto.InterviewQueueScope;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -12,6 +13,24 @@ import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface DepartmentInterviewMapper {
+
+    // 不限制部门或场次状态：已关闭签到的场次仍可排队和叫号。
+    @Select("""
+            <script>
+            SELECT DISTINCT c.department_id, c.session_id
+            FROM department_check_in c
+            LEFT JOIN department_interview i ON i.check_in_id = c.id
+            WHERE c.cas_id IN
+              <foreach collection="candidateCasIds" item="casId"
+                       open="(" separator="," close=")">
+                #{casId}
+              </foreach>
+              AND i.ended_at IS NULL
+            </script>
+            """)
+    java.util.List<InterviewQueueScope> selectCandidateQueueScopes(
+            @Param("candidateCasIds") java.util.Set<String> candidateCasIds
+    );
 
     @Select("""
             SELECT c.id AS check_in_id, c.application_id,

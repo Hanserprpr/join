@@ -6,6 +6,7 @@ import cn.sduonline.join.data.dto.DepartmentInterviewVO;
 import cn.sduonline.join.data.dto.InterviewQueueItemVO;
 import cn.sduonline.join.data.dto.MyInterviewQueueStatusVO;
 import cn.sduonline.join.data.dto.SessionScopedSnapshot;
+import cn.sduonline.join.data.dto.InterviewQueueScope;
 import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigRequest;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
@@ -27,8 +28,10 @@ import cn.sduonline.join.mapper.UserMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,6 +56,7 @@ public class DepartmentInterviewService {
     public ServiceResult<InterviewRoomStateVO> callNextInRoom(
             Long departmentId, Long roomId, String administratorCasId
     ) {
+        Set<String> affectedCandidates = new LinkedHashSet<>();
         ServiceResult<InterviewRoomStateVO> result =
                 transactionTemplate.execute(status -> {
             ServiceResult<DepartmentInterviewRoom> access =
@@ -83,19 +87,21 @@ public class DepartmentInterviewService {
             }
             if (active != null) {
                 finishActive(active);
+                affectedCandidates.add(active.getCandidateCasId());
             }
             next.setRoomId(roomId);
             next.setInterviewerCasId(administratorCasId);
             next.setStartedAt(LocalDateTime.now());
             interviewMapper.insertRoomInterview(next);
             interviewMapper.insertRoomActive(next);
+            affectedCandidates.add(next.getCandidateCasId());
             return ServiceResult.success(buildRoomState(
                     departmentId, roomId, administratorCasId
             ));
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(
-                    departmentId, sessionOf(result.data()));
+            publishAffectedQueues(
+                    departmentId, sessionOf(result.data()), affectedCandidates);
             interviewSseService.publishRoom(departmentId, roomId);
             sendCallNotification(result.data().currentInterview());
         }
@@ -105,6 +111,7 @@ public class DepartmentInterviewService {
     public ServiceResult<InterviewRoomStateVO> forceCallNextInRoom(
             Long departmentId, Long roomId, String administratorCasId
     ) {
+        Set<String> affectedCandidates = new LinkedHashSet<>();
         ServiceResult<InterviewRoomStateVO> result =
                 transactionTemplate.execute(status -> {
             ServiceResult<DepartmentInterviewRoom> access =
@@ -128,19 +135,21 @@ public class DepartmentInterviewService {
             }
             if (active != null) {
                 finishActive(active);
+                affectedCandidates.add(active.getCandidateCasId());
             }
             next.setRoomId(roomId);
             next.setInterviewerCasId(administratorCasId);
             next.setStartedAt(LocalDateTime.now());
             interviewMapper.insertRoomInterview(next);
             interviewMapper.insertRoomActive(next);
+            affectedCandidates.add(next.getCandidateCasId());
             return ServiceResult.success(buildRoomState(
                     departmentId, roomId, administratorCasId
             ));
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(
-                    departmentId, sessionOf(result.data()));
+            publishAffectedQueues(
+                    departmentId, sessionOf(result.data()), affectedCandidates);
             interviewSseService.publishRoom(departmentId, roomId);
             sendCallNotification(result.data().currentInterview());
         }
@@ -215,6 +224,7 @@ public class DepartmentInterviewService {
             Long departmentId, Long roomId, String administratorCasId,
             boolean force
     ) {
+        Set<String> affectedCandidates = new LinkedHashSet<>();
         ServiceResult<InterviewRoomStateVO> result =
                 transactionTemplate.execute(status -> {
             ServiceResult<DepartmentInterviewRoom> access =
@@ -241,11 +251,14 @@ public class DepartmentInterviewService {
             DepartmentInterview active =
                     interviewMapper.selectActiveByRoom(roomId);
             finishActive(active);
+            affectedCandidates.add(active.getCandidateCasId());
             return ServiceResult.success(buildRoomState(
                     departmentId, roomId, administratorCasId
             ));
         });
         if (result != null && result.isSuccess()) {
+            publishAffectedQueues(
+                    departmentId, sessionOf(result.data()), affectedCandidates);
             interviewSseService.publishRoom(departmentId, roomId);
         }
         return result;
@@ -254,6 +267,7 @@ public class DepartmentInterviewService {
     public ServiceResult<InterviewQueueItemVO> stopCallingInRoom(
             Long departmentId, Long roomId, String administratorCasId
     ) {
+        Set<String> affectedCandidates = new LinkedHashSet<>();
         ServiceResult<InterviewQueueItemVO> result =
                 transactionTemplate.execute(status -> {
             ServiceResult<DepartmentInterviewRoom> access =
@@ -268,6 +282,7 @@ public class DepartmentInterviewService {
             if (active == null) {
                 return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
             }
+            affectedCandidates.add(active.getCandidateCasId());
             interviewMapper.deleteActive(active.getId());
             interviewMapper.deleteInterview(active.getId());
             return ServiceResult.success(
@@ -277,8 +292,8 @@ public class DepartmentInterviewService {
             );
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(
-                    departmentId, sessionOf(result.data()));
+            publishAffectedQueues(
+                    departmentId, sessionOf(result.data()), affectedCandidates);
             interviewSseService.publishRoom(departmentId, roomId);
         }
         return result;
@@ -287,6 +302,7 @@ public class DepartmentInterviewService {
     public ServiceResult<InterviewQueueItemVO> passCurrentInRoom(
             Long departmentId, Long roomId, String administratorCasId
     ) {
+        Set<String> affectedCandidates = new LinkedHashSet<>();
         ServiceResult<InterviewQueueItemVO> result =
                 transactionTemplate.execute(status -> {
             ServiceResult<DepartmentInterviewRoom> access =
@@ -301,11 +317,12 @@ public class DepartmentInterviewService {
             if (active == null) {
                 return ServiceResult.failure(BizCode.INTERVIEW_NOT_ACTIVE);
             }
+            affectedCandidates.add(active.getCandidateCasId());
             return passActiveInTransaction(departmentId, active);
         });
         if (result != null && result.isSuccess()) {
-            interviewSseService.publishQueue(
-                    departmentId, sessionOf(result.data()));
+            publishAffectedQueues(
+                    departmentId, sessionOf(result.data()), affectedCandidates);
             interviewSseService.publishRoom(departmentId, roomId);
         }
         return result;
@@ -357,6 +374,22 @@ public class DepartmentInterviewService {
         return snapshot instanceof SessionScopedSnapshot scoped
                 ? scoped.sessionId()
                 : null;
+    }
+
+    /** 在叫号事务成功提交后，刷新当前场次及候选人其他未完成的队列。 */
+    private void publishAffectedQueues(
+            Long departmentId, Long sessionId, Set<String> candidateCasIds
+    ) {
+        Set<InterviewQueueScope> scopes = new LinkedHashSet<>();
+        scopes.add(new InterviewQueueScope(departmentId, sessionId));
+        if (!candidateCasIds.isEmpty()) {
+            scopes.addAll(interviewMapper.selectCandidateQueueScopes(
+                    candidateCasIds));
+        }
+        for (InterviewQueueScope scope : scopes) {
+            interviewSseService.publishQueue(
+                    scope.departmentId(), scope.sessionId());
+        }
     }
 
     private InterviewRoomStateVO buildRoomState(

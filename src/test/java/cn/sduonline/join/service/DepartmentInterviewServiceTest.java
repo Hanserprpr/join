@@ -12,6 +12,7 @@ import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.InterviewQueueStatus;
 import cn.sduonline.join.data.enums.InterviewPassMode;
 import cn.sduonline.join.data.dto.InterviewQueueItemVO;
+import cn.sduonline.join.data.dto.InterviewQueueScope;
 import cn.sduonline.join.data.dto.InterviewQueueConfigVO;
 import cn.sduonline.join.data.dto.InterviewQueueConfigPatchRequest;
 import cn.sduonline.join.data.dto.InterviewEvaluationRequest;
@@ -603,6 +604,125 @@ class DepartmentInterviewServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(null, result.data().currentInterview());
         verify(interviewMapper).deleteActive(300L);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "call", "force-call", "finish", "force-finish", "pass", "stop"
+    })
+    void activeChangesRefreshAllAffectedQueuesAfterTransaction(String operation) {
+        DepartmentInterviewRoom room = openRoom();
+        room.setCreatedBy("admin01");
+        DepartmentInterview active = waitingCandidate();
+        active.setId(300L);
+        active.setRoomId(9L);
+        DepartmentInterview next = waitingCandidate();
+        next.setId(301L);
+        next.setCandidateCasId("20240002");
+        var current = new java.util.concurrent.atomic.AtomicReference<>(active);
+        var inTransaction = new java.util.concurrent.atomic.AtomicBoolean();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            inTransaction.set(true);
+            try {
+                TransactionCallback<?> callback = invocation.getArgument(0);
+                return callback.doInTransaction(transactionStatus);
+            } finally {
+                inTransaction.set(false);
+            }
+        }).when(transactionTemplate).execute(any());
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        when(interviewMapper.selectActiveByRoom(9L))
+                .thenAnswer(ignored -> current.get());
+        when(interviewMapper.deleteActive(300L)).thenAnswer(ignored -> {
+            current.set(null);
+            return 1;
+        });
+        boolean calling = operation.equals("call") || operation.equals("force-call");
+        if (calling || operation.contains("finish")) {
+            when(roomMapper.selectById(12L, 9L)).thenReturn(room);
+        }
+        if (operation.equals("call") || operation.contains("finish")) {
+            when(roomMapper.selectMemberStatuses(9L, 300L)).thenReturn(List.of(
+                    new cn.sduonline.join.data.dto.InterviewRoomMemberStatusVO(
+                            "admin01", "李老师", !operation.startsWith("force"), null
+                    )
+            ));
+        }
+        if (calling) {
+            when(interviewMapper.selectNextWaitingForUpdate(12L, 5L))
+                    .thenReturn(next);
+            when(interviewMapper.insertRoomActive(next)).thenAnswer(ignored -> {
+                current.set(next);
+                return 1;
+            });
+        }
+        if (operation.equals("pass")) {
+            when(interviewMapper.selectQueueConfig(12L)).thenReturn(
+                    new InterviewQueueConfigVO(3, 2, InterviewPassMode.RECHECK_IN));
+            when(interviewMapper.selectCheckInForUpdate(200L))
+                    .thenReturn(checkIn(200L, 1L, 0));
+        }
+        var candidates = calling
+                ? java.util.Set.of("20240001", "20240002")
+                : java.util.Set.of("20240001");
+        when(interviewMapper.selectCandidateQueueScopes(candidates))
+                .thenAnswer(ignored -> {
+                    assertFalse(inTransaction.get());
+                    return List.of(
+                            new InterviewQueueScope(12L, 5L),
+                            new InterviewQueueScope(13L, 6L),
+                            new InterviewQueueScope(14L, 7L),
+                            new InterviewQueueScope(13L, 6L)
+                    );
+                });
+        org.mockito.Mockito.doAnswer(ignored -> {
+            assertFalse(inTransaction.get());
+            return null;
+        }).when(interviewSseService).publishQueue(any(), any());
+        if (operation.equals("pass") || operation.equals("stop")) {
+            when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
+                    .thenReturn(new InterviewQueueItemVO(
+                            200L, 100L, "20240001", "张三", 7, 1L, 0, null,
+                            InterviewQueueStatus.WAITING,
+                            null, null, null, null, false, 5L));
+        }
+
+        ServiceResult<?> result = switch (operation) {
+            case "call" -> service.callNextInRoom(12L, 9L, "admin01");
+            case "force-call" -> service.forceCallNextInRoom(12L, 9L, "admin01");
+            case "finish" -> service.finishInRoom(12L, 9L, "admin01");
+            case "force-finish" -> service.forceFinishInRoom(12L, 9L, "admin01");
+            case "pass" -> service.passCurrentInRoom(12L, 9L, "admin01");
+            case "stop" -> service.stopCallingInRoom(12L, 9L, "admin01");
+            default -> throw new IllegalArgumentException(operation);
+        };
+
+        assertTrue(result.isSuccess());
+        verify(interviewMapper).selectCandidateQueueScopes(candidates);
+        verify(interviewSseService).publishQueue(12L, 5L);
+        verify(interviewSseService).publishQueue(13L, 6L);
+        verify(interviewSseService).publishQueue(14L, 7L);
+        verify(interviewSseService).publishRoom(12L, 9L);
+        org.mockito.Mockito.verifyNoMoreInteractions(interviewSseService);
+    }
+
+    @Test
+    void failedCandidateAssignmentDoesNotPublishQueueChanges() {
+        DepartmentInterviewRoom room = openRoom();
+        when(roomMapper.selectByIdForUpdate(12L, 9L)).thenReturn(room);
+        when(roomMapper.countMember(9L, "admin01")).thenReturn(1);
+        DepartmentInterview next = waitingCandidate();
+        when(interviewMapper.selectNextWaitingForUpdate(12L, 5L)).thenReturn(next);
+        when(interviewMapper.insertRoomActive(next))
+                .thenThrow(new org.springframework.dao.DuplicateKeyException("busy"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.dao.DuplicateKeyException.class,
+                () -> service.callNextInRoom(12L, 9L, "admin01"));
+
+        verify(interviewMapper, never()).selectCandidateQueueScopes(any());
+        org.mockito.Mockito.verifyNoInteractions(interviewSseService);
     }
 
     private static DepartmentInterview waitingCandidate() {
