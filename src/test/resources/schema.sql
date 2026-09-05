@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `profile_completed` BOOLEAN NOT NULL DEFAULT FALSE,
   `qq`         VARCHAR(20)           DEFAULT NULL,
   `college`    VARCHAR(64)           DEFAULT NULL,
+  `campus` VARCHAR(32) DEFAULT NULL,
   `major`      VARCHAR(64)           DEFAULT NULL,
   `grade`      SMALLINT              DEFAULT NULL,
   `created_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,

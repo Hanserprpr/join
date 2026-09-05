@@ -1,5 +1,6 @@
 package cn.sduonline.join.data.po;
 
+import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.enums.ApplicationStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,6 +18,9 @@ public class DepartmentApplication {
     private String casId;
     private String applicantName;
     private String college;
+
+    /** 学生所在校区；历史资料允许为空。 */
+    private Campus campus;
     private String major;
     private Integer grade;
     private String phone;

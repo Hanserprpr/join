@@ -240,19 +240,22 @@ class DepartmentApplicationServiceTest {
         application.setScore(new BigDecimal("4.5"));
         when(applicationMapper.countApplications(
                 12L, "张三", "软件学院", 2024, true,
-                ApplicationStatus.SUBMITTED
+                ApplicationStatus.SUBMITTED,
+                null
         )).thenReturn(1L);
         when(applicationMapper.selectApplications(
                 12L, "张三", "软件学院", 2024,
                 true, ApplicationStatus.SUBMITTED,
-                "score", "desc", 0, 20
+                "score", "desc", 0, 20,
+                null
         ))
                 .thenReturn(List.of(application));
 
         var result = service.findApplications(
                 12L, " 张三 ", " 软件学院 ", 2024,
                 true, ApplicationStatus.SUBMITTED,
-                "score", "desc", 1, 20
+                "score", "desc", 1, 20,
+                null
         );
 
         assertTrue(result.isSuccess());
@@ -271,16 +274,19 @@ class DepartmentApplicationServiceTest {
         when(organizationMapper.selectDepartmentById(12L))
                 .thenReturn(new Department());
         when(applicationMapper.countApplications(
-                12L, null, null, null, null, null
+                12L, null, null, null, null, null,
+                null
         )).thenReturn(0L);
         when(applicationMapper.selectApplications(
                 12L, null, null, null, null, null,
-                "submittedAt", "desc", 0, 20
+                "submittedAt", "desc", 0, 20,
+                null
         )).thenReturn(List.of());
 
         var result = service.findApplications(
                 12L, null, null, null, null, null,
-                "submittedAt", "desc", 1, 20
+                "submittedAt", "desc", 1, 20,
+                null
         );
 
         assertTrue(result.isSuccess());

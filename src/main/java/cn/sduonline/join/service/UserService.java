@@ -173,6 +173,9 @@ public class UserService {
         if (StringUtils.hasText(request.major())) {
             user.setMajor(request.major().trim());
         }
+        if (request.campus() != null) {
+            user.setCampus(request.campus());
+        }
         if (request.grade() != null) {
             user.setGrade(request.grade());
         }

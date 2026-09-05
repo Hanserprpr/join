@@ -35,6 +35,25 @@ import org.junit.jupiter.api.Test;
  */
 class UserMapperUpdateStrategyTest {
 
+    @Test
+    void campusPersistsAndSurvivesOtherUpdates() {
+        try (SqlSession session = sqlSessionFactory.openSession(true)) {
+            UserMapper mapper = session.getMapper(UserMapper.class);
+            User user = mapper.selectById("20240001");
+            assertNull(user.getCampus());
+            user.setCampus(cn.sduonline.join.data.enums.Campus.CENTRAL);
+            mapper.updateById(user);
+            session.clearCache();
+            User saved = mapper.selectById("20240001");
+            assertEquals(cn.sduonline.join.data.enums.Campus.CENTRAL, saved.getCampus());
+            saved.setQq("654321");
+            mapper.updateById(saved);
+            session.clearCache();
+            assertEquals(cn.sduonline.join.data.enums.Campus.CENTRAL,
+                    mapper.selectById("20240001").getCampus());
+        }
+    }
+
     private static SqlSessionFactory sqlSessionFactory;
 
     @BeforeAll

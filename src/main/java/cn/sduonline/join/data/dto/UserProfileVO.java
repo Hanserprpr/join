@@ -1,5 +1,6 @@
 package cn.sduonline.join.data.dto;
 
+import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.po.User;
 import java.time.LocalDateTime;
 import lombok.Builder;
@@ -42,6 +43,9 @@ public class UserProfileVO {
     /** 学院。 */
     private String college;
 
+    /** 学生所在校区；历史资料允许为空。 */
+    private Campus campus;
+
     /** 专业。 */
     private String major;
 
@@ -80,6 +84,7 @@ public class UserProfileVO {
                 .profileCompleted(Boolean.TRUE.equals(user.getProfileCompleted()))
                 .qq(user.getQq())
                 .college(user.getCollege())
+                .campus(user.getCampus())
                 .major(user.getMajor())
                 .grade(user.getGrade())
                 .createdAt(user.getCreatedAt())

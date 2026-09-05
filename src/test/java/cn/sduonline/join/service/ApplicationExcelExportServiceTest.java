@@ -29,7 +29,8 @@ class ApplicationExcelExportServiceTest {
                                 1L, "意向方向", QuestionType.SINGLE_CHOICE,
                                 null,
                                 List.of(new ApplicationAnswerOptionVO(10L, "后端"))
-                        ))
+                        )),
+                        null
                 );
 
         byte[] content = new ApplicationExcelExportService()

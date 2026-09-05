@@ -62,7 +62,8 @@ public class UserProfileController {
                 && !StringUtils.hasText(request.college())
                 && !StringUtils.hasText(request.major())
                 && request.grade() == null
-                && request.qq() == null) {
+                && request.qq() == null
+                && request.campus() == null) {
             return Result.fail(
                     BizCode.PARAM_INVALID,
                     "至少填写一个可更新的个人资料字段"

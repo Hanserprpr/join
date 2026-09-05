@@ -1,5 +1,6 @@
 package cn.sduonline.join.data.dto;
 
+import cn.sduonline.join.data.enums.Campus;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -19,6 +20,7 @@ import jakarta.validation.constraints.Size;
  * @param major 专业
  * @param grade 入学年级
  * @param qq QQ 号（选填）；传空字符串表示清空
+ * @param campus 学生所在校区（选填）；缺省或 null 保持原值，不影响资料完成状态
  */
 public record ContactUpdateRequest(
         @Email
@@ -39,6 +41,12 @@ public record ContactUpdateRequest(
         Integer grade,
 
         @Pattern(regexp = "^(?:[1-9]\\d{4,11})?$")
-        String qq
+        String qq,
+
+        Campus campus
 ) {
+    public ContactUpdateRequest(String email, String phone, String college,
+            String major, Integer grade, String qq) {
+        this(email, phone, college, major, grade, qq, null);
+    }
 }

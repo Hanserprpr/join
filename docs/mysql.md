@@ -24,6 +24,7 @@
 | `profile_completed` | TINYINT(1) | 非空，默认 0 | 手机号、学院、专业和年级是否完整（邮箱选填） |
 | `qq` | VARCHAR(20) | 可空 | QQ 号，选填 |
 | `college` | VARCHAR(64) | 可空 | 学院 |
+| `campus` | VARCHAR(32) | 可空 | 学生所在校区，Campus 枚举编码；历史资料允许为空 |
 | `major` | VARCHAR(64) | 可空 | 专业 |
 | `grade` | SMALLINT | 可空 | 入学年级 |
 | `created_at` | DATETIME | 非空，默认当前时间 | 创建时间 |

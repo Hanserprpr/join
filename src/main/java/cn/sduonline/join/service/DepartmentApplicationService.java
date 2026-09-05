@@ -1,5 +1,6 @@
 package cn.sduonline.join.service;
 
+import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.dto.ApplicationAnswerRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishVO;
@@ -61,7 +62,8 @@ public class DepartmentApplicationService {
             String sortBy,
             String sortOrder,
             int page,
-            int size
+            int size,
+            Campus campus
     ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
@@ -70,13 +72,15 @@ public class DepartmentApplicationService {
         String normalizedCollege = trimToNull(college);
         long total = applicationMapper.countApplications(
                 departmentId, normalizedKeyword, normalizedCollege, grade,
-                interviewed, status
+                interviewed, status,
+                campus
         );
         List<DepartmentApplicationSummaryVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, normalizedKeyword, normalizedCollege, grade,
                         interviewed, status, sortBy, sortOrder,
-                        (page - 1) * size, size
+                        (page - 1) * size, size,
+                        campus
                 )
                 .stream()
                 .map(DepartmentApplicationSummaryVO::from)
@@ -269,7 +273,8 @@ public class DepartmentApplicationService {
             String keyword,
             String college,
             Integer grade,
-            Boolean interviewed
+            Boolean interviewed,
+            Campus campus
     ) {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
@@ -277,7 +282,8 @@ public class DepartmentApplicationService {
         List<DepartmentApplicationDetailVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, trimToNull(keyword), trimToNull(college),
-                        grade, interviewed, null, null, null, null, null
+                        grade, interviewed, null, null, null, null, null,
+                        campus
                 )
                 .stream()
                 .map(this::toDetailVO)
@@ -466,7 +472,8 @@ public class DepartmentApplicationService {
                 application.getQq(),
                 application.getStatus(),
                 application.getSubmittedAt(),
-                answers
+                answers,
+                application.getCampus()
         );
     }
 

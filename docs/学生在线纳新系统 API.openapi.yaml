@@ -1055,6 +1055,13 @@ paths:
       summary: 分页查询部门报名信息
       operationId: findApplications
       parameters:
+      - name: campus
+        in: query
+        required: false
+        description: 学生所在校区；不传则不筛选，包含未填写校区的历史用户。
+        schema:
+          type: string
+          enum: [SOFTWARE_PARK, CENTRAL, QIANFOSHAN, XINGLONGSHAN, HONGJIALOU, BAOTUQUAN]
       - name: departmentId
         in: path
         required: true
@@ -2333,6 +2340,13 @@ paths:
       summary: 导出部门报名信息
       operationId: exportApplications
       parameters:
+      - name: campus
+        in: query
+        required: false
+        description: 学生所在校区；不传则不筛选，包含未填写校区的历史用户。
+        schema:
+          type: string
+          enum: [SOFTWARE_PARK, CENTRAL, QIANFOSHAN, XINGLONGSHAN, HONGJIALOU, BAOTUQUAN]
       - name: departmentId
         in: path
         required: true
@@ -2678,6 +2692,10 @@ components:
         选填字段（email、qq）额外支持传空字符串，表示把该字段清空为 NULL。
         必填字段（phone、college、major、grade）不支持清空。
       properties:
+        campus:
+          description: 学生所在校区；历史资料可为 null。更新资料时缺省或 null 表示不修改。
+          type: [string, "null"]
+          enum: [SOFTWARE_PARK, CENTRAL, QIANFOSHAN, XINGLONGSHAN, HONGJIALOU, BAOTUQUAN, null]
         email:
           description: |
             邮箱。空字符串表示清空；null 或缺省表示不修改。
@@ -2756,6 +2774,10 @@ components:
     UserProfileVO:
       type: object
       properties:
+        campus:
+          description: 学生所在校区；历史资料可为 null。更新资料时缺省或 null 表示不修改。
+          type: [string, "null"]
+          enum: [SOFTWARE_PARK, CENTRAL, QIANFOSHAN, XINGLONGSHAN, HONGJIALOU, BAOTUQUAN, null]
         sub:
           type: string
         name:
@@ -5248,6 +5270,10 @@ components:
     DepartmentApplicationSummaryVO:
       type: object
       properties:
+        campus:
+          description: 学生所在校区；历史资料可为 null。更新资料时缺省或 null 表示不修改。
+          type: [string, "null"]
+          enum: [SOFTWARE_PARK, CENTRAL, QIANFOSHAN, XINGLONGSHAN, HONGJIALOU, BAOTUQUAN, null]
         id:
           type: integer
           format: int64
@@ -5348,6 +5374,10 @@ components:
     DepartmentApplicationDetailVO:
       type: object
       properties:
+        campus:
+          description: 学生所在校区；历史资料可为 null。更新资料时缺省或 null 表示不修改。
+          type: [string, "null"]
+          enum: [SOFTWARE_PARK, CENTRAL, QIANFOSHAN, XINGLONGSHAN, HONGJIALOU, BAOTUQUAN, null]
         id:
           type: integer
           format: int64

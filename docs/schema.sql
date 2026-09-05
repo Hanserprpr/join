@@ -18,6 +18,7 @@ CREATE TABLE `user` (
   `profile_completed`  TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '必填资料是否完整',
   `qq`                 VARCHAR(20)  NULL COMMENT 'QQ号（选填）',
   `college`            VARCHAR(64)  NULL COMMENT '学院',
+  `campus` VARCHAR(32) DEFAULT NULL,
   `major`              VARCHAR(64)  NULL COMMENT '专业',
   `grade`              SMALLINT     NULL COMMENT '入学年级',
   `created_at`         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,

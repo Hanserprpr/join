@@ -1,5 +1,6 @@
 package cn.sduonline.join.controller;
 
+import cn.sduonline.join.data.enums.Campus;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
@@ -55,6 +56,7 @@ public class DepartmentApplicationController {
      * @param departmentId 部门 ID
      * @param keyword 搜索关键词，可匹配姓名、学号、手机号和 QQ
      * @param college 学院筛选
+     * @param campus 学生校区筛选，不传则包含所有校区及未填写的用户
      * @param grade 年级筛选
      * @param interviewed 是否已完成面试
      * @param status 报名状态筛选，不传则查询全部状态
@@ -78,12 +80,14 @@ public class DepartmentApplicationController {
             @RequestParam(defaultValue = "desc")
             @Pattern(regexp = "asc|desc") String sortOrder,
             @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @RequestParam(required = false) Campus campus
     ) {
         ServiceResult<PageVO<DepartmentApplicationSummaryVO>> result =
                 applicationService.findApplications(
                         departmentId, keyword, college, grade, interviewed,
-                        status, sortBy, sortOrder, page, size
+                        status, sortBy, sortOrder, page, size,
+                        campus
                 );
         return result.isSuccess()
                 ? Result.ok(result.data())
@@ -194,6 +198,7 @@ public class DepartmentApplicationController {
      * @param departmentId 部门 ID
      * @param keyword 搜索关键词，可匹配姓名、学号、手机号和 QQ
      * @param college 学院筛选
+     * @param campus 学生校区筛选，不传则不限制校区
      * @param grade 年级筛选
      * @param interviewed 是否已完成面试
      * @return Excel 文件或业务错误
@@ -205,11 +210,13 @@ public class DepartmentApplicationController {
             @RequestParam(required = false) @Size(max = 100) String keyword,
             @RequestParam(required = false) @Size(max = 64) String college,
             @RequestParam(required = false) @Min(2000) @Max(2100) Integer grade,
-            @RequestParam(required = false) Boolean interviewed
+            @RequestParam(required = false) Boolean interviewed,
+            @RequestParam(required = false) Campus campus
     ) {
         ServiceResult<java.util.List<DepartmentApplicationDetailVO>> result =
                 applicationService.findForExport(
-                        departmentId, keyword, college, grade, interviewed
+                        departmentId, keyword, college, grade, interviewed,
+                        campus
                 );
         if (!result.isSuccess()) {
             return ResponseEntity.badRequest().body(Result.fail(result.error()));

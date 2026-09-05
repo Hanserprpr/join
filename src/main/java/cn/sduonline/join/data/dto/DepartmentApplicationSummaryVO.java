@@ -1,5 +1,6 @@
 package cn.sduonline.join.data.dto;
 
+import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.enums.ApplicationStatus;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import java.math.BigDecimal;
@@ -18,7 +19,8 @@ public record DepartmentApplicationSummaryVO(
         LocalDateTime submittedAt,
         Boolean interviewed,
         Long interviewId,
-        BigDecimal score
+        BigDecimal score,
+        Campus campus
 ) {
     public static DepartmentApplicationSummaryVO from(
             DepartmentApplication application
@@ -36,7 +38,8 @@ public record DepartmentApplicationSummaryVO(
                 application.getSubmittedAt(),
                 application.getInterviewed(),
                 application.getInterviewId(),
-                application.getScore()
+                application.getScore(),
+                application.getCampus()
         );
     }
 }

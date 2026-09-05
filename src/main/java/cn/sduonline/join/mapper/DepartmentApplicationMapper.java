@@ -1,5 +1,6 @@
 package cn.sduonline.join.mapper;
 
+import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.dto.AdmissionWeChatRecipient;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswer;
@@ -31,6 +32,9 @@ public interface DepartmentApplicationMapper {
             <if test="college != null and college != ''">
               AND u.college = #{college}
             </if>
+            <if test="campus != null">
+              AND u.campus = #{campus}
+            </if>
             <if test="grade != null">
               AND u.grade = #{grade}
             </if>
@@ -51,13 +55,14 @@ public interface DepartmentApplicationMapper {
             @Param("college") String college,
             @Param("grade") Integer grade,
             @Param("interviewed") Boolean interviewed,
-            @Param("status") cn.sduonline.join.data.enums.ApplicationStatus status
+            @Param("status") cn.sduonline.join.data.enums.ApplicationStatus status,
+            @Param("campus") Campus campus
     );
 
     @Select("""
             <script>
             SELECT a.id, a.department_id, a.cas_id,
-                   u.name AS applicant_name, u.college, u.major, u.grade,
+                   u.name AS applicant_name, u.college, u.major, u.grade, u.campus,
                    u.phone, u.email, u.qq, a.status, a.submitted_at,
                    i.id AS interview_id,
                    CASE WHEN i.ended_at IS NOT NULL
@@ -81,6 +86,9 @@ public interface DepartmentApplicationMapper {
             </if>
             <if test="college != null and college != ''">
               AND u.college = #{college}
+            </if>
+            <if test="campus != null">
+              AND u.campus = #{campus}
             </if>
             <if test="grade != null">
               AND u.grade = #{grade}
@@ -120,12 +128,13 @@ public interface DepartmentApplicationMapper {
             @Param("sortBy") String sortBy,
             @Param("sortOrder") String sortOrder,
             @Param("offset") Integer offset,
-            @Param("limit") Integer limit
+            @Param("limit") Integer limit,
+            @Param("campus") Campus campus
     );
 
     @Select("""
             SELECT a.id, a.department_id, a.cas_id,
-                   u.name AS applicant_name, u.college, u.major, u.grade,
+                   u.name AS applicant_name, u.college, u.major, u.grade, u.campus,
                    u.phone, u.email, u.qq, a.status, a.submitted_at,
                    i.id AS interview_id,
                    CASE WHEN i.ended_at IS NOT NULL

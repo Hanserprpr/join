@@ -32,6 +32,29 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
+    @Test
+    void optionalCampusPreservesLegacyProfileCompletionAndExistingValue() {
+        User user = new User();
+        user.setCasId("20240001");
+        user.setPhone("13900000000");
+        user.setCollege("软件学院");
+        user.setMajor("软件工程");
+        user.setGrade(2024);
+        when(userMapper.selectById("20240001")).thenReturn(user);
+        var oldRequest = new ContactUpdateRequest(null, null, null, null, null, "123456");
+        assertTrue(userService.updateContact("20240001", oldRequest).isSuccess());
+        assertTrue(user.getProfileCompleted());
+        assertEquals(null, user.getCampus());
+        var campus = cn.sduonline.join.data.enums.Campus.CENTRAL;
+        assertTrue(userService.updateContact("20240001", new ContactUpdateRequest(
+                null, null, null, null, null, null, campus)).isSuccess());
+        assertEquals(campus, user.getCampus());
+        assertTrue(userService.updateContact("20240001", oldRequest).isSuccess());
+        assertEquals(campus, user.getCampus());
+        assertTrue(user.getProfileCompleted());
+        assertEquals(campus, cn.sduonline.join.data.dto.UserProfileVO.from(user).getCampus());
+    }
+
     @Mock
     private UserMapper userMapper;
 

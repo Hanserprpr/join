@@ -1,5 +1,6 @@
 package cn.sduonline.join.data.po;
 
+import cn.sduonline.join.data.enums.Campus;
 import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -69,6 +70,9 @@ public class User {
      * 学院。
      */
     private String college;
+
+    /** 学生所在校区；历史资料允许为空。 */
+    private Campus campus;
 
     /**
      * 专业。
