@@ -20,6 +20,7 @@ class CollegeMajorServiceTest {
 
         assertTrue(service.isValidCollege("软件学院"));
         assertTrue(service.isValidCollegeMajor("软件学院", "软件工程"));
+        assertTrue(service.isValidCollegeMajor("管理学院", "管理科学与工程"));
     }
 
     @Test
