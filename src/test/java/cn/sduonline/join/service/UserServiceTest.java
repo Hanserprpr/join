@@ -10,7 +10,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cn.sduonline.join.data.dto.UserProfileVO;
 import cn.sduonline.join.data.enums.BizCode;
+import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.data.dto.ContactUpdateRequest;
 import cn.sduonline.join.data.dto.ExternalStudentIdentity;
@@ -32,8 +34,12 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
+    /**
+     * 校区由学院推导：老客户端不传校区照样能补齐，传了也不能推翻字典。
+     * 校区不参与资料完整性判断，老请求的行为不受影响。
+     */
     @Test
-    void optionalCampusPreservesLegacyProfileCompletionAndExistingValue() {
+    void updateContactDerivesCampusFromCollege() {
         User user = new User();
         user.setCasId("20240001");
         user.setPhone("13900000000");
@@ -41,18 +47,38 @@ class UserServiceTest {
         user.setMajor("软件工程");
         user.setGrade(2024);
         when(userMapper.selectById("20240001")).thenReturn(user);
+
         var oldRequest = new ContactUpdateRequest(null, null, null, null, null, "123456");
         assertTrue(userService.updateContact("20240001", oldRequest).isSuccess());
         assertTrue(user.getProfileCompleted());
-        assertEquals(null, user.getCampus());
-        var campus = cn.sduonline.join.data.enums.Campus.CENTRAL;
+        assertEquals(Campus.SOFTWARE_PARK, user.getCampus());
+
         assertTrue(userService.updateContact("20240001", new ContactUpdateRequest(
-                null, null, null, null, null, null, campus)).isSuccess());
-        assertEquals(campus, user.getCampus());
-        assertTrue(userService.updateContact("20240001", oldRequest).isSuccess());
-        assertEquals(campus, user.getCampus());
+                null, null, null, null, null, null, Campus.CENTRAL)).isSuccess());
+        assertEquals(Campus.SOFTWARE_PARK, user.getCampus());
+
+        assertTrue(userService.updateContact("20240001", new ContactUpdateRequest(
+                null, null, "药学院", "药学", null, null)).isSuccess());
+        assertEquals(Campus.BAOTUQUAN, user.getCampus());
         assertTrue(user.getProfileCompleted());
-        assertEquals(campus, cn.sduonline.join.data.dto.UserProfileVO.from(user).getCampus());
+        assertEquals(Campus.BAOTUQUAN, UserProfileVO.from(user).getCampus());
+    }
+
+    /** 字典没给校区的学院（老格式配置）仍然采信请求里的校区。 */
+    @Test
+    void updateContactFallsBackToRequestedCampusWithoutDictionaryCampus() {
+        CollegeMajorService dictionary = new CollegeMajorService();
+        dictionary.replaceFromJson("{\"软件学院\": [\"软件工程\"]}");
+        UserService service = new UserService(userMapper, dictionary);
+        User user = new User();
+        user.setCasId("20240001");
+        user.setCollege("软件学院");
+        when(userMapper.selectById("20240001")).thenReturn(user);
+
+        assertTrue(service.updateContact("20240001", new ContactUpdateRequest(
+                null, null, null, null, null, null, Campus.CENTRAL)).isSuccess());
+
+        assertEquals(Campus.CENTRAL, user.getCampus());
     }
 
     @Mock
@@ -163,6 +189,7 @@ class UserServiceTest {
         assertEquals("张三", result.getName());
         assertEquals("软件学院", result.getCollege());
         assertEquals("软件工程", result.getMajor());
+        assertEquals(Campus.SOFTWARE_PARK, result.getCampus());
         verify(userMapper).insert(any(User.class));
     }
 

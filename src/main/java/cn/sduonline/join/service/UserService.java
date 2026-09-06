@@ -3,6 +3,7 @@ package cn.sduonline.join.service;
 import cn.sduonline.join.data.dto.ExternalStudentIdentity;
 import cn.sduonline.join.data.dto.ContactUpdateRequest;
 import cn.sduonline.join.data.enums.BizCode;
+import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.mapper.UserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -114,6 +115,7 @@ public class UserService {
                 : identity.name().trim());
         created.setCollege(identity.college().trim());
         created.setMajor(identity.major().trim());
+        created.setCampus(collegeMajorService.resolveCampus(created.getCollege()));
         created.setEmail(null);
         created.setPhone(null);
         created.setProfileCompleted(false);
@@ -138,7 +140,8 @@ public class UserService {
      * <p>
      * 选填字段（邮箱、QQ 号）传空字符串表示清空，写入 null。
      * <p>
-     * 提供学院或专业时，校验其是否属于系统维护的学院专业字典。
+     * 提供学院或专业时，校验其是否属于系统维护的学院专业字典；
+     * 校区不采信请求，按学院从字典推导，详见 {@link #applyCampus}。
      *
      * @param casId 当前用户统一认证账号
      * @param request 个人资料更新请求
@@ -173,9 +176,7 @@ public class UserService {
         if (StringUtils.hasText(request.major())) {
             user.setMajor(request.major().trim());
         }
-        if (request.campus() != null) {
-            user.setCampus(request.campus());
-        }
+        applyCampus(user, request.campus());
         if (request.grade() != null) {
             user.setGrade(request.grade());
         }
@@ -187,6 +188,25 @@ public class UserService {
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
         return ServiceResult.success(user);
+    }
+
+    /**
+     * 按学院推导并写入校区。
+     * <p>
+     * 校区由学院唯一决定，字典能推导出结果时以推导值为准；请求里的校区只在
+     * 字典未给出该学院校区时兜底，保证旧客户端继续可用。学院未变的更新也会
+     * 重新推导一次，历史资料因此会在用户下次改资料时自动补齐校区。
+     *
+     * @param user 待更新的用户
+     * @param requested 请求中携带的校区，可为 null
+     */
+    private void applyCampus(User user, Campus requested) {
+        Campus derived = collegeMajorService.resolveCampus(user.getCollege());
+        if (derived != null) {
+            user.setCampus(derived);
+        } else if (requested != null) {
+            user.setCampus(requested);
+        }
     }
 
     /** 登录时同步修正历史非主修账号的展示姓名。 */

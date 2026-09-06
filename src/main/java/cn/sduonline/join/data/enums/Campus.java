@@ -1,7 +1,6 @@
 package cn.sduonline.join.data.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * 山东大学校区
@@ -21,6 +20,15 @@ public enum Campus {
         this.displayName = displayName;
     }
 
+    /**
+     * 校区中文名，用于日志与异常信息；
+     * 序列化仍走枚举名，接口返回的取值不受影响。
+     *
+     * @return 校区中文名
+     */
+    public String getDisplayName() {
+        return displayName;
+    }
 
     /**
      * 根据枚举编码或中文名称解析校区
