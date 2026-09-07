@@ -16,7 +16,9 @@ import cn.sduonline.join.data.dto.sse.InterviewQueueSseEnvelope;
 import cn.sduonline.join.data.dto.sse.MyQueueStatusSseEnvelope;
 import cn.sduonline.join.data.vo.Result;
 import cn.sduonline.join.security.scope.DepartmentPermission;
+import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
+import cn.sduonline.join.service.AuthorizationService;
 import cn.sduonline.join.service.DepartmentInterviewService;
 import cn.sduonline.join.service.DepartmentInterviewSessionService;
 import cn.sduonline.join.service.InterviewSseService;
@@ -53,6 +55,7 @@ public class DepartmentInterviewController {
     private final DepartmentInterviewService interviewService;
     private final DepartmentInterviewSessionService sessionService;
     private final InterviewSseService interviewSseService;
+    private final AuthorizationService authorizationService;
 
     /**
      * 创建面试场次草稿
@@ -143,18 +146,24 @@ public class DepartmentInterviewController {
     }
 
     /**
-     * 查询部门全部面试场次
+     * 查询部门面试场次
      *
      * @param departmentId 部门 ID
-     * @return 按开始时间倒序排列的面试场次
+     * @return 管理员获取全部场次，普通用户仅获取已发布场次
      */
     @GetMapping("/sessions")
-    @DepartmentPermission(PermissionCode.INTERVIEW_MANAGE)
     public Result<List<InterviewSessionVO>> findSessions(
             @PathVariable @Positive Long departmentId
     ) {
-        ServiceResult<List<InterviewSessionVO>> result =
-                sessionService.findAll(departmentId);
+        boolean canManage = authorizationService.canAccessWithPermission(
+                StpUtil.getLoginIdAsString(),
+                PermissionCode.INTERVIEW_MANAGE.code(),
+                OrgType.DEPARTMENT,
+                departmentId
+        );
+        ServiceResult<List<InterviewSessionVO>> result = canManage
+                ? sessionService.findAll(departmentId)
+                : sessionService.findPublished(departmentId);
         return result.isSuccess()
                 ? Result.ok(result.data())
                 : Result.fail(result.error());

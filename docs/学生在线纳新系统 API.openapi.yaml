@@ -582,7 +582,7 @@ paths:
     get:
       tags:
       - 面试
-      summary: 查询全部面试场次
+      summary: 查询可见面试场次（管理员全部，普通用户仅已发布）
       operationId: findSessions
       parameters:
       - name: departmentId

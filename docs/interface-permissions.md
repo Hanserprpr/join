@@ -180,7 +180,7 @@
 | PUT | `/api/departments/{departmentId}/interviews/sessions/{sessionId}` | 修改面试场次（含动态二维码开关和有效秒数） |
 | POST | `/api/departments/{departmentId}/interviews/sessions/{sessionId}/publish` | 发布面试场次 |
 | POST | `/api/departments/{departmentId}/interviews/sessions/{sessionId}/end` | 结束面试场次 |
-| GET | `/api/departments/{departmentId}/interviews/sessions` | 查询全部场次 |
+| GET | `/api/departments/{departmentId}/interviews/sessions` | 查询场次（持有本权限时返回全部场次；普通用户仅返回已发布场次） |
 | PUT | `/api/departments/{departmentId}/interviews/queue-config` | 完整更新过号配置 |
 | PATCH | `/api/departments/{departmentId}/interviews/queue-config` | 部分更新过号配置 |
 | POST | `/api/departments/{departmentId}/interview-rooms` | 创建面试室 |
@@ -290,6 +290,7 @@
 | POST | `/api/check-ins` | 签到（扫码时令牌自带场次；否则传部门 ID 和场次 ID） |
 | DELETE | `/api/departments/{departmentId}/interviews/sessions/{sessionId}/check-ins/me` | 取消本人指定场次尚未进入面试的签到；主动取消不恢复顺延优先资格 |
 | GET | `/api/departments/{departmentId}/interviews/sessions/current` | 查询当前全部已发布场次 |
+| GET | `/api/departments/{departmentId}/interviews/sessions` | 兼容场次列表；普通用户仅返回已发布场次 |
 | GET | `/api/departments/{departmentId}/interviews/my-queue-status` | 我的排队状态 |
 | GET | `/api/departments/{departmentId}/interviews/my-events` | SSE 订阅我的排队状态 |
 

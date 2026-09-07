@@ -63,7 +63,7 @@ public class OpenApiConfig {
             Map.entry("DepartmentInterviewController.publishSession", "发布面试场次"),
             Map.entry("DepartmentInterviewController.endSession", "结束面试场次"),
             Map.entry("DepartmentInterviewController.findPublishedSession", "查询当前全部已发布场次"),
-            Map.entry("DepartmentInterviewController.findSessions", "查询全部面试场次"),
+            Map.entry("DepartmentInterviewController.findSessions", "查询可见面试场次"),
             Map.entry("DepartmentInterviewController.findQueueConfig", "查询部门全局过号配置"),
             Map.entry("DepartmentInterviewController.updateQueueConfig", "完整更新部门全局过号配置"),
             Map.entry("DepartmentInterviewController.patchQueueConfig", "部分更新部门全局过号配置"),
