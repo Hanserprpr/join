@@ -224,7 +224,7 @@ class MapperSqlContractTest {
                 DepartmentInterviewMapper.class.getMethod(
                         "selectCandidateQueueItem", Long.class, String.class),
                 DepartmentInterviewMapper.class.getMethod(
-                        "countPeopleAhead",
+                        "selectPeopleAheadCandidates",
                         Long.class, Long.class, Long.class, Boolean.class),
                 DepartmentInterviewMapper.class.getMethod(
                         "selectInterviewingQueueNumbers",
@@ -300,7 +300,7 @@ class MapperSqlContractTest {
                 "selectInterviewingQueueNumbers", Long.class, Long.class
         );
         Method ahead = DepartmentInterviewMapper.class.getMethod(
-                "countPeopleAhead",
+                "selectPeopleAheadCandidates",
                 Long.class, Long.class, Long.class, Boolean.class
         );
 

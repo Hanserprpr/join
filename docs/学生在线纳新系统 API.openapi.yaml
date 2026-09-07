@@ -5095,6 +5095,16 @@ components:
         timestamp:
           type: integer
           format: int64
+    InterviewQueueAheadCandidateVO:
+      type: object
+      properties:
+        queueNumber:
+          type: integer
+          format: int32
+        candidateName:
+          type: string
+          description: 姓名仅保留第一个字，其余以 * 替代
+          example: 张*
     MyInterviewQueueStatusVO:
       type: object
       properties:
@@ -5118,6 +5128,11 @@ components:
         peopleAhead:
           type: integer
           format: int32
+        peopleAheadCandidates:
+          type: array
+          description: 前方人员序号和打码姓名，按排队顺序排列；无前方人员时为空数组
+          items:
+            $ref: "#/components/schemas/InterviewQueueAheadCandidateVO"
         interviewingQueueNumbers:
           type: array
           items:

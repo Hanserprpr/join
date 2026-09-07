@@ -1,6 +1,7 @@
 package cn.sduonline.join.mapper;
 
 import cn.sduonline.join.data.po.DepartmentInterview;
+import cn.sduonline.join.data.dto.InterviewQueueAheadCandidateVO;
 import cn.sduonline.join.data.dto.InterviewQueueItemVO;
 import cn.sduonline.join.data.dto.InterviewQueueScope;
 import org.apache.ibatis.annotations.Delete;
@@ -123,8 +124,9 @@ public interface DepartmentInterviewMapper {
     );
 
     @Select("""
-            SELECT COUNT(1)
+            SELECT ahead.queue_number, COALESCE(candidate.name, '') AS candidate_name
             FROM department_check_in ahead
+            LEFT JOIN `user` candidate ON candidate.cas_id = ahead.cas_id
             LEFT JOIN department_interview own_interview
                    ON own_interview.check_in_id = ahead.id
             LEFT JOIN department_interview_active other_active
@@ -151,8 +153,9 @@ public interface DepartmentInterviewMapper {
                 own_interview.id IS NOT NULL
                 OR other_active.interview_id IS NULL
               )
+            ORDER BY ahead.priority DESC, ahead.queue_order ASC
             """)
-    int countPeopleAhead(
+    java.util.List<InterviewQueueAheadCandidateVO> selectPeopleAheadCandidates(
             @Param("departmentId") Long departmentId,
             @Param("sessionId") Long sessionId,
             @Param("queueOrder") Long queueOrder,

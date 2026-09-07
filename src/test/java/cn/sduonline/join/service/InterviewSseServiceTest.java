@@ -161,7 +161,7 @@ class InterviewSseServiceTest {
     private static MyInterviewQueueStatusVO status(Long sessionId) {
         return new MyInterviewQueueStatusVO(
                 12L, sessionId, 7, InterviewQueueStatus.WAITING,
-                0, List.of()
+                0, List.of(), List.of()
         );
     }
 

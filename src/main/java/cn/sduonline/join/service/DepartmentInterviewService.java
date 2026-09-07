@@ -1,5 +1,7 @@
 package cn.sduonline.join.service;
 
+import cn.sduonline.join.data.dto.InterviewQueueAheadCandidateVO;
+
 import cn.sduonline.join.client.WeChatApiClient.TemplateData;
 import cn.sduonline.join.config.WeChatProperties;
 import cn.sduonline.join.data.dto.DepartmentInterviewVO;
@@ -547,22 +549,37 @@ public class DepartmentInterviewService {
         // 同一部门同时只会有一条签到记录，场次直接取自本人的签到，
         // 前方人数与叫号中号码都只统计同场次（同校区）的候选人。
         Long sessionId = item.sessionId();
-        int peopleAhead = item.status() == InterviewQueueStatus.WAITING
+        List<InterviewQueueAheadCandidateVO> peopleAheadCandidates = item.status() == InterviewQueueStatus.WAITING
                 || item.status() == InterviewQueueStatus.INTERVIEWING_ELSEWHERE
-                ? interviewMapper.countPeopleAhead(
+                ? interviewMapper.selectPeopleAheadCandidates(
                         departmentId, sessionId, item.queueOrder(),
                         Boolean.TRUE.equals(item.priority())
                 )
-                : 0;
+                : List.of();
         return ServiceResult.success(new MyInterviewQueueStatusVO(
                 departmentId,
                 sessionId,
                 item.queueNumber(),
                 item.status(),
-                peopleAhead,
+                peopleAheadCandidates.size(),
                 interviewMapper.selectInterviewingQueueNumbers(
-                        departmentId, sessionId)
+                        departmentId, sessionId),
+                peopleAheadCandidates.stream()
+                        .map(candidate -> new InterviewQueueAheadCandidateVO(
+                                candidate.queueNumber(),
+                                maskCandidateName(candidate.candidateName())))
+                        .toList()
         ));
+    }
+
+    private static String maskCandidateName(String name) {
+        if (name == null || name.isBlank()) {
+            return "";
+        }
+        String normalized = name.strip();
+        int firstCharacterEnd = normalized.offsetByCodePoints(0, 1);
+        int length = normalized.codePointCount(0, normalized.length());
+        return normalized.substring(0, firstCharacterEnd) + "*".repeat(length - 1);
     }
 
     public ServiceResult<InterviewQueueConfigVO> findQueueConfig(

@@ -1,5 +1,7 @@
 package cn.sduonline.join.service;
 
+import cn.sduonline.join.data.dto.InterviewQueueAheadCandidateVO;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -238,8 +240,10 @@ class DepartmentInterviewServiceTest {
         );
         when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
                 .thenReturn(item);
-        when(interviewMapper.countPeopleAhead(12L, 5L, 12L, false))
-                .thenReturn(3);
+        when(interviewMapper.selectPeopleAheadCandidates(12L, 5L, 12L, false))
+                .thenReturn(List.of(new InterviewQueueAheadCandidateVO(8, "张三"),
+                        new InterviewQueueAheadCandidateVO(9, "欧阳小明"),
+                        new InterviewQueueAheadCandidateVO(10, "𠮷田")));
         when(interviewMapper.selectInterviewingQueueNumbers(12L, 5L))
                 .thenReturn(List.of(8, 9));
 
@@ -248,7 +252,30 @@ class DepartmentInterviewServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(12, result.data().queueNumber());
         assertEquals(3, result.data().peopleAhead());
+        assertEquals(List.of(
+                new InterviewQueueAheadCandidateVO(8, "张*"),
+                new InterviewQueueAheadCandidateVO(9, "欧***"),
+                new InterviewQueueAheadCandidateVO(10, "𠮷*")
+        ), result.data().peopleAheadCandidates());
         assertEquals(List.of(8, 9), result.data().interviewingQueueNumbers());
+    }
+
+    @Test
+    void nonWaitingCandidatesHaveNoPeopleAhead() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        for (var status : List.of(InterviewQueueStatus.INTERVIEWING,
+                InterviewQueueStatus.COMPLETED, InterviewQueueStatus.RECHECK_IN_REQUIRED)) {
+            when(interviewMapper.selectCandidateQueueItem(12L, "20240001"))
+                    .thenReturn(new InterviewQueueItemVO(
+                            200L, 100L, "20240001", "张三", 12, 12L, 0, null,
+                            status, null, null, null, null, false, 5L));
+            var result = service.findMyQueueStatus(12L, "20240001");
+            assertEquals(0, result.data().peopleAhead());
+            assertEquals(List.of(), result.data().peopleAheadCandidates());
+        }
+        verify(interviewMapper, never()).selectPeopleAheadCandidates(
+                any(), any(), any(), any());
     }
 
     @Test
@@ -261,7 +288,7 @@ class DepartmentInterviewServiceTest {
         var result = service.findMyQueueStatus(12L, "20240001");
 
         assertEquals(BizCode.CHECK_IN_NOT_FOUND, result.error());
-        verify(interviewMapper, never()).countPeopleAhead(
+        verify(interviewMapper, never()).selectPeopleAheadCandidates(
                 any(), any(), any(), any()
         );
     }
