@@ -2,12 +2,15 @@ package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.data.dto.UserProfileVO;
@@ -16,7 +19,9 @@ import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.data.dto.ContactUpdateRequest;
 import cn.sduonline.join.data.dto.ExternalStudentIdentity;
+import cn.sduonline.join.data.dto.StudentAcademicProfile;
 import cn.sduonline.join.mapper.UserMapper;
+import cn.sduonline.join.mapper.StudentAcademicProfileMapper;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +32,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -69,7 +75,7 @@ class UserServiceTest {
     void updateContactFallsBackToRequestedCampusWithoutDictionaryCampus() {
         CollegeMajorService dictionary = new CollegeMajorService();
         dictionary.replaceFromJson("{\"软件学院\": [\"软件工程\"]}");
-        UserService service = new UserService(userMapper, dictionary);
+        UserService service = new UserService(userMapper, dictionary, studentAcademicProfileMapper);
         User user = new User();
         user.setCasId("20240001");
         user.setCollege("软件学院");
@@ -84,13 +90,17 @@ class UserServiceTest {
     @Mock
     private UserMapper userMapper;
 
+    @Mock
+    private StudentAcademicProfileMapper studentAcademicProfileMapper;
+
     private UserService userService;
 
     @BeforeEach
     void setUp() {
         userService = new UserService(
                 userMapper,
-                new CollegeMajorService()
+                new CollegeMajorService(),
+                studentAcademicProfileMapper
         );
     }
 
@@ -108,10 +118,72 @@ class UserServiceTest {
         assertEquals(null, result.getEmail());
         assertEquals(null, result.getPhone());
         assertNotNull(result.getCreatedAt());
+        assertNull(result.getCollege());
+        assertNull(result.getMajor());
+        assertFalse(result.getProfileCompleted());
+        verify(studentAcademicProfileMapper).selectByCasId("20240001");
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insert(captor.capture());
         assertEquals("20240001", captor.getValue().getCasId());
+    }
+
+    @Test
+    void syncFromOidc_prefillsOnlyAcademicFieldsAndDerivesCampus() {
+        when(studentAcademicProfileMapper.selectByCasId("20240001"))
+                .thenReturn(new StudentAcademicProfile(" 软件学院 ", " 软件工程 "));
+
+        User result = userService.syncFromOidc(oidcUser("sub-001", "张三", " 20240001 "));
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).insert(captor.capture());
+        assertSame(result, captor.getValue());
+        assertEquals("软件学院", result.getCollege());
+        assertEquals("软件工程", result.getMajor());
+        assertEquals(Campus.SOFTWARE_PARK, result.getCampus());
+        assertEquals("张三", result.getName());
+        assertNull(result.getEmail());
+        assertNull(result.getPhone());
+        assertNull(result.getGrade());
+        assertFalse(result.getProfileCompleted());
+    }
+
+    @Test
+    void syncFromOidc_continuesWhenAcademicLookupFails() {
+        when(studentAcademicProfileMapper.selectByCasId("20240001"))
+                .thenThrow(new DataAccessResourceFailureException("source unavailable"));
+
+        User result = userService.syncFromOidc(oidcUser("sub-001", "张三", "20240001"));
+
+        verify(userMapper).insert(result);
+        assertNull(result.getCollege());
+        assertNull(result.getMajor());
+        assertFalse(result.getProfileCompleted());
+    }
+
+    @Test
+    void syncFromOidc_treatsBlankAcademicFieldsAsMissing() {
+        when(studentAcademicProfileMapper.selectByCasId("20240001"))
+                .thenReturn(new StudentAcademicProfile("  ", null));
+
+        User result = userService.syncFromOidc(oidcUser("sub-001", "张三", "20240001"));
+
+        verify(userMapper).insert(result);
+        assertNull(result.getCollege());
+        assertNull(result.getMajor());
+        assertNull(result.getCampus());
+    }
+
+    @Test
+    void syncFromOidc_skipsOversizedFieldWithoutDiscardingOtherField() {
+        when(studentAcademicProfileMapper.selectByCasId("20240001"))
+                .thenReturn(new StudentAcademicProfile("软件学院", "专".repeat(65)));
+
+        User result = userService.syncFromOidc(oidcUser("sub-001", "张三", "20240001"));
+
+        verify(userMapper).insert(result);
+        assertEquals("软件学院", result.getCollege());
+        assertNull(result.getMajor());
     }
 
     @Test
@@ -139,6 +211,7 @@ class UserServiceTest {
         assertEquals("软件工程", result.getMajor());
         assertEquals(2024, result.getGrade());
         verify(userMapper, never()).updateById(any(User.class));
+        verifyNoInteractions(studentAcademicProfileMapper);
     }
 
     @Test
@@ -175,6 +248,7 @@ class UserServiceTest {
 
         assertThrows(IllegalStateException.class, () -> userService.syncFromOidc(oidcUser));
         verify(userMapper, never()).insert(any(User.class));
+        verifyNoInteractions(studentAcademicProfileMapper);
     }
 
     @Test
@@ -191,6 +265,7 @@ class UserServiceTest {
         assertEquals("软件工程", result.getMajor());
         assertEquals(Campus.SOFTWARE_PARK, result.getCampus());
         verify(userMapper).insert(any(User.class));
+        verifyNoInteractions(studentAcademicProfileMapper);
     }
 
     @Test

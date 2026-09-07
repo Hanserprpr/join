@@ -2,10 +2,12 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.dto.ExternalStudentIdentity;
 import cn.sduonline.join.data.dto.ContactUpdateRequest;
+import cn.sduonline.join.data.dto.StudentAcademicProfile;
 import cn.sduonline.join.data.enums.BizCode;
 import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.po.User;
 import cn.sduonline.join.mapper.UserMapper;
+import cn.sduonline.join.mapper.StudentAcademicProfileMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -13,6 +15,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -32,6 +35,7 @@ public class UserService {
 
     private final UserMapper userMapper;
     private final CollegeMajorService collegeMajorService;
+    private final StudentAcademicProfileMapper studentAcademicProfileMapper;
 
     /**
      * 按 OIDC {@code sub} 查询本地用户。
@@ -59,7 +63,8 @@ public class UserService {
      * 根据 OIDC claims 创建本地用户。
      * <p>
      * 身份字段来自 IdP：{@code sub}、{@code name}、{@code casID}。
-     * 资料字段（邮箱、手机、学院等）不由 IdP 提供，留给用户后续补全。
+     * 首次创建时按 casID 从基础用户库预填学院、专业；其余资料留给用户补全。
+     * 已有本地用户不重复查询，也不覆盖其资料。
      */
     @Transactional
     public User syncFromOidc(OidcUser oidcUser) {
@@ -88,9 +93,42 @@ public class UserService {
         created.setProfileCompleted(false);
         created.setCreatedAt(now);
         created.setUpdatedAt(now);
+        prefillAcademicProfile(created);
         userMapper.insert(created);
         log.info("Created local user from OIDC, sub={}, casId={}", sub, casId);
         return created;
+    }
+
+    /** 预填失败不阻止登录，仍可在个人资料页手动补全。 */
+    private void prefillAcademicProfile(User user) {
+        StudentAcademicProfile profile;
+        try {
+            profile = studentAcademicProfileMapper.selectByCasId(user.getCasId());
+        } catch (DataAccessException exception) {
+            // 不输出异常正文，避免 SQL 参数或外部库信息进入登录日志。
+            log.warn("Academic profile lookup failed during first OIDC login, errorType={}",
+                    exception.getClass().getSimpleName());
+            return;
+        }
+        if (profile == null) {
+            return;
+        }
+        user.setCollege(normalizeAcademicField(profile.college()));
+        user.setMajor(normalizeAcademicField(profile.major()));
+        user.setCampus(collegeMajorService.resolveCampus(user.getCollege()));
+    }
+
+    private static String normalizeAcademicField(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String normalized = value.trim();
+        // 来源字段允许 255 字符，本地学院、专业上限为 64；不截断名称。
+        if (normalized.codePointCount(0, normalized.length()) > 64) {
+            log.warn("Skipped academic profile field exceeding local 64-character limit");
+            return null;
+        }
+        return normalized;
     }
 
     /**

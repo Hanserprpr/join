@@ -11,6 +11,27 @@
   （Flyway 会校验校验和）。
 - `docs/migrations/` 下是引入 Flyway 之前的历史脚本，仅作存档，不再新增。
 
+## OIDC 首次登录预填学院、专业
+
+复用 `spring.datasource` 的连接和账号，读取同一 MySQL 实例中的
+`isdusvr_db`，无需新增数据源或迁移外部表。由管理员给当前应用账号授权：
+
+```sql
+GRANT SELECT ON isdusvr_db.isdu_basic_cas TO 'join'@'%';
+GRANT SELECT ON isdusvr_db.isdu_basic_user TO 'join'@'%';
+```
+
+首次 OIDC 登录创建本地用户时，以可信 claim `casID` 匹配
+`isdu_basic_cas.cas_id`，通过 `isdu_basic_cas.id = isdu_basic_user.id`
+关联，仅查询 `depart` 和 `major`，分别写入本地 `college` 和 `major`。
+校区继续从本地学院字典推导。已有本地用户不再查询或覆盖资料；外部 Token
+登录继续使用原有身份数据。
+
+查询设置 3 秒语句超时；无匹配、关联用户不存在或查询异常时允许继续登录，
+缺失资料由用户手动补全。空白字段转为 NULL；来源字段可达 255 字符，
+超过本地 64 字符上限的字段会跳过并记录警告，不截断名称。
+预填不将 `profile_completed` 设为 true，手机号和年级仍需用户填写。
+
 ## `user`
 
 | 字段 | 类型 | 约束 | 说明 |
