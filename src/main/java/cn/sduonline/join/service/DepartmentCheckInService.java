@@ -5,6 +5,7 @@ import cn.sduonline.join.data.dto.CheckInQrCodeVO;
 import cn.sduonline.join.data.dto.CheckInQrGrant;
 import cn.sduonline.join.data.dto.CheckInVO;
 import cn.sduonline.join.data.enums.BizCode;
+import cn.sduonline.join.data.enums.InterviewSessionStatus;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.mapper.AdminOrganizationMapper;
@@ -104,16 +105,7 @@ public class DepartmentCheckInService {
             if (organizationMapper.selectDepartmentById(departmentId) == null) {
                 return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
             }
-            DepartmentInterviewSession published =
-                    sessionMapper.selectPublishedById(
-                            departmentId, requestedSessionId);
-            if (published == null) {
-                return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
-            }
-            if (Boolean.TRUE.equals(published.getQrCheckInEnabled())) {
-                return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
-            }
-            sessionId = published.getId();
+            sessionId = requestedSessionId;
         }
         return completeCheckIn(
                 departmentId, sessionId, scannedWithQr, casId);
@@ -149,11 +141,19 @@ public class DepartmentCheckInService {
             String casId
     ) {
         DepartmentInterviewSession session =
-                sessionMapper.selectPublishedForUpdate(
+                sessionMapper.selectCheckInSessionForUpdate(
                         departmentId, sessionId
                 );
         if (session == null) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
+        }
+        boolean checkInClosed = session.getStatus() == InterviewSessionStatus.ENDED
+                || hasCheckInEnded(session);
+        // 开放签到时仍遵守扫码要求；关闭后只允许恢复已有的过号记录，
+        // 无需生成新的签到二维码。新签到会在 existing 检查之后被拒绝。
+        if (!checkInClosed && !scannedWithQr
+                && Boolean.TRUE.equals(session.getQrCheckInEnabled())) {
+            return ServiceResult.failure(BizCode.CHECK_IN_TOKEN_INVALID);
         }
         boolean priorityEligible = scannedWithQr
                 && Boolean.TRUE.equals(session.getQrCheckInEnabled());
@@ -179,10 +179,6 @@ public class DepartmentCheckInService {
                 );
         if (existing != null) {
             if (Boolean.TRUE.equals(existing.getRequiresRecheckIn())) {
-                if (hasCheckInEnded(session)) {
-                    return ServiceResult.failure(
-                            BizCode.INTERVIEW_SESSION_NOT_OPEN);
-                }
                 checkInMapper.initializeSequence(sessionId);
                 Integer queueNumber =
                         checkInMapper.selectNextNumberForUpdate(sessionId);
@@ -198,7 +194,7 @@ public class DepartmentCheckInService {
             }
             return ServiceResult.failure(BizCode.CHECK_IN_ALREADY_EXISTS);
         }
-        if (hasCheckInEnded(session)) {
+        if (checkInClosed) {
             return ServiceResult.failure(BizCode.INTERVIEW_SESSION_NOT_OPEN);
         }
         if (sessionMapper.countCheckIns(sessionId)

@@ -47,6 +47,7 @@ public interface DepartmentCheckInMapper {
             FROM department_check_in
             WHERE session_id = #{sessionId}
               AND application_id = #{applicationId}
+            FOR UPDATE
             """)
     DepartmentCheckIn selectBySessionAndApplication(
             @Param("sessionId") Long sessionId,

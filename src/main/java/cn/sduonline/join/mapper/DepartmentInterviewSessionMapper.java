@@ -80,6 +80,22 @@ public interface DepartmentInterviewSessionMapper {
             @Param("sessionId") Long sessionId
     );
 
+    /** 签到与过号恢复共用的场次锁；结束场次仅可恢复已有签到。 */
+    @Select("""
+            SELECT id, department_id, name, starts_at, ends_at, location,
+                   check_in_limit, qr_check_in_enabled,
+                   qr_code_ttl_seconds, status,
+                   published_at, ended_at
+            FROM department_interview_session
+            WHERE id = #{sessionId} AND department_id = #{departmentId}
+              AND status IN ('PUBLISHED', 'ENDED')
+            FOR UPDATE
+            """)
+    DepartmentInterviewSession selectCheckInSessionForUpdate(
+            @Param("departmentId") Long departmentId,
+            @Param("sessionId") Long sessionId
+    );
+
     @Select("""
             SELECT id, department_id, name, starts_at, ends_at, location,
                    check_in_limit, qr_check_in_enabled,

@@ -12,7 +12,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.config.AppProperties;
+import cn.sduonline.join.data.dto.CheckInQrGrant;
 import cn.sduonline.join.data.enums.BizCode;
+import cn.sduonline.join.data.enums.InterviewSessionStatus;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentCheckIn;
 import cn.sduonline.join.data.po.Department;
@@ -26,6 +28,8 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
@@ -115,7 +119,7 @@ class DepartmentCheckInServiceTest {
         assertEquals(12L, captured.data().departmentId());
         assertEquals(30L, captured.data().sessionId());
 
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -136,7 +140,7 @@ class DepartmentCheckInServiceTest {
     void rejectsUserWhoDidNotApplyToDepartment() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
                 .thenReturn(null);
@@ -151,7 +155,7 @@ class DepartmentCheckInServiceTest {
     void createsOneCheckInForRegisteredUser() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -182,7 +186,7 @@ class DepartmentCheckInServiceTest {
     void rejectsCheckInWhenAlreadyQueuedInAnotherPublishedSession() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -206,7 +210,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn("12:30");
         DepartmentInterviewSession session = openSession();
         session.setEndsAt(LocalDateTime.now().minusMinutes(1));
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -224,7 +228,7 @@ class DepartmentCheckInServiceTest {
     void repeatedScanReturnsAlreadyCheckedInError() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -250,7 +254,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn("12:30");
         DepartmentInterviewSession session = openSession();
         session.setEndsAt(LocalDateTime.now().minusMinutes(1));
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -274,7 +278,7 @@ class DepartmentCheckInServiceTest {
     void concurrentRepeatedScanReturnsAlreadyCheckedInError() {
         when(valueOperations.get("join:check-in:token:valid"))
                 .thenReturn("12:30");
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -299,7 +303,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn("12:30");
         DepartmentInterviewSession session = openSession();
         session.setCheckInLimit(1);
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -319,7 +323,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn("12:30");
         DepartmentInterviewSession session = openSession();
         session.setQrCheckInEnabled(true);
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -342,8 +346,7 @@ class DepartmentCheckInServiceTest {
         Department department = new Department();
         department.setId(12L);
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
-        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(openSession());
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -366,7 +369,7 @@ class DepartmentCheckInServiceTest {
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
         DepartmentInterviewSession session = openSession();
         session.setQrCheckInEnabled(true);
-        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(session);
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L)).thenReturn(session);
 
         var result = service.checkIn(12L, 30L, null, "20240001");
 
@@ -379,8 +382,7 @@ class DepartmentCheckInServiceTest {
     void checkingInAgainRejoinsQueueAtTheEnd() {
         Department department = new Department();
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
-        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(openSession());
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -404,13 +406,12 @@ class DepartmentCheckInServiceTest {
     }
 
     @Test
-    void rejectsRecheckInAfterSessionEndTime() {
+    void allowsRecheckInAfterSessionEndTime() {
         Department department = new Department();
         when(organizationMapper.selectDepartmentById(12L)).thenReturn(department);
-        when(sessionMapper.selectPublishedById(12L, 30L)).thenReturn(openSession());
         DepartmentInterviewSession session = openSession();
         session.setEndsAt(LocalDateTime.now().minusMinutes(1));
-        when(sessionMapper.selectPublishedForUpdate(12L, 30L))
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
@@ -425,11 +426,126 @@ class DepartmentCheckInServiceTest {
         when(checkInMapper.selectBySessionAndApplication(30L, 100L))
                 .thenReturn(existing);
 
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(9);
+
+        var result = service.checkIn(12L, 30L, null, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(9, result.data().queueNumber());
+        verify(checkInMapper).reactivateAfterCheckIn(existing);
+        verify(checkInMapper, never()).insert(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "ENDED, true, false", "ENDED, false, false",
+            "ENDED, true, true", "ENDED, false, true",
+            "PUBLISHED, true, false", "PUBLISHED, false, false",
+            "PUBLISHED, true, true", "PUBLISHED, false, true"
+    })
+    void restoresPassedCandidateAfterCheckInCloses(
+            InterviewSessionStatus status, boolean requiresQr, boolean captured
+    ) {
+        DepartmentInterviewSession session = closedSession(status);
+        session.setQrCheckInEnabled(requiresQr);
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
+                .thenReturn(session);
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        DepartmentCheckIn existing = currentCheckIn();
+        existing.setRequiresRecheckIn(true);
+        existing.setPassCount(2);
+        existing.setPriority(false);
+        when(checkInMapper.selectBySessionAndApplication(30L, 100L))
+                .thenReturn(existing);
+        when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(9);
+        if (!captured) {
+            when(organizationMapper.selectDepartmentById(12L))
+                    .thenReturn(new Department());
+        }
+
+        var result = captured
+                ? service.checkInCaptured(new CheckInQrGrant(12L, 30L), "20240001")
+                : service.checkIn(12L, 30L, null, "20240001");
+
+        assertTrue(result.isSuccess());
+        assertEquals(200L, result.data().id());
+        assertEquals(30L, result.data().sessionId());
+        assertEquals(9, result.data().queueNumber());
+        assertEquals(9L, existing.getQueueOrder());
+        assertEquals(2, existing.getPassCount());
+        assertEquals(false, existing.getPriority());
+        assertEquals(false, existing.getRequiresRecheckIn());
+        verify(checkInMapper).reactivateAfterCheckIn(existing);
+        verify(checkInMapper, never()).insert(any());
+        verify(sessionMapper, never()).countCheckIns(any());
+        verify(sessionMapper, never()).selectPendingCarryoverForUpdate(any(), any(), any());
+        verify(interviewSseService).publishQueueAfterCommit(12L, 30L);
+        verifyNoInteractions(redisTemplate);
+
+        // 恢复后重复提交不能再次取号。
+        var repeated = captured
+                ? service.checkInCaptured(new CheckInQrGrant(12L, 30L), "20240001")
+                : service.checkIn(12L, 30L, null, "20240001");
+        assertEquals(BizCode.CHECK_IN_ALREADY_EXISTS, repeated.error());
+        verify(checkInMapper, times(1)).incrementNextNumber(30L);
+        verify(checkInMapper, times(1)).reactivateAfterCheckIn(existing);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"ENDED, true", "ENDED, false", "PUBLISHED, true", "PUBLISHED, false"})
+    void closedSessionStillRejectsNewDirectCheckIns(
+            InterviewSessionStatus status, boolean requiresQr
+    ) {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentInterviewSession session = closedSession(status);
+        session.setQrCheckInEnabled(requiresQr);
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
+                .thenReturn(session);
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+
         var result = service.checkIn(12L, 30L, null, "20240001");
 
         assertEquals(BizCode.INTERVIEW_SESSION_NOT_OPEN, result.error());
+        verify(checkInMapper, never()).insert(any());
         verify(checkInMapper, never()).reactivateAfterCheckIn(any());
         verify(checkInMapper, never()).initializeSequence(any());
+        verifyNoInteractions(interviewSseService);
+    }
+
+    @Test
+    void recoveryCannotRequeueSomeoneAlreadyInterviewed() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
+                .thenReturn(closedSession(InterviewSessionStatus.ENDED));
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(100L);
+        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+                .thenReturn(application);
+        when(checkInMapper.countInterviewsByApplication(100L)).thenReturn(1);
+
+        var result = service.checkIn(12L, 30L, null, "20240001");
+
+        assertEquals(BizCode.STATE_NOT_ALLOWED, result.error());
+        verify(checkInMapper, never()).reactivateAfterCheckIn(any());
+        verify(checkInMapper, never()).initializeSequence(any());
+    }
+
+    private static DepartmentInterviewSession closedSession(InterviewSessionStatus status) {
+        DepartmentInterviewSession session = openSession();
+        session.setStatus(status);
+        // ENDED 覆盖提前手动结束；PUBLISHED 覆盖到点但定时任务尚未执行。
+        session.setEndsAt(status == InterviewSessionStatus.ENDED
+                ? LocalDateTime.now().plusHours(1)
+                : LocalDateTime.now().minusMinutes(1));
+        return session;
     }
 
     @Test
@@ -507,6 +623,7 @@ class DepartmentCheckInServiceTest {
         session.setId(30L);
         session.setDepartmentId(12L);
         session.setCheckInLimit(50);
+        session.setStatus(InterviewSessionStatus.PUBLISHED);
         return session;
     }
 }

@@ -55,6 +55,8 @@ public class DepartmentCheckInController {
     /**
      * 完成签到并获取叫号序号。启用二维码的场次需要提供动态令牌；
      * 未启用时需提供部门 ID 和场次 ID。
+     * 场次关闭签到后，已有 RECHECK_IN_REQUIRED 记录的本人可以继续恢复排队，
+     * 此时传部门 ID 和场次 ID 即可，无需二维码令牌。
      *
      * @param request 签到令牌
      * @return 签到记录和叫号序号
