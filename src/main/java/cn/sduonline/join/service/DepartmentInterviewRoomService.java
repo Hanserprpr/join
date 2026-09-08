@@ -50,7 +50,17 @@ public class DepartmentInterviewRoomService {
         room.setName(request.name().trim());
         room.setCreatedBy(creatorCasId);
         room.setStatus("OPEN");
-        roomMapper.insert(room);
+        try {
+            roomMapper.insert(room);
+        } catch (DuplicateKeyException exception) {
+            // 当前读确认开放中的房间重名；已关闭的房间允许复用名称。
+            if (roomMapper.selectOpenIdBySessionAndNameForUpdate(
+                    room.getSessionId(), room.getName()
+            ) == null) {
+                throw exception;
+            }
+            return ServiceResult.failure(BizCode.INTERVIEW_ROOM_NAME_EXISTS);
+        }
         roomMapper.insertMember(room.getId(), creatorCasId);
         interviewSseService.publishRoomAfterCommit(
                 departmentId, room.getId()
@@ -61,7 +71,7 @@ public class DepartmentInterviewRoomService {
     /**
      * 列出指定场次的面试室。
      * <p>
-     * 面试室属于场次而不是部门，房间名的唯一性也只在场次内保证。不按场次过滤时
+     * 面试室属于场次而不是部门，仅开放中的房间名在场次内保持唯一。不按场次过滤时
      * 同名的新旧面试室会并排出现在同一个列表里，面试官很容易进错。
      * 这里不筛状态：场次结束后房间会刻意留着把排队的人面完，
      * 已关闭的房间也仍需要出现在本场次的记录里。

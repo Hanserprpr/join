@@ -26,6 +26,17 @@ public interface DepartmentInterviewRoomMapper {
     int insert(DepartmentInterviewRoom room);
 
     @Select("""
+            SELECT id
+            FROM department_interview_room
+            WHERE session_id = #{sessionId} AND open_name = #{name}
+            FOR UPDATE
+            """)
+    Long selectOpenIdBySessionAndNameForUpdate(
+            @Param("sessionId") Long sessionId,
+            @Param("name") String name
+    );
+
+    @Select("""
             SELECT id, department_id, session_id, name, status,
                    created_by, created_at
             FROM department_interview_room

@@ -1,11 +1,14 @@
 package cn.sduonline.join.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.data.dto.InterviewRoomRequest;
@@ -21,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,6 +85,60 @@ class DepartmentInterviewRoomServiceTest {
         assertTrue(result.isSuccess());
         assertEquals(1, result.data().size());
         assertEquals(5L, result.data().getFirst().sessionId());
+    }
+
+    @Test
+    void returnsBusinessErrorForDuplicateRoomNameWithoutJoiningOrPublishing() {
+        when(sessionMapper.selectPublishedForUpdate(12L, 5L))
+                .thenReturn(new DepartmentInterviewSession());
+        when(roomMapper.insert(any()))
+                .thenThrow(new DuplicateKeyException("duplicate room name"));
+        when(roomMapper.selectOpenIdBySessionAndNameForUpdate(5L, "第一面试室"))
+                .thenReturn(9L);
+
+        var result = service.create(
+                12L, "admin01", new InterviewRoomRequest(5L, " 第一面试室 ")
+        );
+
+        assertEquals(BizCode.INTERVIEW_ROOM_NAME_EXISTS, result.error());
+        verify(roomMapper, never()).insertMember(any(), any());
+        verifyNoInteractions(interviewSseService);
+    }
+
+    @Test
+    void propagatesDuplicateKeyWhenNoRoomHasTheSameSessionAndName() {
+        when(sessionMapper.selectPublishedForUpdate(12L, 5L))
+                .thenReturn(new DepartmentInterviewSession());
+        var failure = new DuplicateKeyException("unexpected unique constraint");
+        when(roomMapper.insert(any())).thenThrow(failure);
+        when(roomMapper.selectOpenIdBySessionAndNameForUpdate(5L, "第一面试室"))
+                .thenReturn(null);
+
+        var thrown = assertThrows(DuplicateKeyException.class, () -> service.create(
+                12L, "admin01", new InterviewRoomRequest(5L, "第一面试室")
+        ));
+
+        assertSame(failure, thrown);
+        verify(roomMapper, never()).insertMember(any(), any());
+        verifyNoInteractions(interviewSseService);
+    }
+
+    @Test
+    void propagatesDatabaseFailuresOtherThanDuplicateKeys() {
+        when(sessionMapper.selectPublishedForUpdate(12L, 5L))
+                .thenReturn(new DepartmentInterviewSession());
+        var failure = new DataAccessResourceFailureException("database unavailable");
+        when(roomMapper.insert(any())).thenThrow(failure);
+
+        var thrown = assertThrows(DataAccessResourceFailureException.class,
+                () -> service.create(
+                        12L, "admin01", new InterviewRoomRequest(5L, "第一面试室")
+                ));
+
+        assertSame(failure, thrown);
+        verify(roomMapper, never()).selectOpenIdBySessionAndNameForUpdate(any(), any());
+        verify(roomMapper, never()).insertMember(any(), any());
+        verifyNoInteractions(interviewSseService);
     }
 
     @Test
