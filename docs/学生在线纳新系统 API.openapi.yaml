@@ -3564,6 +3564,10 @@ components:
         administratorCount:
           type: integer
           format: int32
+        allSubmitted:
+          type: boolean
+          readOnly: true
+          description: 当前存在面试、管理员人数大于 0 且所有管理员均已提交评价时为 true
         pendingAdministrators:
           type: array
           items:
