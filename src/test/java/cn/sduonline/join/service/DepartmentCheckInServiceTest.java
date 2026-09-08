@@ -69,7 +69,7 @@ class DepartmentCheckInServiceTest {
 
         assertEquals(BizCode.CHECK_IN_TOKEN_INVALID, result.error());
         verify(applicationMapper, never())
-                .selectByDepartmentAndUser(any(), any());
+                .selectByDepartmentAndUserForUpdate(any(), any());
     }
 
     @Test
@@ -123,7 +123,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(3);
 
@@ -142,7 +142,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn("12:30");
         when(sessionMapper.selectCheckInSessionForUpdate(12L, 30L))
                 .thenReturn(openSession());
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(null);
 
         var result = service.checkIn("valid", "20240001");
@@ -159,7 +159,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         when(checkInMapper.selectBySessionAndApplication(30L, 100L))
                 .thenReturn(null);
@@ -190,7 +190,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         when(checkInMapper.countOtherSessionCheckIns(12L, 100L, 30L))
                 .thenReturn(1);
@@ -214,7 +214,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
 
         var result = service.checkIn("valid", "20240001");
@@ -232,7 +232,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         DepartmentCheckIn existing = new DepartmentCheckIn();
         existing.setId(200L);
@@ -258,7 +258,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         DepartmentCheckIn existing = new DepartmentCheckIn();
         existing.setId(200L);
@@ -282,7 +282,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         DepartmentCheckIn existing = new DepartmentCheckIn();
         existing.setId(200L);
@@ -307,7 +307,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         when(sessionMapper.countCheckIns(30L)).thenReturn(1);
 
@@ -327,7 +327,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         when(sessionMapper.selectPendingCarryoverForUpdate(
                 12L, 100L, 30L
@@ -350,7 +350,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         when(checkInMapper.selectNextNumberForUpdate(30L)).thenReturn(1);
 
@@ -375,7 +375,7 @@ class DepartmentCheckInServiceTest {
 
         assertEquals(BizCode.CHECK_IN_TOKEN_INVALID, result.error());
         verify(applicationMapper, never())
-                .selectByDepartmentAndUser(any(), any());
+                .selectByDepartmentAndUserForUpdate(any(), any());
     }
 
     @Test
@@ -386,7 +386,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(openSession());
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         DepartmentCheckIn existing = new DepartmentCheckIn();
         existing.setId(200L);
@@ -415,7 +415,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         DepartmentCheckIn existing = new DepartmentCheckIn();
         existing.setId(200L);
@@ -452,7 +452,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         DepartmentCheckIn existing = currentCheckIn();
         existing.setRequiresRecheckIn(true);
@@ -507,7 +507,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(session);
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
 
         var result = service.checkIn(12L, 30L, null, "20240001");
@@ -527,7 +527,7 @@ class DepartmentCheckInServiceTest {
                 .thenReturn(closedSession(InterviewSessionStatus.ENDED));
         DepartmentApplication application = new DepartmentApplication();
         application.setId(100L);
-        when(applicationMapper.selectByDepartmentAndUser(12L, "20240001"))
+        when(applicationMapper.selectByDepartmentAndUserForUpdate(12L, "20240001"))
                 .thenReturn(application);
         when(checkInMapper.countInterviewsByApplication(100L)).thenReturn(1);
 

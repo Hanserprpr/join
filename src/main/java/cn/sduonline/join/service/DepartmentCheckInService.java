@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -72,7 +73,7 @@ public class DepartmentCheckInService {
         ));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ServiceResult<CheckInVO> checkIn(
             Long requestedDepartmentId, Long requestedSessionId,
             String token, String casId
@@ -122,7 +123,7 @@ public class DepartmentCheckInService {
     }
 
     /** 使用扫码时已验证的凭证完成签到。 */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ServiceResult<CheckInVO> checkInCaptured(
             CheckInQrGrant grant, String casId
     ) {
@@ -140,6 +141,8 @@ public class DepartmentCheckInService {
             boolean scannedWithQr,
             String casId
     ) {
+        // 场次锁串行化取号和容量检查；READ_COMMITTED 避免锁前的部门查询
+        // 固定旧快照，确保等待锁后能统计到前一个事务提交的签到。
         DepartmentInterviewSession session =
                 sessionMapper.selectCheckInSessionForUpdate(
                         departmentId, sessionId
@@ -157,8 +160,11 @@ public class DepartmentCheckInService {
         }
         boolean priorityEligible = scannedWithQr
                 && Boolean.TRUE.equals(session.getQrCheckInEnabled());
+        // 所有签到入口统一按场次 -> 报名 -> 签到记录的顺序加锁。
+        // 不同场次也必须争用同一报名行，才能串行完成跨场次查重和插入。
         DepartmentApplication application =
-                applicationMapper.selectByDepartmentAndUser(departmentId, casId);
+                applicationMapper.selectByDepartmentAndUserForUpdate(
+                        departmentId, casId);
         if (application == null) {
             return ServiceResult.failure(BizCode.CHECK_IN_NOT_REGISTERED);
         }
@@ -264,6 +270,7 @@ public class DepartmentCheckInService {
     }
 
     /** 兼容仅携带二维码令牌的调用。 */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ServiceResult<CheckInVO> checkIn(String token, String casId) {
         return checkIn(null, null, token, casId);
     }
