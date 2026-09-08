@@ -376,7 +376,7 @@ CREATE TABLE `department_interview_evaluation` (
   `submitted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`interview_id`, `admin_cas_id`),
   CONSTRAINT `chk_interview_evaluation_score`
-    CHECK (`score` BETWEEN 1.0 AND 5.0 AND MOD(`score` * 2, 1) = 0),
+    CHECK (`score` BETWEEN 0.5 AND 5.0 AND MOD(`score` * 2, 1) = 0),
   CONSTRAINT `fk_interview_evaluation_interview`
     FOREIGN KEY (`interview_id`) REFERENCES `department_interview` (`id`)
     ON DELETE CASCADE,

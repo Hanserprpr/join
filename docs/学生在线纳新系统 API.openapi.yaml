@@ -3150,7 +3150,7 @@ components:
           format: double
           multipleOf: 0.5
           maximum: 5
-          minimum: 1
+          minimum: 0.5
         evaluation:
           type: string
           maxLength: 2000

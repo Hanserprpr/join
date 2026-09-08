@@ -398,14 +398,14 @@ GRANT SELECT ON isdusvr_db.isdu_basic_user TO 'join'@'%';
 |---|---|---|---|
 | `interview_id` | BIGINT | 联合 PK，FK，非空 | 面试 ID |
 | `admin_cas_id` | VARCHAR(32) | 联合 PK，FK，非空 | 评分管理员 |
-| `score` | DECIMAL(2,1) | 非空 | 1–5 分，以 0.5 为步进 |
+| `score` | DECIMAL(2,1) | 非空 | 0.5–5 分，以 0.5 为步进 |
 | `evaluation` | VARCHAR(2000) | 可空 | 面试评价 |
 | `submitted_at` | DATETIME | 非空，默认当前时间 | 提交时间 |
 
 约束与外键：
 
 - 联合主键：`(interview_id, admin_cas_id)`
-- 检查约束：评分在 1–5 之间，且只允许整分或半分
+- 检查约束：评分在 0.5–5 之间，且只允许整分或半分
 - 外键：`interview_id → department_interview.id`，`ON DELETE CASCADE`
 - 外键：`admin_cas_id → user.cas_id`
 

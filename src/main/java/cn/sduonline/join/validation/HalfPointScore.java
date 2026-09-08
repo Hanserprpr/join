@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface HalfPointScore {
 
-    String message() default "评分必须在 1 至 5 之间，且以 0.5 为步进";
+    String message() default "评分必须在 0.5 至 5 之间，且以 0.5 为步进";
 
     Class<?>[] groups() default {};
 

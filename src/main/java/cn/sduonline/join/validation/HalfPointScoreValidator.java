@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 public class HalfPointScoreValidator
         implements ConstraintValidator<HalfPointScore, BigDecimal> {
 
-    private static final BigDecimal MIN = new BigDecimal("1.0");
+    private static final BigDecimal MIN = new BigDecimal("0.5");
     private static final BigDecimal MAX = new BigDecimal("5.0");
     private static final BigDecimal STEP = new BigDecimal("0.5");
 

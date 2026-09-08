@@ -29,6 +29,7 @@ class InterviewEvaluationRequestTest {
 
     @Test
     void acceptsWholeAndHalfPointScores() {
+        assertValid("0.5");
         assertValid("1");
         assertValid("3.5");
         assertValid("5.0");
@@ -36,7 +37,8 @@ class InterviewEvaluationRequestTest {
 
     @Test
     void rejectsScoresOutsideRangeOrNotOnHalfPointStep() {
-        assertInvalid("0.5");
+        assertInvalid("0");
+        assertInvalid("0.4");
         assertInvalid("3.2");
         assertInvalid("5.5");
     }
