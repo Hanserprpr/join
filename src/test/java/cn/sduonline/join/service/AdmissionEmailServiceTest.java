@@ -55,7 +55,7 @@ class AdmissionEmailServiceTest {
     }
 
     @Test
-    void queuesPersonalizedMessageForReliableDelivery() {
+    void queuesMessageWithoutApplicantNameForReliableDelivery() {
         when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
         AdmissionEmailService service = service(true);
         DepartmentApplication application = application();
@@ -68,11 +68,36 @@ class AdmissionEmailServiceTest {
                 100L,
                 "zhangsan@example.com",
                 "录取通知",
-                "张三\n欢迎加入！",
+                "欢迎加入！",
                 "PENDING",
                 LocalDateTime.ofInstant(NOW, ZONE)
         );
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void replacesAllNamePlaceholdersForEachRecipient() {
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        AdmissionEmailService service = service(true);
+        DepartmentApplication first = application();
+        DepartmentApplication second = application();
+        second.setId(101L);
+        second.setApplicantName("李四");
+        second.setEmail("lisi@example.com");
+
+        service.enqueue(
+                List.of(first, second), "录取通知",
+                " {name}同学：\n欢迎{name}加入！{department} "
+        );
+
+        verify(outboxMapper).insert(
+                100L, "zhangsan@example.com", "录取通知",
+                "张三同学：\n欢迎张三加入！{department}", "PENDING", now()
+        );
+        verify(outboxMapper).insert(
+                101L, "lisi@example.com", "录取通知",
+                "李四同学：\n欢迎李四加入！{department}", "PENDING", now()
+        );
     }
 
     @Test
@@ -87,7 +112,7 @@ class AdmissionEmailServiceTest {
                 100L,
                 "zhangsan@example.com",
                 "录取通知",
-                "张三\n欢迎加入！",
+                "欢迎加入！",
                 "SKIPPED",
                 LocalDateTime.ofInstant(NOW, ZONE)
         );
@@ -112,7 +137,7 @@ class AdmissionEmailServiceTest {
         assertEquals("join@example.com", captor.getValue().getFrom());
         assertEquals("zhangsan@example.com", captor.getValue().getTo()[0]);
         assertEquals("录取通知", captor.getValue().getSubject());
-        assertEquals("张三\n欢迎加入！", captor.getValue().getText());
+        assertEquals("欢迎加入！", captor.getValue().getText());
         verify(outboxMapper).markSent(7L, now());
     }
 
@@ -176,7 +201,7 @@ class AdmissionEmailServiceTest {
         outbox.setId(7L);
         outbox.setRecipient("zhangsan@example.com");
         outbox.setSubject("录取通知");
-        outbox.setContent("张三\n欢迎加入！");
+        outbox.setContent("欢迎加入！");
         outbox.setAttempts(0);
         return outbox;
     }

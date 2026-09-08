@@ -82,7 +82,7 @@ public class AdmissionEmailService {
                     application.getId(),
                     application.getEmail(),
                     subject.trim(),
-                    application.getApplicantName() + "\n" + content.trim(),
+                    content.trim().replace("{name}", application.getApplicantName()),
                     status,
                     now
             );

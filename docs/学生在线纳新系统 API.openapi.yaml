@@ -3685,6 +3685,8 @@ components:
           minLength: 0
         content:
           type: string
+          description: 邮件正文，支持 {name} 占位符。后端在生成邮件队列记录时将所有 {name} 替换为对应收件学生的姓名；未包含占位符时不自动添加姓名。
+          example: "{name}同学：\n恭喜你被录取，欢迎加入！"
           maxLength: 10000
           minLength: 0
       required:
