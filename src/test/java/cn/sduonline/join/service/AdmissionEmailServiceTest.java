@@ -101,6 +101,25 @@ class AdmissionEmailServiceTest {
     }
 
     @Test
+    void replacesAllTimePlaceholdersWithBeijingDateAcrossUtcDayBoundary() {
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        Instant instant = Instant.parse("2026-09-07T16:00:00Z");
+        clock = Clock.fixed(instant, ZoneId.of("UTC"));
+        AdmissionEmailService service = service(true);
+
+        service.enqueue(
+                List.of(application()), "录取通知",
+                " {name}同学：\n欢迎加入！\n{time}\n日期：{time} "
+        );
+
+        verify(outboxMapper).insert(
+                100L, "zhangsan@example.com", "录取通知",
+                "张三同学：\n欢迎加入！\n2026 年 9 月 8 日\n日期：2026 年 9 月 8 日",
+                "PENDING", LocalDateTime.ofInstant(instant, ZoneId.of("UTC"))
+        );
+    }
+
+    @Test
     void recordsSkippedMessageWhenDeliveryIsDisabled() {
         AdmissionEmailService service = service(false);
 

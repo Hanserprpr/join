@@ -5,7 +5,10 @@ import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.mapper.AdmissionEmailOutboxMapper;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -25,6 +28,9 @@ public class AdmissionEmailService {
     private static final int DISPATCH_BATCH_SIZE = 20;
     private static final Duration PROCESSING_TIMEOUT = Duration.ofMinutes(5);
     private static final Duration MAX_RETRY_DELAY = Duration.ofHours(1);
+    private static final DateTimeFormatter EMAIL_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy 年 M 月 d 日")
+                    .withZone(ZoneId.of("Asia/Shanghai"));
 
     private final AdmissionEmailOutboxMapper outboxMapper;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
@@ -75,14 +81,17 @@ public class AdmissionEmailService {
         if (enabled) {
             requireConfiguredMailSender();
         }
-        LocalDateTime now = LocalDateTime.now(clock);
+        Instant currentInstant = clock.instant();
+        LocalDateTime now = LocalDateTime.ofInstant(currentInstant, clock.getZone());
+        String datedContent = content.trim()
+                .replace("{time}", EMAIL_DATE_FORMAT.format(currentInstant));
         String status = enabled ? "PENDING" : "SKIPPED";
         for (DepartmentApplication application : applications) {
             outboxMapper.insert(
                     application.getId(),
                     application.getEmail(),
                     subject.trim(),
-                    content.trim().replace("{name}", application.getApplicantName()),
+                    datedContent.replace("{name}", application.getApplicantName()),
                     status,
                     now
             );
