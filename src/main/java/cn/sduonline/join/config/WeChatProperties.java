@@ -39,7 +39,7 @@ public class WeChatProperties {
             "";
     private String interviewCallTemplateId =
             "";
-    /** 发布录取结果时向全部已绑定微信的报名者发送。 */
+    /** 发布录取结果时仅向本次录取且已绑定微信的报名者发送。 */
     private String admissionResultTemplateId =
             "";
     /**

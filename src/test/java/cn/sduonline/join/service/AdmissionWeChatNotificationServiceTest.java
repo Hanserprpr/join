@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import cn.sduonline.join.client.WeChatApiClient.TemplateData;
@@ -34,7 +35,7 @@ class AdmissionWeChatNotificationServiceTest {
     }
 
     @Test
-    void sendsAdmittedAndRejectedTemplateValues() {
+    void sendsOnlyAdmittedNotificationsAndSkipsRejectedRecipients() {
         AdmissionWeChatRecipient admitted = recipient(
                 100L, "张三", "openid-admitted",
                 ApplicationStatus.ADMISSION_DRAFT);
@@ -52,13 +53,7 @@ class AdmissionWeChatNotificationServiceTest {
                         "const2", new TemplateData("录取"),
                         "thing12", new TemplateData("技术部")
                 ));
-        verify(templateMessageService).send(
-                "openid-rejected", TEMPLATE_ID,
-                Map.of(
-                        "thing1", new TemplateData("李四"),
-                        "const2", new TemplateData("未录取"),
-                        "thing12", new TemplateData("技术部")
-                ));
+        verifyNoMoreInteractions(templateMessageService);
     }
 
     @Test
@@ -68,13 +63,13 @@ class AdmissionWeChatNotificationServiceTest {
                 ApplicationStatus.ADMISSION_DRAFT);
         AdmissionWeChatRecipient second = recipient(
                 101L, "李四", "openid-2",
-                ApplicationStatus.SUBMITTED);
+                ApplicationStatus.ADMISSION_DRAFT);
         when(templateMessageService.send(
                 eq("openid-1"), eq(TEMPLATE_ID), any()))
                 .thenThrow(new IllegalStateException("wechat unavailable"));
 
         service.sendAfterCommit(
-                "技术部", List.of(first, second), Set.of(100L));
+                "技术部", List.of(first, second), Set.of(100L, 101L));
 
         verify(templateMessageService).send(
                 eq("openid-2"), eq(TEMPLATE_ID), any());

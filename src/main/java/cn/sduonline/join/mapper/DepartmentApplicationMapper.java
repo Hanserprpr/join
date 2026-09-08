@@ -304,8 +304,7 @@ public interface DepartmentApplicationMapper {
     );
 
     /**
-     * 取本次发布需要通知的微信用户：拟录取草稿发送“录取”，其余尚未发布结果的
-     * 报名发送“未录取”。已正式录取的历史记录不会重复通知。
+     * 仅查询本次拟录取且已绑定微信的报名者；未录取者和历史已录取者不通知。
      */
     @Select("""
             SELECT a.id AS application_id,
@@ -315,7 +314,7 @@ public interface DepartmentApplicationMapper {
             FROM department_application a
             JOIN `user` u ON u.cas_id = a.cas_id
             WHERE a.department_id = #{departmentId}
-              AND a.status IN ('SUBMITTED', 'ADMISSION_DRAFT')
+              AND a.status = 'ADMISSION_DRAFT'
               AND u.wechat_openid IS NOT NULL
               AND u.wechat_openid != ''
             ORDER BY a.id ASC

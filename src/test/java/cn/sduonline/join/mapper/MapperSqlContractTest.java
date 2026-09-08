@@ -369,15 +369,15 @@ class MapperSqlContractTest {
     }
 
     @Test
-    void admissionWechatRecipientsIncludeBothResultGroupsAndBoundUsersOnly()
+    void admissionWechatRecipientsIncludeOnlyDraftsAndBoundUsers()
             throws NoSuchMethodException {
         Method method = DepartmentApplicationMapper.class.getMethod(
                 "selectAdmissionWeChatRecipients", Long.class
         );
         String query = sql(method.getAnnotation(Select.class).value());
 
-        assertTrue(query.contains(
-                "a.status IN ('SUBMITTED', 'ADMISSION_DRAFT')"));
+        assertTrue(query.contains("a.status = 'ADMISSION_DRAFT'"));
+        assertFalse(query.contains("'SUBMITTED'"));
         assertTrue(query.contains("u.wechat_openid IS NOT NULL"));
         assertTrue(query.contains("u.wechat_openid != ''"));
         assertFalse(query.contains("'ADMITTED'"));

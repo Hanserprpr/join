@@ -20,7 +20,6 @@ import org.springframework.util.StringUtils;
 public class AdmissionWeChatNotificationService {
 
     private static final String RESULT_ADMITTED = "录取";
-    private static final String RESULT_REJECTED = "未录取";
 
     private final WeChatTemplateMessageService templateMessageService;
     private final WeChatProperties properties;
@@ -64,12 +63,10 @@ public class AdmissionWeChatNotificationService {
             Set<Long> admittedApplicationIds
     ) {
         for (AdmissionWeChatRecipient recipient : recipients) {
-            if (!StringUtils.hasText(recipient.wechatOpenid())) {
+            if (!admittedApplicationIds.contains(recipient.applicationId())
+                    || !StringUtils.hasText(recipient.wechatOpenid())) {
                 continue;
             }
-            String result = admittedApplicationIds.contains(
-                    recipient.applicationId())
-                    ? RESULT_ADMITTED : RESULT_REJECTED;
             try {
                 templateMessageService.send(
                         recipient.wechatOpenid(),
@@ -77,7 +74,7 @@ public class AdmissionWeChatNotificationService {
                         Map.of(
                                 "thing1", new TemplateData(
                                         normalizedName(recipient)),
-                                "const2", new TemplateData(result),
+                                "const2", new TemplateData(RESULT_ADMITTED),
                                 "thing12", new TemplateData(departmentName)
                         )
                 );
@@ -85,7 +82,7 @@ public class AdmissionWeChatNotificationService {
                 log.warn(
                         "Failed to send admission result WeChat notification: "
                                 + "applicationId={}, result={}",
-                        recipient.applicationId(), result, exception
+                        recipient.applicationId(), RESULT_ADMITTED, exception
                 );
             }
         }

@@ -387,10 +387,7 @@ class DepartmentApplicationServiceTest {
         List<AdmissionWeChatRecipient> weChatRecipients = List.of(
                 new AdmissionWeChatRecipient(
                         100L, "张三", "openid-admitted",
-                        ApplicationStatus.ADMISSION_DRAFT),
-                new AdmissionWeChatRecipient(
-                        101L, "李四", "openid-rejected",
-                        ApplicationStatus.SUBMITTED)
+                        ApplicationStatus.ADMISSION_DRAFT)
         );
         when(applicationMapper.selectAdmissionWeChatRecipients(12L))
                 .thenReturn(weChatRecipients);
