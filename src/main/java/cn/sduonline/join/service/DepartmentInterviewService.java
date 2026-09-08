@@ -29,6 +29,8 @@ import cn.sduonline.join.mapper.DepartmentInterviewSessionMapper;
 import cn.sduonline.join.mapper.UserMapper;
 import cn.sduonline.join.security.scope.OrgType;
 import cn.sduonline.join.security.scope.PermissionCode;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -652,9 +654,50 @@ public class DepartmentInterviewService {
                 interviewMapper.selectByIdAndDepartment(
                         departmentId, interviewId
                 );
-        return interview == null
-                ? ServiceResult.failure(BizCode.INTERVIEW_NOT_FOUND)
-                : ServiceResult.success(DepartmentInterviewVO.from(interview));
+        if (interview == null) {
+            return ServiceResult.failure(BizCode.INTERVIEW_NOT_FOUND);
+        }
+        List<InterviewEvaluationVO> evaluations = interview.getRoomId() == null
+                ? List.of()
+                : roomMapper.selectEvaluations(interview.getRoomId(), interviewId);
+        return ServiceResult.success(DepartmentInterviewVO.from(
+                interview,
+                evaluateAverageScore(evaluations),
+                mergeEvaluations(evaluations)
+        ));
+    }
+
+    private static BigDecimal evaluateAverageScore(List<InterviewEvaluationVO> evaluations) {
+        BigDecimal total = BigDecimal.ZERO;
+        int count = 0;
+        for (InterviewEvaluationVO evaluation : evaluations) {
+            if (evaluation.score() != null) {
+                total = total.add(evaluation.score());
+                count++;
+            }
+        }
+        if (count == 0) {
+            return BigDecimal.ZERO;
+        }
+        return total.divide(BigDecimal.valueOf(count), 1, RoundingMode.HALF_UP);
+    }
+
+    private static String mergeEvaluations(List<InterviewEvaluationVO> evaluations) {
+        StringBuilder merged = new StringBuilder();
+        for (InterviewEvaluationVO evaluation : evaluations) {
+            if (evaluation.evaluation() == null
+                    || evaluation.evaluation().isBlank()) {
+                continue;
+            }
+            if (!merged.isEmpty()) {
+                merged.append('\n');
+            }
+            merged
+                    .append(evaluation.administratorName())
+                    .append(": ")
+                    .append(evaluation.evaluation());
+        }
+        return merged.toString();
     }
 
     /**
