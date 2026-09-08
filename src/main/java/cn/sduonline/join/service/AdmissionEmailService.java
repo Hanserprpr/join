@@ -3,6 +3,9 @@ package cn.sduonline.join.service;
 import cn.sduonline.join.data.po.AdmissionEmailOutbox;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.mapper.AdmissionEmailOutboxMapper;
+import jakarta.mail.internet.InternetAddress;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -38,6 +41,7 @@ public class AdmissionEmailService {
     private final boolean enabled;
     private final String host;
     private final String sender;
+    private final String senderName;
     private final Clock clock;
 
     @Autowired
@@ -47,11 +51,12 @@ public class AdmissionEmailService {
             TransactionTemplate transactionTemplate,
             @Value("${app.admission-email.enabled:false}") boolean enabled,
             @Value("${spring.mail.host:}") String host,
-            @Value("${spring.mail.username:}") String sender
+            @Value("${spring.mail.username:}") String sender,
+            @Value("${app.admission-email.sender-name:}") String senderName
     ) {
         this(
                 outboxMapper, mailSenderProvider, transactionTemplate,
-                enabled, host, sender, Clock.systemDefaultZone()
+                enabled, host, sender, senderName, Clock.systemDefaultZone()
         );
     }
 
@@ -62,6 +67,7 @@ public class AdmissionEmailService {
             boolean enabled,
             String host,
             String sender,
+            String senderName,
             Clock clock
     ) {
         this.outboxMapper = outboxMapper;
@@ -70,6 +76,7 @@ public class AdmissionEmailService {
         this.enabled = enabled;
         this.host = host;
         this.sender = sender;
+        this.senderName = senderName;
         this.clock = clock;
     }
 
@@ -143,7 +150,7 @@ public class AdmissionEmailService {
     ) {
         try {
             SimpleMailMessage mail = new SimpleMailMessage();
-            mail.setFrom(sender);
+            mail.setFrom(formattedSender());
             mail.setTo(message.getRecipient());
             mail.setSubject(message.getSubject());
             mail.setText(message.getContent());
@@ -173,6 +180,19 @@ public class AdmissionEmailService {
                     "Admission email delivery failed; messageId={}, retryAt={}",
                     message.getId(), retryAt, exception
             );
+        }
+    }
+
+    private String formattedSender() {
+        if (!StringUtils.hasText(senderName)) {
+            return sender;
+        }
+        try {
+            return new InternetAddress(
+                    sender, senderName.trim(), StandardCharsets.UTF_8.name()
+            ).toString();
+        } catch (UnsupportedEncodingException exception) {
+            throw new IllegalStateException("Unable to encode mail sender name", exception);
         }
     }
 

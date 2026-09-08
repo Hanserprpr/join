@@ -11,6 +11,10 @@ import static org.mockito.Mockito.when;
 import cn.sduonline.join.data.po.AdmissionEmailOutbox;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.mapper.AdmissionEmailOutboxMapper;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -19,6 +23,9 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,6 +33,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMailMessage;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -160,6 +169,39 @@ class AdmissionEmailServiceTest {
         verify(outboxMapper).markSent(7L, now());
     }
 
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", " 学生在线 ", "学生在线, 纳新"})
+    void preservesSenderAddressAndEncodesDisplayName(String senderName) throws Exception {
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        when(outboxMapper.selectNextForUpdate(any(), any()))
+                .thenReturn(outbox()).thenReturn(null);
+        when(outboxMapper.markProcessing(7L, now())).thenReturn(1);
+        when(outboxMapper.markSent(7L, now())).thenReturn(1);
+        AdmissionEmailService service = new AdmissionEmailService(
+                outboxMapper, mailSenderProvider, transactionTemplate,
+                true, "smtp.example.com", "join@example.com", senderName, clock
+        );
+
+        service.dispatchPending();
+
+        ArgumentCaptor<SimpleMailMessage> captor =
+                ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(captor.capture());
+        // 使用实际的 Spring MIME 转换并序列化，验证收件端能解码中文名称。
+        MimeMessage mime = new JavaMailSenderImpl().createMimeMessage();
+        captor.getValue().copyTo(new MimeMailMessage(mime));
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        mime.writeTo(bytes);
+        MimeMessage received = new MimeMessage(
+                (jakarta.mail.Session) null, new ByteArrayInputStream(bytes.toByteArray()));
+        InternetAddress from = (InternetAddress) received.getFrom()[0];
+        assertEquals("join@example.com", from.getAddress());
+        assertEquals(senderName == null || senderName.isBlank() ? null : senderName.trim(),
+                from.getPersonal());
+        verify(outboxMapper).markSent(7L, now());
+    }
+
     @Test
     void schedulesRetryWhenDeliveryFails() {
         when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
@@ -186,7 +228,7 @@ class AdmissionEmailServiceTest {
     void rejectsEnabledDeliveryWithoutMailConfiguration() {
         AdmissionEmailService service = new AdmissionEmailService(
                 outboxMapper, mailSenderProvider, transactionTemplate,
-                true, "", "", clock
+                true, "", "", "", clock
         );
 
         assertThrows(
@@ -203,7 +245,7 @@ class AdmissionEmailServiceTest {
     private AdmissionEmailService service(boolean enabled) {
         return new AdmissionEmailService(
                 outboxMapper, mailSenderProvider, transactionTemplate,
-                enabled, "smtp.example.com", "join@example.com", clock
+                enabled, "smtp.example.com", "join@example.com", "", clock
         );
     }
 

@@ -154,6 +154,7 @@ app:
     allowed-url-prefixes: ${POSTER_ALLOWED_URL_PREFIXES:}
   admission-email:
     enabled: ${ADMISSION_EMAIL_ENABLED:false}
+    sender-name: ${MAIL_SENDER_NAME:}
     poll-delay-ms: ${ADMISSION_EMAIL_POLL_DELAY_MS:5000}
   # 登录成功后回跳的前端地址
   frontend-url: ${FRONTEND_URL:https://i.sdu.edu.cn/recruit}
