@@ -1,9 +1,11 @@
 package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.dto.ApplicationAnswerVO;
-import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
+import cn.sduonline.join.data.dto.DepartmentApplicationExportVO;
+import cn.sduonline.join.data.dto.InterviewEvaluationVO;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.apache.poi.ss.usermodel.Cell;
@@ -24,14 +26,15 @@ public class ApplicationExcelExportService {
     private static final DateTimeFormatter DATE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public byte[] export(List<DepartmentApplicationDetailVO> applications) {
+    public byte[] export(List<DepartmentApplicationExportVO> applications) {
         try (Workbook workbook = new XSSFWorkbook();
                 ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("报名信息");
             CellStyle headerStyle = createHeaderStyle(workbook);
             String[] headers = {
                 "报名ID", "学号", "姓名", "学院", "专业", "年级",
-                "手机号", "邮箱", "QQ", "报名状态", "提交时间", "问卷答案"
+                "手机号", "邮箱", "QQ", "报名状态", "提交时间", "问卷答案",
+                "是否已面试", "面试官评价", "平均分"
             };
             Row header = sheet.createRow(0);
             for (int index = 0; index < headers.length; index++) {
@@ -43,7 +46,8 @@ public class ApplicationExcelExportService {
                 writeRow(sheet.createRow(index + 1), applications.get(index));
             }
             int[] widths = {
-                12, 16, 14, 24, 20, 10, 16, 28, 16, 14, 22, 60
+                12, 16, 14, 24, 20, 10, 16, 28, 16, 14, 22, 60,
+                12, 60, 10
             };
             for (int index = 0; index < widths.length; index++) {
                 sheet.setColumnWidth(index, widths[index] * 256);
@@ -63,7 +67,7 @@ public class ApplicationExcelExportService {
 
     private static void writeRow(
             Row row,
-            DepartmentApplicationDetailVO application
+            DepartmentApplicationExportVO application
     ) {
         setNumber(row, 0, application.id());
         setText(row, 1, application.casId());
@@ -84,6 +88,33 @@ public class ApplicationExcelExportService {
                         : DATE_TIME_FORMAT.format(application.submittedAt())
         );
         setText(row, 11, formatAnswers(application.answers()));
+        setText(
+                row, 12,
+                Boolean.TRUE.equals(application.interviewed()) ? "是" : "否"
+        );
+        setText(row, 13, formatEvaluations(application.evaluations()));
+        setDecimal(row, 14, application.averageScore());
+    }
+
+    private static String formatEvaluations(
+            List<InterviewEvaluationVO> evaluations
+    ) {
+        return evaluations.stream()
+                .map(evaluation -> {
+                    StringBuilder builder =
+                            new StringBuilder(evaluation.administratorName());
+                    if (evaluation.score() != null) {
+                        builder.append("（")
+                                .append(evaluation.score().toPlainString())
+                                .append("分）");
+                    }
+                    if (evaluation.evaluation() != null
+                            && !evaluation.evaluation().isBlank()) {
+                        builder.append("：").append(evaluation.evaluation());
+                    }
+                    return builder.toString();
+                })
+                .collect(java.util.stream.Collectors.joining("\n"));
     }
 
     private static String formatAnswers(List<ApplicationAnswerVO> answers) {
@@ -122,6 +153,12 @@ public class ApplicationExcelExportService {
     private static void setNumber(Row row, int column, Long value) {
         if (value != null) {
             row.createCell(column).setCellValue(value);
+        }
+    }
+
+    private static void setDecimal(Row row, int column, BigDecimal value) {
+        if (value != null) {
+            row.createCell(column).setCellValue(value.doubleValue());
         }
     }
 }

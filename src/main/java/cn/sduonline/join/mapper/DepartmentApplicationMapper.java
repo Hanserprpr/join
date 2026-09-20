@@ -2,6 +2,7 @@ package cn.sduonline.join.mapper;
 
 import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.dto.AdmissionWeChatRecipient;
+import cn.sduonline.join.data.dto.InterviewEvaluationVO;
 import cn.sduonline.join.data.po.DepartmentApplication;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswer;
 import cn.sduonline.join.data.po.DepartmentApplicationAnswerOption;
@@ -155,6 +156,20 @@ public interface DepartmentApplicationMapper {
     DepartmentApplication selectApplicationDetail(
             @Param("departmentId") Long departmentId,
             @Param("applicationId") Long applicationId
+    );
+
+    @Select("""
+            SELECT e.interview_id,
+                   e.admin_cas_id AS administrator_cas_id,
+                   u.name AS administrator_name,
+                   e.score, e.evaluation, e.submitted_at
+            FROM department_interview_evaluation e
+            JOIN `user` u ON u.cas_id = e.admin_cas_id
+            WHERE e.interview_id = #{interviewId}
+            ORDER BY e.submitted_at, e.admin_cas_id
+            """)
+    java.util.List<InterviewEvaluationVO> selectEvaluationsByInterviewId(
+            @Param("interviewId") Long interviewId
     );
 
     @Select("""

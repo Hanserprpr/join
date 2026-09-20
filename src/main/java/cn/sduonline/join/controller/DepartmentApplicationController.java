@@ -9,6 +9,7 @@ import cn.sduonline.join.data.dto.AdmissionPublishVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
 import cn.sduonline.join.data.dto.MyDepartmentApplicationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
+import cn.sduonline.join.data.dto.DepartmentApplicationExportVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationSummaryVO;
 import cn.sduonline.join.data.dto.PageVO;
 import cn.sduonline.join.data.enums.ApplicationStatus;
@@ -213,7 +214,7 @@ public class DepartmentApplicationController {
             @RequestParam(required = false) Boolean interviewed,
             @RequestParam(required = false) Campus campus
     ) {
-        ServiceResult<java.util.List<DepartmentApplicationDetailVO>> result =
+        ServiceResult<java.util.List<DepartmentApplicationExportVO>> result =
                 applicationService.findForExport(
                         departmentId, keyword, college, grade, interviewed,
                         campus

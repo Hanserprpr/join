@@ -7,6 +7,8 @@ import cn.sduonline.join.data.dto.AdmissionPublishVO;
 import cn.sduonline.join.data.dto.AdmissionWeChatRecipient;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
 import cn.sduonline.join.data.dto.DepartmentApplicationDetailVO;
+import cn.sduonline.join.data.dto.DepartmentApplicationExportVO;
+import cn.sduonline.join.data.dto.InterviewEvaluationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationSummaryVO;
 import cn.sduonline.join.data.dto.MyApplicationVO;
@@ -268,7 +270,7 @@ public class DepartmentApplicationService {
         return ServiceResult.success(applications);
     }
 
-    public ServiceResult<List<DepartmentApplicationDetailVO>> findForExport(
+    public ServiceResult<List<DepartmentApplicationExportVO>> findForExport(
             Long departmentId,
             String keyword,
             String college,
@@ -279,14 +281,14 @@ public class DepartmentApplicationService {
         if (organizationMapper.selectDepartmentById(departmentId) == null) {
             return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
         }
-        List<DepartmentApplicationDetailVO> applications = applicationMapper
+        List<DepartmentApplicationExportVO> applications = applicationMapper
                 .selectApplications(
                         departmentId, trimToNull(keyword), trimToNull(college),
                         grade, interviewed, null, null, null, null, null,
                         campus
                 )
                 .stream()
-                .map(this::toDetailVO)
+                .map(this::toExportVO)
                 .toList();
         return ServiceResult.success(applications);
     }
@@ -439,11 +441,9 @@ public class DepartmentApplicationService {
         }
     }
 
-    private DepartmentApplicationDetailVO toDetailVO(
-            DepartmentApplication application
-    ) {
-        List<ApplicationAnswerVO> answers = applicationMapper
-                .selectAnswers(application.getId())
+    private List<ApplicationAnswerVO> loadAnswers(Long applicationId) {
+        return applicationMapper
+                .selectAnswers(applicationId)
                 .stream()
                 .map(answer -> new ApplicationAnswerVO(
                         answer.getQuestionId(),
@@ -459,6 +459,40 @@ public class DepartmentApplicationService {
                                 .toList()
                 ))
                 .toList();
+    }
+
+    private DepartmentApplicationExportVO toExportVO(
+            DepartmentApplication application
+    ) {
+        List<InterviewEvaluationVO> evaluations =
+                application.getInterviewId() == null
+                        ? List.of()
+                        : applicationMapper.selectEvaluationsByInterviewId(
+                                application.getInterviewId()
+                        );
+        return new DepartmentApplicationExportVO(
+                application.getId(),
+                application.getCasId(),
+                application.getApplicantName(),
+                application.getCollege(),
+                application.getMajor(),
+                application.getGrade(),
+                application.getPhone(),
+                application.getEmail(),
+                application.getQq(),
+                application.getStatus(),
+                application.getSubmittedAt(),
+                loadAnswers(application.getId()),
+                application.getInterviewed(),
+                evaluations,
+                application.getScore()
+        );
+    }
+
+    private DepartmentApplicationDetailVO toDetailVO(
+            DepartmentApplication application
+    ) {
+        List<ApplicationAnswerVO> answers = loadAnswers(application.getId());
         return new DepartmentApplicationDetailVO(
                 application.getId(),
                 application.getDepartmentId(),
