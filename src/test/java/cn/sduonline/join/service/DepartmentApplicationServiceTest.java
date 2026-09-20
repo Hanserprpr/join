@@ -357,6 +357,55 @@ class DepartmentApplicationServiceTest {
     }
 
     @Test
+    void batchAdmitsEligibleApplicationsAndSkipsAdmittedOnes() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+        DepartmentApplication submitted =
+                application(100L, ApplicationStatus.SUBMITTED);
+        DepartmentApplication draft =
+                application(101L, ApplicationStatus.ADMISSION_DRAFT);
+        DepartmentApplication admitted =
+                application(102L, ApplicationStatus.ADMITTED);
+        when(applicationMapper.selectByDepartmentAndIdsForUpdate(
+                12L, List.of(100L, 101L, 102L, 999L)))
+                .thenReturn(List.of(submitted, draft, admitted));
+
+        var result = service.admitBatch(
+                12L, List.of(100L, 101L, 102L, 999L, 100L)
+        );
+
+        assertTrue(result.isSuccess());
+        assertEquals(2, result.data().admittedCount());
+        verify(applicationMapper).updateStatusesToAdmissionDraft(
+                12L, List.of(100L, 101L)
+        );
+    }
+
+    @Test
+    void batchAdmissionReturnsZeroWhenNoIdsProvided() {
+        when(organizationMapper.selectDepartmentById(12L))
+                .thenReturn(new Department());
+
+        var result = service.admitBatch(12L, List.of());
+
+        assertTrue(result.isSuccess());
+        assertEquals(0, result.data().admittedCount());
+        verify(applicationMapper, never())
+                .selectByDepartmentAndIdsForUpdate(any(), any());
+    }
+
+    @Test
+    void rejectsBatchAdmissionWhenDepartmentMissing() {
+        when(organizationMapper.selectDepartmentById(12L)).thenReturn(null);
+
+        var result = service.admitBatch(12L, List.of(100L));
+
+        assertEquals(BizCode.DEPARTMENT_NOT_FOUND, result.error());
+        verify(applicationMapper, never())
+                .selectByDepartmentAndIdsForUpdate(any(), any());
+    }
+
+    @Test
     void rejectsAdmissionForApplicationOutsideDepartment() {
         when(organizationMapper.selectDepartmentById(12L))
                 .thenReturn(new Department());
@@ -574,6 +623,16 @@ class DepartmentApplicationServiceTest {
 
         assertTrue(result.isSuccess());
         assertTrue(result.data().isEmpty());
+    }
+
+    private static DepartmentApplication application(
+            Long id, ApplicationStatus status
+    ) {
+        DepartmentApplication application = new DepartmentApplication();
+        application.setId(id);
+        application.setDepartmentId(12L);
+        application.setStatus(status);
+        return application;
     }
 
     private void prepareEligibleUser() {

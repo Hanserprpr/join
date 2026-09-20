@@ -2,6 +2,7 @@ package cn.sduonline.join.service;
 
 import cn.sduonline.join.data.enums.Campus;
 import cn.sduonline.join.data.dto.ApplicationAnswerRequest;
+import cn.sduonline.join.data.dto.AdmissionBatchVO;
 import cn.sduonline.join.data.dto.AdmissionPublishRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishVO;
 import cn.sduonline.join.data.dto.AdmissionWeChatRecipient;
@@ -132,6 +133,46 @@ public class DepartmentApplicationService {
             application.setStatus(ApplicationStatus.ADMISSION_DRAFT);
         }
         return ServiceResult.success(DepartmentApplicationVO.from(application));
+    }
+
+    /**
+     * 批量将部门内指定报名设置为拟录取。
+     * 不存在、不属于该部门或已正式录取的记录会被跳过，已在拟录取中的记录计为成功。
+     *
+     * @param departmentId 部门 ID
+     * @param applicationIds 报名记录 ID 列表
+     * @return 成功设置为拟录取的数量
+     */
+    @Transactional
+    public ServiceResult<AdmissionBatchVO> admitBatch(
+            Long departmentId,
+            List<Long> applicationIds
+    ) {
+        if (organizationMapper.selectDepartmentById(departmentId) == null) {
+            return ServiceResult.failure(BizCode.DEPARTMENT_NOT_FOUND);
+        }
+        List<Long> distinctIds = applicationIds == null
+                ? List.of()
+                : applicationIds.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList();
+        if (distinctIds.isEmpty()) {
+            return ServiceResult.success(new AdmissionBatchVO(0));
+        }
+        List<Long> eligibleIds = applicationMapper
+                .selectByDepartmentAndIdsForUpdate(departmentId, distinctIds)
+                .stream()
+                .filter(application ->
+                        application.getStatus() != ApplicationStatus.ADMITTED)
+                .map(DepartmentApplication::getId)
+                .toList();
+        if (!eligibleIds.isEmpty()) {
+            applicationMapper.updateStatusesToAdmissionDraft(
+                    departmentId, eligibleIds
+            );
+        }
+        return ServiceResult.success(new AdmissionBatchVO(eligibleIds.size()));
     }
 
     @Transactional

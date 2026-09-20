@@ -293,6 +293,41 @@ public interface DepartmentApplicationMapper {
             @Param("applicationId") Long applicationId
     );
 
+    @Select("""
+            <script>
+            SELECT id, department_id, cas_id, status, submitted_at
+            FROM department_application
+            WHERE department_id = #{departmentId}
+              AND id IN
+              <foreach collection="applicationIds" item="applicationId"
+                       open="(" separator="," close=")">
+                #{applicationId}
+              </foreach>
+            FOR UPDATE
+            </script>
+            """)
+    java.util.List<DepartmentApplication> selectByDepartmentAndIdsForUpdate(
+            @Param("departmentId") Long departmentId,
+            @Param("applicationIds") java.util.List<Long> applicationIds
+    );
+
+    @Update("""
+            <script>
+            UPDATE department_application
+            SET status = 'ADMISSION_DRAFT'
+            WHERE department_id = #{departmentId}
+              AND id IN
+              <foreach collection="applicationIds" item="applicationId"
+                       open="(" separator="," close=")">
+                #{applicationId}
+              </foreach>
+            </script>
+            """)
+    int updateStatusesToAdmissionDraft(
+            @Param("departmentId") Long departmentId,
+            @Param("applicationIds") java.util.List<Long> applicationIds
+    );
+
     @Update("""
             UPDATE department_application
             SET status = #{status}

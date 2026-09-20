@@ -4,6 +4,8 @@ import cn.sduonline.join.data.enums.Campus;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sduonline.join.data.dto.DepartmentApplicationRequest;
+import cn.sduonline.join.data.dto.AdmissionBatchRequest;
+import cn.sduonline.join.data.dto.AdmissionBatchVO;
 import cn.sduonline.join.data.dto.AdmissionPublishRequest;
 import cn.sduonline.join.data.dto.AdmissionPublishVO;
 import cn.sduonline.join.data.dto.DepartmentApplicationVO;
@@ -132,6 +134,28 @@ public class DepartmentApplicationController {
     ) {
         ServiceResult<DepartmentApplicationVO> result =
                 applicationService.admit(departmentId, applicationId);
+        return result.isSuccess()
+                ? Result.ok(result.data())
+                : Result.fail(result.error());
+    }
+
+    /**
+     * 批量将指定报名人设置为拟录取
+     *
+     * @param departmentId 部门 ID
+     * @param request 报名记录 ID 列表
+     * @return 成功设置为拟录取的数量
+     */
+    @PostMapping("/{departmentId}/applications/admissions/batch")
+    @DepartmentPermission(PermissionCode.ADMISSION_MANAGE)
+    public Result<AdmissionBatchVO> admitBatch(
+            @PathVariable @Positive Long departmentId,
+            @Valid @RequestBody AdmissionBatchRequest request
+    ) {
+        ServiceResult<AdmissionBatchVO> result =
+                applicationService.admitBatch(
+                        departmentId, request.applicationIds()
+                );
         return result.isSuccess()
                 ? Result.ok(result.data())
                 : Result.fail(result.error());
