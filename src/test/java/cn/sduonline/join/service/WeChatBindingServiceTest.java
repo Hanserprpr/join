@@ -43,6 +43,7 @@ class WeChatBindingServiceTest {
         properties = new WeChatProperties();
         properties.setAppId("wx-app-id");
         properties.setAppSecret("app-secret");
+        properties.setBindingTemplateId("test-binding-template");
         properties.setOauthCallbackUrl(
                 "https://api.example.com/api/wechat/binding/callback");
         properties.setBindingResultUrl(
@@ -94,7 +95,7 @@ class WeChatBindingServiceTest {
                 "join:wechat:binding:state:state-1");
         verify(templateMessageService).send(
                 eq("openid-1"),
-                eq(""),
+                eq("test-binding-template"),
                 any());
     }
 

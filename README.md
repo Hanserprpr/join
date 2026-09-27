@@ -106,7 +106,7 @@ java -jar target/join-0.0.1-SNAPSHOT.jar
 
 | 能力 | 配置要点 |
 | --- | --- |
-| 学院专业字典 | 默认启用 Nacos；本地可设 `NACOS_CONFIG_ENABLED=false` 使用 `college-majors.json`。使用 Nacos 时 `NACOS_NAMESPACE` 填 namespace ID。 |
+| 学院专业字典 | 默认关闭 Nacos，使用 `college-majors.json`；接入远端字典需设 `NACOS_CONFIG_ENABLED=true` 并配置地址和命名空间。使用 Nacos 时 `NACOS_NAMESPACE` 填 namespace ID。 |
 | 微信 | 配置 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`、登录/绑定/签到回调和模板 ID；公开回调地址需与公众号配置一致。 |
 | 录取邮件 | `ADMISSION_EMAIL_ENABLED=true`，并配置 `MAIL_HOST`、端口、账号、密码及 SSL；邮件通过 outbox 队列处理。 |
 | S3 文件存储 | `AVATAR_STORAGE=s3`，配置 `AVATAR_S3_*`；海报共享头像的存储后端与 S3 凭据。 |
@@ -161,3 +161,7 @@ scripts/              运维辅助脚本
 - [重新签到恢复](docs/frontend-recheck-in-recovery.md)
 
 运维辅助脚本可能修改业务数据，执行前需阅读脚本及确认目标环境。
+
+## 公开配置说明
+
+仓库中的 Nacos、代理地址、公众号主页和微信模板不包含实际部署值。部署时需显式配置 `NACOS_SERVER_ADDR`、`NACOS_NAMESPACE`、`WECHAT_PROXY_HOST`、`WECHAT_OFFICIAL_ACCOUNT_PROFILE_URL` 和三个 `WECHAT_*_TEMPLATE_ID`。启用 Nacos 后使用自己的 namespace ID；公众号主页需填写完整关注入口。现有部署升级前也应补齐这些配置，避免依赖旧默认值。

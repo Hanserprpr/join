@@ -69,6 +69,7 @@ class DepartmentInterviewServiceTest {
                 .when(sessionMapper.selectById(12L, 5L))
                 .thenReturn(new DepartmentInterviewSession());
         weChatProperties = new WeChatProperties();
+        weChatProperties.setInterviewCallTemplateId("test-interview-template");
         service = new DepartmentInterviewService(
                 organizationMapper, interviewMapper, roomMapper,
                 sessionMapper, transactionTemplate,

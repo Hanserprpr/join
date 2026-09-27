@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 class AdmissionWeChatNotificationServiceTest {
 
     private static final String TEMPLATE_ID =
-            "";
+            "test-admission-template";
 
     private WeChatTemplateMessageService templateMessageService;
     private AdmissionWeChatNotificationService service;

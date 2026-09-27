@@ -116,7 +116,7 @@ sentry:
 app:
   college-majors:
     nacos:
-      enabled: ${NACOS_CONFIG_ENABLED:true}
+      enabled: ${NACOS_CONFIG_ENABLED:false}
       server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
       # 必须使用 namespace ID，不能使用“校区-专业列表”这个显示名称。
       namespace: ${NACOS_NAMESPACE:}
